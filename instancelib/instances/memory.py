@@ -15,12 +15,13 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
+
+import random
+
 from ..utils.func import filter_snd_none
-from ..utils.chunks import divide_iterable_in_lists
 
 import itertools
-from typing import (Any, Generic, Iterable, Iterator, List, Optional, Sequence, Tuple,
-                    TypeVar)
+from typing import (Any, Generic, Iterable, Iterator, List, Optional, Sequence, Tuple)
 
 from .base import Instance, InstanceProvider
 
@@ -30,7 +31,7 @@ from ..typehints import KT, DT, VT, RT
 
 class DataPoint(Instance[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
 
-    def __init__(self, identifier: KT, data: DT, vector: Optional[VT], representation: None) -> None:
+    def __init__(self, identifier: KT, data: DT, vector: Optional[VT], representation: RT) -> None:
         self._identifier = identifier
         self._data = data
         self._vector = vector
@@ -41,7 +42,7 @@ class DataPoint(Instance[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
         return self._data
 
     @property
-    def representation(self) -> DT:
+    def representation(self) -> RT:
         return self._representation
 
     @property
@@ -55,6 +56,10 @@ class DataPoint(Instance[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
     @vector.setter
     def vector(self, value: Optional[VT]) -> None:  # type: ignore
         self._vector = value
+
+    @classmethod
+    def from_instance(cls, instance: Instance[KT, DT, VT, RT]):
+        return cls(instance.identifier, instance.data, instance.vector, instance.representation)
 
 
 class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
@@ -70,11 +75,11 @@ class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT
         if vectors is None or len(vectors) != len(indices):
             vectors = [None] * len(indices)
         datapoints = itertools.starmap(
-            DataPoint[KT, DT, VT, RT], zip(indices, raw_data, vectors))
+            DataPoint[KT, DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
         return cls(datapoints)
 
     @classmethod
-    def from_data(cls, raw_data: Sequence[DT]) -> DataPointProvider[KT, DT, VT]:
+    def from_data(cls, raw_data: Sequence[DT]) -> DataPointProvider[KT, DT, VT, RT]:
         indices = range(len(raw_data))
         vectors = [None] * len(raw_data)
         datapoints = itertools.starmap(
@@ -82,12 +87,11 @@ class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT
         return cls(datapoints)
 
     @classmethod
-    def from_provider(cls, provider: InstanceProvider[KT, DT, VT, RT], *args, **kwargs) -> DataPointProvider[KT, DT, VT, RT]:
+    def from_provider(cls, provider: InstanceProvider[KT, DT, VT, RT], *args: Any, **kwargs: Any) -> DataPointProvider[KT, DT, VT, RT]:
         if isinstance(provider, DataPointProvider):
-            return cls.copy(provider)
+            return cls.copy(provider) # type: ignore
         instances = provider.bulk_get_all()
-        datapoints = [DataPoint[KT, DT, VT](
-            ins.identifier, ins.data, ins.vector) for ins in instances]
+        datapoints = [DataPoint[KT, DT, VT, RT](ins.identifier, ins.data, ins.vector, ins.representation) for ins in instances]
         return cls(datapoints)
 
     @classmethod
@@ -98,7 +102,7 @@ class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT
     def __iter__(self) -> Iterator[KT]:
         yield from self.dictionary.keys()
 
-    def __getitem__(self, key: KT):
+    def __getitem__(self, key: KT) -> Instance[KT, DT, VT, RT]:
         return self.dictionary[key]
 
     def __setitem__(self, key: KT, value: Instance[KT, DT, VT, RT]) -> None:
@@ -130,6 +134,23 @@ class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT
 
     def bulk_get_all(self) -> List[Instance[KT, DT, VT, RT]]:
         return list(self.get_all())
+
+    @classmethod
+    def train_test_split(cls, 
+                         source: InstanceProvider[KT, DT, VT, RT], 
+                         train_size: int) -> Tuple[InstanceProvider[KT, DT, VT, RT], InstanceProvider[KT, DT, VT, RT]]:
+        
+        source_keys = list(frozenset(source.key_list))
+        
+        # Randomly sample train keys
+        train_keys = random.sample(source_keys, train_size)
+        # The remainder should be used for testing        
+        test_keys = frozenset(source_keys).difference(train_keys)
+        
+        train_provider = cls([DataPoint.from_instance(source[key]) for key in train_keys])
+        test_provider = cls([DataPoint.from_instance(source[key]) for key in test_keys])
+        return train_provider, test_provider
+
 
     
 
@@ -166,11 +187,28 @@ class DataBucketProvider(DataPointProvider[KT, DT, VT, RT], Generic[KT, DT, VT, 
         return not self._elements
 
     @classmethod
-    def from_provider(cls, provider: InstanceProvider[KT, DT, VT, RT], *args, **kwargs) -> DataBucketProvider[KT, DT, VT, RT]:
+    def from_provider(cls, provider: InstanceProvider[KT, DT, VT, RT], *args: Any, **kwargs: Any) -> DataBucketProvider[KT, DT, VT, RT]:
         return cls(provider, provider.key_list)
 
     @classmethod
     def copy(cls, provider: DataPointProvider[KT, DT, VT, RT]):
         if isinstance(provider, DataBucketProvider):
-            return cls(provider.dataset, provider.key_list)
+            return cls(provider.dataset, provider.key_list) # type: ignore
         return cls(provider, provider.key_list)
+
+    @classmethod
+    def train_test_split(cls, 
+                         source: InstanceProvider[KT, DT, VT, RT], 
+                         train_size: int) -> Tuple[InstanceProvider[KT, DT, VT, RT], InstanceProvider[KT, DT, VT, RT]]:
+        source_keys = list(frozenset(source.key_list))
+        
+        # Randomly sample train keys
+        train_keys = random.sample(source_keys, train_size)
+        # The remainder should be used for testing        
+        test_keys = frozenset(source_keys).difference(train_keys)
+        
+        train_provider = cls(source, train_keys)
+        test_provider = cls(source, test_keys)
+        return train_provider, test_provider
+
+

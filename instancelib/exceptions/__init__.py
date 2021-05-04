@@ -1,1 +1,1 @@
-from .base import NoVectorsException
+from .base import NoVectorsException # type: ignore

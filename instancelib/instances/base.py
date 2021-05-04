@@ -17,13 +17,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import (Any, Generic, Iterator, List, Mapping, MutableMapping,
-                    Optional, Sequence, Tuple, TypeVar)
+from typing import (Generic, Iterator, List, MutableMapping,
+                    Optional, Sequence, Tuple)
 
 import numpy as np  # type: ignore
 
 from ..utils.chunks import divide_iterable_in_lists
-from ..utils.func import filter_snd_none, filter_snd_none_zipped
+from ..utils.func import filter_snd_none_zipped
 
 from ..typehints import KT, DT, VT, RT, CT
 
@@ -89,6 +89,7 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
     def __repr__(self) -> str:
         return self.__str__()
+
 
 
 class ContextInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT, CT]):
@@ -377,3 +378,11 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         """        
         return list(self.get_all())
         
+    
+    @classmethod
+    @abstractmethod
+    def train_test_split(cls, 
+                         source: InstanceProvider[KT, DT, VT, RT], 
+                         train_size: int) -> Tuple[InstanceProvider[KT, DT, VT, RT], InstanceProvider[KT, DT, VT, RT]]:
+        raise NotImplementedError
+

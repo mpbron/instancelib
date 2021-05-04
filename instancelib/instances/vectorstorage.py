@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+from __future__ import annotations
 
 import functools
 from io import UnsupportedOperation
@@ -26,6 +27,7 @@ from ..typehints import KT, VT
 F = TypeVar("F", bound=Callable[..., Any])
 
 class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT]):
+    @property
     @abstractmethod
     def writeable(self) -> bool:
         raise NotImplementedError
@@ -59,10 +61,10 @@ class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT]):
         raise NotImplementedError
 
     @abstractmethod
-    def __enter__(self):
+    def __enter__(self) -> VectorStorage[KT, VT]:
         raise NotImplementedError
     @abstractmethod
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
         raise NotImplementedError
 
 def ensure_writeable(func: F) -> F:

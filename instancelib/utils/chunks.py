@@ -16,7 +16,7 @@
 
 import itertools
 
-from typing import Optional, Tuple, TypeVar, Sequence, Iterator, List, Iterable
+from typing import Optional, Tuple, TypeVar, Sequence, Iterator, Iterable
 from operator import itemgetter
 
 _T = TypeVar("_T")
@@ -32,7 +32,7 @@ def divide_iterable(iterable: Iterable[_T], batch_size: int) -> Iterator[Iterato
         yield itertools.chain([first], itertools.islice(iterator, batch_size - 1))
 
 def divide_iterable_in_lists(iterable: Iterable[_T], batch_size: int) -> Iterator[Sequence[_T]]:
-    return map(list, divide_iterable(iterable, batch_size))
+    return map(list, divide_iterable(iterable, batch_size)) # type: ignore
 
 
 def get_consecutive(iterable: Sequence[int]) -> Iterable[Sequence[int]]:

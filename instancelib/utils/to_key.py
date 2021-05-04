@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-from typing import TypeVar, Union, Any
+from typing import Union, Any
 
 from ..instances import Instance
 from ..typehints import KT
@@ -34,5 +34,5 @@ def to_key(instance_or_key: Union[KT, Instance[KT, Any, Any, Any]]) -> KT:
         The identifer of the instance (or the input verbatim)
     """
     if isinstance(instance_or_key, Instance):
-        return instance_or_key.identifier
+        return instance_or_key.identifier # type: ignore
     return instance_or_key

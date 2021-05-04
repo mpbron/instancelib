@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from typing import (Any, Dict, FrozenSet, Generic, Iterable, Optional,
-                    Sequence, Set, TypeVar, Union)
+                    Sequence, Set, Union)
 
 from ..instances import Instance
 from ..utils.to_key import to_key

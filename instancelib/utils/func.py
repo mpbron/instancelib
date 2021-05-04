@@ -147,7 +147,7 @@ def union(*sets: FrozenSet[_T]) -> FrozenSet[_T]:
         return frozenset()
 def find_subsets(s: FrozenSet[_T], n: int) -> FrozenSet[FrozenSet[_T]]:
     
-    subsets_n = frozenset(
+    subsets_n = frozenset( # type: ignore
         map(frozenset, itertools.combinations(s, n))) # type: ignore
     return subsets_n # type: ignore
 

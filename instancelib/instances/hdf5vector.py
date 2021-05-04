@@ -114,8 +114,8 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         """        
         with h5py.File(self.h5path, self.__mode) as hfile:
             if "dicts" not in hfile:
-                dt = h5py.special_dtype(vlen=np.dtype("uint8"))
-                hfile.create_dataset("dicts", (2,), dtype=dt)
+                dt = h5py.special_dtype(vlen=np.dtype("uint8")) # type: ignore
+                hfile.create_dataset("dicts", (2,), dtype=dt) # type: ignore
             dicts = hfile["dicts"]
             assert isinstance(dicts, Dataset)
             dicts[0] = np.fromstring(
@@ -148,14 +148,14 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         
     
             
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type, value, traceback): # type: ignore
         if self.__mode in self.__writemodes:
             self.__store_dicts()
     
     def close(self) -> None:
         """Close the file and store changes to the index to disk
         """        
-        self.__exit__(None, None, None)
+        self.__exit__(None, None, None) # type: ignore
 
     @ensure_writeable
     def _create_matrix(self, first_slice: np.ndarray) -> None:
@@ -170,7 +170,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         vector_dim = first_slice.shape[1]
         with h5py.File(self.h5path, self.__mode) as hfile:
             if "vectors" not in hfile:
-                hfile.create_dataset(
+                hfile.create_dataset( # type: ignore
                     "vectors", data=first_slice, 
                     maxshape=(None, vector_dim), dtype="f", chunks=True)
 

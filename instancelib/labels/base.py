@@ -15,10 +15,9 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from abc import ABC, abstractmethod
-from typing import Any, FrozenSet, Generic, Set, TypeVar, Union
+from typing import Any, FrozenSet, Generic, Set, Union
 
 from ..instances import Instance
-from ..utils.to_key import to_key
 
 from ..typehints import KT, LT
 
@@ -97,7 +96,7 @@ class LabelProvider(ABC, Generic[KT, LT]):
 
     @property
     def len_positive(self) -> int:
-        docset = set()
+        docset: Set[KT] = set()
         for label in self.labelset:
             for instance in self.get_instances_by_label(label):
                 docset.add(instance)

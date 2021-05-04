@@ -1,0 +1,7 @@
+numpy
+pandas
+h5py
+tables
+sphinx
+sphinx-rtd-theme
+sphinx-autodoc-typehints

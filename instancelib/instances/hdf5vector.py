@@ -16,10 +16,9 @@
 
 import itertools
 import pickle
-from abc import abstractmethod
-from typing import (Dict, Generic, Iterable, Iterator, Optional, Sequence,
-                    Tuple, TypeVar)
-
+from os import PathLike
+from typing import (Dict, Generic, Iterator, Optional, Sequence,
+                    Tuple)
 import h5py  # type: ignore
 import numpy as np  # type: ignore
 from h5py._hl.dataset import Dataset  # type: ignore
@@ -55,7 +54,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
     """    
     
     __writemodes = ["a", "r+", "w", "w-", "x"]
-    def __init__(self, h5path: str, mode: str = "r") -> None:
+    def __init__(self, h5path: "PathLike[str]", mode: str = "r") -> None:
         self.__mode = mode
         self.h5path = h5path
         self.key_dict: Dict[KT, int] = dict()
@@ -141,7 +140,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         with h5py.File(self.h5path, self.__mode) as hfile:
             keys = hfile["keys"]
             assert isinstance(keys, Dataset)
-            for i, key in enumerate(keys):
+            for i, key in enumerate(keys): # type: ignore
                 self.key_dict[key] = i # type: ignore
                 self.inv_key_dict[i] = key # type: ignore
         self.__store_dicts()
@@ -185,7 +184,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         """        
         with h5py.File(self.h5path, self.__mode) as hfile:
             if "keys" not in hfile:
-                hfile.create_dataset("keys", 
+                hfile.create_dataset("keys", # type: ignore
                     data = np.array(keys), maxshape=(None,)) # type: ignore
             for i, key in enumerate(keys):
                 self.key_dict[key] = i
@@ -215,11 +214,11 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         with h5py.File(self.h5path, self.__mode) as hfile:
             dataset = hfile["vectors"]
             assert isinstance(dataset, Dataset)
-            old_shape = dataset.shape
+            old_shape = dataset.shape # type: ignore
             mat_shape = matrix.shape
             assert mat_shape[1] == old_shape[1]
-            new_shape = (dataset.shape[0] + mat_shape[0], mat_shape[1])
-            dataset.resize(size=new_shape)
+            new_shape = (dataset.shape[0] + mat_shape[0], mat_shape[1]) # type: ignore
+            dataset.resize(size=new_shape) # type: ignore
             dataset[-mat_shape[0]:,:] = matrix
         return True 
 
@@ -249,12 +248,12 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         with h5py.File(self.h5path, self.__mode) as hfile:
             key_set = hfile["keys"]
             assert isinstance(key_set, Dataset)
-            old_shape = key_set.shape
+            old_shape = key_set.shape # type: ignore
             arr_shape = new_keys.shape
-            new_shape = (old_shape[0] + arr_shape[0],)
-            key_set.resize(size=new_shape)
+            new_shape = (old_shape[0] + arr_shape[0],) # type: ignore
+            key_set.resize(size=new_shape) # type: ignore
             key_set[-arr_shape[0]:] = new_keys
-            start_index = old_shape[0]
+            start_index: int = old_shape[0] # type: ignore
             for i, key in enumerate(keys):
                 hdf5_idx = start_index + i
                 self.key_dict[key] = hdf5_idx
@@ -269,7 +268,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         with h5py.File(self.h5path, self.__mode) as hfile:
             dataset = hfile["vectors"]
             assert isinstance(dataset, Dataset)
-            data = dataset[h5_idx,:]
+            data = dataset[h5_idx,:] # type: ignore
         return data # type: ignore
 
     @ensure_writeable
@@ -519,7 +518,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         results = itertools.starmap(matrix_tuple_to_vectors, self.get_matrix_chunked(keys, chunk_size))
         yield from results
 
-    def get_vectors_zipped(self, keys: Sequence[KT], chunk_size: int = 200):
+    def get_vectors_zipped(self, keys: Sequence[KT], chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, np.ndarray]]]:
         """Return vectors in chunks of `chunk_size` containing the vectors requested in `keys`
 
         Parameters
@@ -538,9 +537,10 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
                 - A vector 
         """
         results = itertools.starmap(matrix_tuple_to_zipped, self.get_matrix_chunked(keys, chunk_size))
-        yield from results
+        yield from results # type: ignore
+           
 
-    def vectors_chunker(self, chunk_size: int = 200):
+    def vectors_chunker(self, chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, np.ndarray]]]:
         """Return vectors in chunks of `chunk_size`. This generator will yield all vectors contained
         in this object.
 
@@ -559,7 +559,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
                 - A vector
         """        
         results = itertools.starmap(matrix_tuple_to_zipped, self.matrices_chunker(chunk_size))
-        yield from results
+        yield from results # type: ignore
            
     def matrices_chunker(self, chunk_size: int = 200):
         """Yield matrices in chunks of `chunk_size` containing all the vectors in this object

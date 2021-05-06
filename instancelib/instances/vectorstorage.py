@@ -49,7 +49,7 @@ class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT]):
         raise NotImplementedError
 
     @abstractmethod
-    def add_bulk(self, keys: Sequence[KT], values: Union[Sequence[VT]]) -> None:
+    def add_bulk(self, input_keys: Sequence[KT], input_values: Union[Sequence[VT]]) -> None:
         raise NotImplementedError
 
     @abstractmethod

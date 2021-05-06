@@ -15,18 +15,16 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
+from os import PathLike
 
 import functools
-import itertools
-from typing import (Any, Dict, Generic, Iterable, Iterator, List, Optional,
-                    Sequence, Tuple, TypeVar, Union)
+import random
+from typing import Iterable, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
-from ..typehints import CT, DT, KT, LT, LVT, RT, VT
 from ..utils.chunks import divide_iterable_in_lists
-from ..utils.func import list_unzip
 from .base import Instance, InstanceProvider
 from .hdf5vector import HDF5VectorStorage
 
@@ -72,7 +70,7 @@ class HDF5Instance(Instance[int, str, np.ndarray, str]):
 
 
 class HDF5Provider(InstanceProvider[int, str, np.ndarray, str]):
-    def __init__(self, data_storage: str, vector_storage_location: str) -> None:
+    def __init__(self, data_storage: "PathLike[str]", vector_storage_location: "PathLike[str]") -> None:
         self.data_storage = data_storage
         self.vector_storage_location = vector_storage_location
         self.vectors = HDF5VectorStorage[int](vector_storage_location)
@@ -85,8 +83,8 @@ class HDF5Provider(InstanceProvider[int, str, np.ndarray, str]):
     def from_data_and_indices(cls,
                               indices: Sequence[int],
                               raw_data: Sequence[str],
-                              data_storage: str,
-                              vector_storage_location: str):
+                              data_storage: "PathLike[str]",
+                              vector_storage_location: "PathLike[str]"):
         assert len(indices) == len(raw_data)
         datapoints = zip(indices, raw_data)
         dataframe = pd.DataFrame(datapoints, columns=["key", "data"])  # type: ignore
@@ -94,36 +92,23 @@ class HDF5Provider(InstanceProvider[int, str, np.ndarray, str]):
         return cls(data_storage, vector_storage_location)
 
     @classmethod
-    def from_data(cls, raw_data: Sequence[str], data_storage_location, 
-                  vector_storage_location) -> HDF5Provider:
+    def from_data(cls, raw_data: Sequence[str], data_storage_location: "PathLike[str]", 
+                  vector_storage_location: "PathLike[str]") -> HDF5Provider:
         indices = list(range(len(raw_data)))
         return cls.from_data_and_indices(indices, raw_data, data_storage_location, vector_storage_location)
-
-    @classmethod
-    def from_provider(cls, provider: InstanceProvider[int, str, np.ndarray, str], 
-                      data_storage: str, vector_storage_location: str, *args, **kwargs) -> HDF5Provider:
-        instances = provider.bulk_get_all()
-        datapoints = [(ins.identifier, ins.data) for ins in instances]
-        ins_vectors = [(ins.identifier, ins.vector) for ins in instances]
-        identifiers, vectors = list_unzip(ins_vectors)
-        dataframe = pd.DataFrame(datapoints, columns=["key", "data"])
-        dataframe.to_hdf(data_storage, "datastorage")  # type: ignore
-        with HDF5VectorStorage[int](vector_storage_location, "a") as storage:
-            storage.add_bulk(identifiers, vectors)
-        return cls(data_storage, vector_storage_location)
 
     def __iter__(self) -> Iterator[int]:
         key_col = self.dataframe["key"]
         for _, key in key_col.items():  # type: ignore
-            yield int(key)
+            yield int(key) # type: ignore
 
     def __getitem__(self, key: int) -> HDF5Instance:
         df = self.dataframe
-        row = df[df.key == key]
+        row = df[df.key == key] # type: ignore
         vector: Optional[np.ndarray] = None
         if key in self.vectors:
             vector = self.vectors[key]
-        return HDF5Instance(key, row["data"].values[0], vector, self.vectors)
+        return HDF5Instance(key, row["data"].values[0], vector, self.vectors) # type: ignore
 
     def __setitem__(self, key: int, value: Instance[int, str, np.ndarray, str]) -> None:
         pass
@@ -136,7 +121,7 @@ class HDF5Provider(InstanceProvider[int, str, np.ndarray, str]):
 
     def __contains__(self, key: object) -> bool:
         df = self.dataframe
-        return len(df[df.key == key]) > 0
+        return len(df[df.key == key]) > 0 # type: ignore
 
     @property
     def empty(self) -> bool:
@@ -152,7 +137,7 @@ class HDF5Provider(InstanceProvider[int, str, np.ndarray, str]):
         constructor = functools.partial(HDF5Instance.from_row, self.vectors)
         df = self.dataframe
         instance_df = df.apply(constructor, axis=1)  # type: ignore
-        instance_list: List[HDF5Instance] = instance_df.tolist()
+        instance_list: List[HDF5Instance] = instance_df.tolist() # type: ignore
         return divide_iterable_in_lists(instance_list, batch_size)
 
     def bulk_add_vectors(self, keys: Sequence[int], values: Sequence[np.ndarray]) -> None:
@@ -168,6 +153,12 @@ class HDF5Provider(InstanceProvider[int, str, np.ndarray, str]):
         self.vectors.reload()
         results = self.vectors.vectors_chunker(batch_size)
         yield from results
+
+    @classmethod
+    def train_test_split(cls, 
+                         source: InstanceProvider[int, str, np.ndarray, str], 
+                         train_size: int) -> Tuple[InstanceProvider[int, str, np.ndarray, str], InstanceProvider[int, str, np.ndarray, str]]:
+        raise NotImplementedError(f"Train test split creation for this type of InstanceProvider ({type(source)}) is not yet supported")
 
 
 class HDF5BucketProvider(HDF5Provider):
@@ -202,14 +193,6 @@ class HDF5BucketProvider(HDF5Provider):
         return not self._elements
 
     @classmethod
-    def from_provider(cls, provider: InstanceProvider[int, str, np.ndarray, str], 
-                      data_storage: str = "", vector_storage_location: str = "", *args, **kwargs) -> HDF5Provider:
-        if isinstance(provider, HDF5Provider):
-            return cls(provider, provider.key_list)
-        hdf5_provider = HDF5Provider.from_provider(provider, data_storage, vector_storage_location, *args, **kwargs)
-        return cls(hdf5_provider, hdf5_provider.key_list)
-
-    @classmethod
     def copy(cls, provider: HDF5BucketProvider) -> HDF5BucketProvider:
         return cls(provider.dataset, provider.key_list)
 
@@ -220,6 +203,22 @@ class HDF5BucketProvider(HDF5Provider):
     def data_chunker(self, batch_size: int) -> Iterator[Sequence[HDF5Instance]]:
         results = self.dataset.data_chunker(batch_size)
         in_set = functools.partial(
-            filter, lambda ins: ins.identifier in self._elements)
+            filter, lambda ins: ins.identifier in self._elements) # type: ignore
         filtered = map(list, map(in_set, results)) # type: ignore
         return filtered # type: ignore
+
+    @classmethod
+    def train_test_split(cls, 
+                         source: InstanceProvider[int, str, np.ndarray, str], 
+                         train_size: int) -> Tuple[InstanceProvider[int, str, np.ndarray, str], InstanceProvider[int, str, np.ndarray, str]]:
+        source_keys = list(frozenset(source.key_list))
+        
+        # Randomly sample train keys
+        train_keys = random.sample(source_keys, train_size)
+        # The remainder should be used for testing        
+        test_keys = frozenset(source_keys).difference(train_keys)
+        if isinstance(source, HDF5Provider):
+            train_provider = cls(source, train_keys)
+            test_provider = cls(source, test_keys)
+            return train_provider, test_provider
+        raise NotImplementedError(f"Train test split for this type of InstanceProvider ({type(source)}) is not yet supported")

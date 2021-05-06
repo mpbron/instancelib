@@ -36,7 +36,7 @@ def divide_iterable_in_lists(iterable: Iterable[_T], batch_size: int) -> Iterato
 
 
 def get_consecutive(iterable: Sequence[int]) -> Iterable[Sequence[int]]:
-    results = [list(map(itemgetter(1), g)) for k, g in itertools.groupby(enumerate(iterable), lambda x: x[0]-x[1])]
+    results = [list(map(itemgetter(1), g)) for _, g in itertools.groupby(enumerate(iterable), lambda x: x[0]-x[1])]
     yield from results # type: ignore
 
 def get_range(iterable: Sequence[int]) -> Iterable[Tuple[int, Optional[int]]]:

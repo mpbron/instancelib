@@ -24,19 +24,19 @@ KT = TypeVar("KT")
 VT = TypeVar("VT")
 
 def slicer(matrix: Union[Dataset, np.ndarray], slices: Iterable[Tuple[int, Optional[int]]]) -> np.ndarray:
-        def get_slices_1d():
+        def get_slices_1d(): # type: ignore
             for slice_min, slice_max in slices:
                 if slice_max is not None:
                     yield matrix[slice_min:slice_max]
                 else:
                     yield matrix[slice_min]
-        def get_slices_2d():
+        def get_slices_2d(): # type: ignore
             for slice_min, slice_max in slices:
                 if slice_max is not None:
                     yield matrix[slice_min:slice_max,:]
                 else:
                     yield matrix[slice_min,:]
-        dims = len(matrix.shape)
+        dims = len(matrix.shape) #type: ignore
         if dims == 1:
             return np.hstack(list(get_slices_1d())) # type: ignore
         return np.vstack(list(get_slices_2d())) # type: ignore

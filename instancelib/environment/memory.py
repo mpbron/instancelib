@@ -16,8 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Generic, Sequence, TypeVar, Iterable, Dict, Any, Set
-
+from typing import Generic, Sequence, Iterable, Dict
 import numpy as np # type: ignore
 
 from ..instances import DataPointProvider, DataBucketProvider
@@ -27,25 +26,16 @@ from .base import AbstractEnvironment
 
 from ..typehints import KT, DT, VT, RT, LT
 
-# TODO Adjust MemoryEnvironment Generic Type (ADD ST)
-
 class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT, VT, RT, LT]):
     def __init__(
             self,
             dataset: DataPointProvider[KT, DT, VT, RT],
-            unlabeled: DataPointProvider[KT, DT, VT, RT],
-            labeled: DataPointProvider[KT, DT, VT, RT],
-            labelprovider: MemoryLabelProvider[KT, LT],
-            truth: MemoryLabelProvider[KT, LT]
+            labelprovider: MemoryLabelProvider[KT, LT]
         ):
         self._dataset = dataset
-        self._unlabeled = unlabeled
-        self._labeled = labeled
         self._labelprovider = labelprovider
         self._named_providers: Dict[str, DataPointProvider[KT, DT, VT, RT]] = dict()
-        self._storage: Dict[str, Any] = dict()
-        self._truth = truth
-
+        
     @classmethod
     def from_data(cls, 
             target_labels: Iterable[LT], 
@@ -54,47 +44,11 @@ class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT,
             ground_truth: Sequence[Iterable[LT]],
             vectors: Sequence[VT]) -> MemoryEnvironment[KT, DT, VT, RT, LT]:
         dataset = DataPointProvider[KT, DT, VT, RT].from_data_and_indices(indices, data, vectors)
-        unlabeled = DataBucketProvider[KT, DT, VT](dataset, dataset.key_list)
-        labeled = DataBucketProvider[KT, DT, VT](dataset, [])
-        labels = MemoryLabelProvider[KT, LT].from_data(target_labels, indices, [])
         truth = MemoryLabelProvider[KT, LT].from_data(target_labels, indices, ground_truth)
-        return cls(dataset, unlabeled, labeled, labels, truth)
-
-    @classmethod
-    def from_environment(cls, environment: AbstractEnvironment[KT, DT, VT, RT, LT], shared_labels: bool = True, *args, **kwargs) -> MemoryEnvironment[KT, DT, VT, RT, LT]:
-        if isinstance(environment.dataset, DataPointProvider):
-            dataset: DataPointProvider[KT, DT, VT, RT] = environment.dataset
-        else:
-            dataset = DataPointProvider[KT, DT, VT, RT].from_provider(environment.dataset)
-        unlabeled = DataBucketProvider[KT, DT, VT](dataset, environment.unlabeled.key_list)
-        labeled = DataBucketProvider[KT, DT, VT](dataset, environment.labeled.key_list)
-        if isinstance(environment.labels, MemoryLabelProvider) and shared_labels:
-            labels: MemoryLabelProvider[KT, LT] = environment.labels
-        else:
-            labels = MemoryLabelProvider[KT, LT](environment.labels.labelset, {}, {}) # type: ignore
-        if isinstance(environment, MemoryEnvironment):                
-            truth = environment.truth
-        else:
-            truth = MemoryLabelProvider[KT, LT](labels.labelset, {}, {})
-        return cls(dataset, unlabeled, labeled, labels, truth)
-
-    @classmethod
-    def from_environment_only_data(cls, environment: AbstractEnvironment[KT, DT, VT, RT, LT]) -> MemoryEnvironment[KT, DT, VT, RT, LT]:
-        if isinstance(environment.dataset, DataPointProvider):
-            dataset: DataPointProvider[KT, DT, VT, RT] = environment.dataset
-        else:
-            dataset = DataPointProvider[KT, DT, VT, RT].from_provider(environment.dataset)
-        unlabeled = DataBucketProvider[KT, DT, VT](dataset, environment.dataset.key_list)
-        labeled = DataBucketProvider[KT, DT, VT](dataset, [])
-        labels = MemoryLabelProvider[KT, LT](environment.labels.labelset, {}, {})
-        if isinstance(environment, MemoryEnvironment):                
-            truth = environment.truth
-        else:
-            truth = MemoryLabelProvider[KT, LT](labels.labelset, {}, {})
-        return cls(dataset, unlabeled, labeled, labels, truth)
+        return cls(dataset, truth)
 
     def create_named_provider(self, name: str) -> DataPointProvider[KT, DT, VT, RT]:
-        self._named_providers[name] = DataBucketProvider[KT, DT, VT](self._dataset, [])
+        self._named_providers[name] = DataBucketProvider[KT, DT, VT, RT](self._dataset, [])
         return self._named_providers[name]
 
     def get_named_provider(self, name: str) -> DataPointProvider[KT, DT, VT, RT]:
@@ -110,32 +64,8 @@ class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT,
         return self._dataset
 
     @property
-    def unlabeled(self) -> DataPointProvider[KT, DT, VT, RT]:
-        return self._unlabeled
-
-    @property
-    def labeled(self) -> DataPointProvider[KT, DT, VT, RT]:
-        return self._labeled
-
-    @property
     def labels(self) -> MemoryLabelProvider[KT, LT]:
         return self._labelprovider
-
-    @property
-    def truth(self) -> MemoryLabelProvider[KT, LT]:
-        return self._truth
-
-    def store(self, key: str, value: Any) -> None:
-        self._storage[key] = value
-
-    
-    def storage_exists(self, key: str) -> bool:
-        return key in self._storage
-
-    
-    def retrieve(self, key: str) -> Any:
-        return self._storage[key]
-
     
     
     

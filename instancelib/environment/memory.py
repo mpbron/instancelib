@@ -33,6 +33,7 @@ class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT,
             labelprovider: MemoryLabelProvider[KT, LT]
         ):
         self._dataset = dataset
+        self._public_dataset = DataBucketProvider[KT, DT, VT, RT](dataset, dataset.key_list)
         self._labelprovider = labelprovider
         self._named_providers: Dict[str, DataPointProvider[KT, DT, VT, RT]] = dict()
         
@@ -61,7 +62,7 @@ class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT,
 
     @property
     def dataset(self) -> DataPointProvider[KT, DT, VT, RT]:
-        return self._dataset
+        return self._public_dataset
 
     @property
     def labels(self) -> MemoryLabelProvider[KT, LT]:

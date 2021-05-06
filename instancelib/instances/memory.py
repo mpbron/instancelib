@@ -21,7 +21,7 @@ import random
 from ..utils.func import filter_snd_none
 
 import itertools
-from typing import (Any, Generic, Iterable, Iterator, List, Optional, Sequence, Tuple)
+from typing import (Generic, Iterable, Iterator, List, Optional, Sequence, Tuple)
 
 from .base import Instance, InstanceProvider
 
@@ -85,19 +85,6 @@ class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT
         datapoints = itertools.starmap(
             DataPoint[KT, DT, VT, RT], zip(indices, raw_data, vectors))
         return cls(datapoints)
-
-    @classmethod
-    def from_provider(cls, provider: InstanceProvider[KT, DT, VT, RT], *args: Any, **kwargs: Any) -> DataPointProvider[KT, DT, VT, RT]:
-        if isinstance(provider, DataPointProvider):
-            return cls.copy(provider) # type: ignore
-        instances = provider.bulk_get_all()
-        datapoints = [DataPoint[KT, DT, VT, RT](ins.identifier, ins.data, ins.vector, ins.representation) for ins in instances]
-        return cls(datapoints)
-
-    @classmethod
-    def copy(cls, provider: DataPointProvider[KT, DT, VT, RT]) -> DataPointProvider[KT, DT, VT, RT]:
-        instances = provider.bulk_get_all()
-        return cls(instances)  # type: ignore
 
     def __iter__(self) -> Iterator[KT]:
         yield from self.dictionary.keys()
@@ -185,16 +172,6 @@ class DataBucketProvider(DataPointProvider[KT, DT, VT, RT], Generic[KT, DT, VT, 
     @property
     def empty(self) -> bool:
         return not self._elements
-
-    @classmethod
-    def from_provider(cls, provider: InstanceProvider[KT, DT, VT, RT], *args: Any, **kwargs: Any) -> DataBucketProvider[KT, DT, VT, RT]:
-        return cls(provider, provider.key_list)
-
-    @classmethod
-    def copy(cls, provider: DataPointProvider[KT, DT, VT, RT]):
-        if isinstance(provider, DataBucketProvider):
-            return cls(provider.dataset, provider.key_list) # type: ignore
-        return cls(provider, provider.key_list)
 
     @classmethod
     def train_test_split(cls, 

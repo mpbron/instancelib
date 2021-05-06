@@ -42,10 +42,9 @@ class TextInstance(DataPoint[KT, str, VT, str], Generic[KT, VT]):
         self._tokenized = value
 
 class TextInstanceProvider(DataPointProvider[KT, str, VT, str], Generic[KT, VT]):
-    datapoints: Dict[KT, TextInstance[KT, VT]]
 
     def __init__(self, datapoints: Iterable[TextInstance[KT, VT]]) -> None:
-        super().__init__(datapoints)
+        self.datapoints = {data.identifier: data for data in datapoints}
         self.children: Dict[KT, Set[KT]] = dict()
         self.parents: Dict[KT, KT] = dict()
 

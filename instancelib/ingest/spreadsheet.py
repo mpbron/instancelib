@@ -1,11 +1,31 @@
+# Copyright (C) 2021 The InstanceLib Authors. All Rights Reserved.
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 import functools
 import itertools
 from os import PathLike
-from typing import (Any,  Callable, FrozenSet, Iterable, Iterator, List, Optional, Sequence, Tuple)
+from typing import (Any, Callable, FrozenSet, Iterable, Iterator, List,
+                    Optional, Sequence, Tuple, Union)
 
 import numpy as np
 import pandas as pd
+
+from ..environment import AbstractEnvironment
 from ..environment.memory import MemoryEnvironment
+from ..environment.text import TextEnvironment
 from ..utils.func import list_unzip3
 
 
@@ -104,19 +124,19 @@ def build_environment(df: pd.DataFrame,
     indices, texts, true_labels = extract_data(df, data_cols, labelfunc)
     if labels is None:
         labels = frozenset(itertools.chain.from_iterable(true_labels))
-    environment = MemoryEnvironment[int, str, np.ndarray, str, str].from_data(
+    environment = TextEnvironment[int, np.ndarray, str].from_data(
         labels, 
         indices, texts, true_labels,
         [])
     return environment
 
 
-def read_excel_dataset(path: "PathLike[str]", 
+def read_excel_dataset(path: "Union[str, PathLike[str]]", 
                        data_cols: Sequence[str], 
                        label_cols: Sequence[str], 
                        labels: Optional[Iterable[str]] = None,
                        label_mapper: Callable[[Any], Optional[str]] = identity_mapper
-                       ) -> MemoryEnvironment[int, str, np.ndarray, str, str]:
+                       ) -> AbstractEnvironment[int, str, np.ndarray, str, str]:
     """Convert a Excel Dataset
 
     Parameters
@@ -133,12 +153,12 @@ def read_excel_dataset(path: "PathLike[str]",
     env = build_environment(df, label_mapper, labels, data_cols, label_cols)
     return env
 
-def read_csv_dataset(path: "PathLike[str]", 
+def read_csv_dataset(path: "Union[str, PathLike[str]]", 
                        data_cols: Sequence[str], 
                        label_cols: Sequence[str], 
                        labels: Optional[Iterable[str]] = None,
                        label_mapper: Callable[[Any], Optional[str]] = identity_mapper
-                       ) -> MemoryEnvironment[int, str, np.ndarray, str, str]:
+                       ) -> AbstractEnvironment[int, str, np.ndarray, str, str]:
     """Convert a Excel Dataset
 
     Parameters
@@ -151,6 +171,6 @@ def read_csv_dataset(path: "PathLike[str]",
     MemoryEnvironment[int, str, np.ndarray, str]
         A MemoryEnvironment. The labels that 
     """    
-    df: pd.DataFrame = pd.read_excel(path) # type: ignore
+    df: pd.DataFrame = pd.read_csv(path) # type: ignore
     env = build_environment(df, label_mapper, labels, data_cols, label_cols)
     return env

@@ -17,8 +17,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import (Generic, Iterator, List, MutableMapping,
-                    Optional, Sequence, Tuple)
+from typing import (Callable, Generic, Iterator, List, MutableMapping,
+                    Optional, Sequence, Tuple, Union)
 
 import numpy as np  # type: ignore
 
@@ -155,7 +155,18 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
     -------
     [type]
         [description]
-    """    
+    """
+    def add_child(self, 
+                  parent: Union[KT, Instance[KT, DT, VT, RT]], 
+                  child: Union[KT, Instance[KT,DT,  VT, RT]]) -> None:
+        raise NotImplementedError
+
+    def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[Instance[KT, DT, VT, RT]]:
+        raise NotImplementedError
+
+    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> Instance[KT, DT, VT, RT]:
+        raise NotImplementedError
+
     
     @abstractmethod
     def __contains__(self, item: object) -> bool:
@@ -377,7 +388,13 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         Use with caution!
         """        
         return list(self.get_all())
-        
+
+    def map_mutate(self, func: Callable[[Instance[KT, DT, VT, RT]], Instance[KT, DT, VT, RT]]) -> None:
+        keys = self.key_list
+        for key in keys:
+            instance = self[key]
+            upd_instance = func(instance)
+            self[key] = upd_instance
     
     @classmethod
     @abstractmethod

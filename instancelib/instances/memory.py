@@ -19,9 +19,10 @@ from __future__ import annotations
 import random
 
 from ..utils.func import filter_snd_none
+from ..utils.to_key import to_key
 
 import itertools
-from typing import (Generic, Iterable, Iterator, List, Optional, Sequence, Tuple)
+from typing import (Dict, Generic, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, Union)
 
 from .base import Instance, InstanceProvider
 
@@ -66,12 +67,15 @@ class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT
 
     def __init__(self, datapoints: Iterable[DataPoint[KT, DT, VT, RT]]) -> None:
         self.dictionary = {data.identifier: data for data in datapoints}
+        self.children: Dict[KT, Set[KT]] = dict()
+        self.parents: Dict[KT, KT] = dict()
+
 
     @classmethod
     def from_data_and_indices(cls,
                               indices: Sequence[KT],
                               raw_data: Sequence[DT],
-                              vectors: Optional[Sequence[Optional[VT]]] = None):
+                              vectors: Optional[Sequence[Optional[VT]]] = None) -> DataPointProvider[KT, DT, VT, RT]:
         if vectors is None or len(vectors) != len(indices):
             vectors = [None] * len(indices)
         datapoints = itertools.starmap(
@@ -83,7 +87,7 @@ class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT
         indices = range(len(raw_data))
         vectors = [None] * len(raw_data)
         datapoints = itertools.starmap(
-            DataPoint[KT, DT, VT, RT], zip(indices, raw_data, vectors))
+            DataPoint[KT, DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
         return cls(datapoints)
 
     def __iter__(self) -> Iterator[KT]:
@@ -138,6 +142,33 @@ class DataPointProvider(InstanceProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT
         test_provider = cls([DataPoint.from_instance(source[key]) for key in test_keys])
         return train_provider, test_provider
 
+    def add_child(self, 
+                  parent: Union[KT, Instance[KT, DT, VT, RT]], 
+                  child: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+        parent_key: KT = to_key(parent)
+        child_key: KT = to_key(child)
+        assert parent_key != child_key
+        if parent_key in self and child_key in self:
+            self.children.setdefault(parent_key, set()).add(child_key)
+            self.parents[child_key] = parent_key
+        else:
+            raise KeyError("Either the parent or child does not exist in this Provider")
+
+    def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[Instance[KT, DT, VT, RT]]:
+        parent_key: KT = to_key(parent)
+        if parent_key in self.children:
+            children = [self.dictionary[child_key] for child_key in self.children[parent_key]]
+            return children # type: ignore
+        return []
+
+    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> Instance[KT, DT, VT, RT]:
+        child_key: KT = to_key(child)
+        if child_key in self.parents:
+            parent_key = self.parents[child_key]
+            parent = self.dictionary[parent_key]
+            return parent # type: ignore
+        raise KeyError(f"The instance with key {child_key} has no parent")
+
 
     
 
@@ -187,5 +218,16 @@ class DataBucketProvider(DataPointProvider[KT, DT, VT, RT], Generic[KT, DT, VT, 
         train_provider = cls(source, train_keys)
         test_provider = cls(source, test_keys)
         return train_provider, test_provider
+    
+    def add_child(self, 
+                  parent: Union[KT, Instance[KT, DT, VT, RT]], 
+                  child: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+        self.dataset.add_child(parent, child)
+
+    def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[Instance[KT, DT, VT, RT]]:
+        return self.dataset.get_children(parent)
+
+    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> Instance[KT, DT, VT, RT]:
+        return self.dataset.get_parent(child)
 
 

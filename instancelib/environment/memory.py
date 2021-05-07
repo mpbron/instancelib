@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Generic, Sequence, Iterable, Dict
 import numpy as np # type: ignore
 
-from ..instances import DataPointProvider, DataBucketProvider
+from ..instances.memory import DataPointProvider, DataBucketProvider
 from ..labels.memory import MemoryLabelProvider
 
 from .base import AbstractEnvironment
@@ -48,8 +48,12 @@ class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT,
         truth = MemoryLabelProvider[KT, LT].from_data(target_labels, indices, ground_truth)
         return cls(dataset, truth)
 
+    def set_named_provider(self, name: str, value: DataPointProvider[KT, DT, VT, RT]):
+        self._named_providers[name] = value
+
+
     def create_named_provider(self, name: str) -> DataPointProvider[KT, DT, VT, RT]:
-        self._named_providers[name] = DataBucketProvider[KT, DT, VT, RT](self._dataset, [])
+        self._named_providers[name] = self.create_empty_provider()
         return self._named_providers[name]
 
     def get_named_provider(self, name: str) -> DataPointProvider[KT, DT, VT, RT]:
@@ -58,12 +62,11 @@ class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT,
         return self._named_providers[name]
 
     def create_empty_provider(self) -> DataPointProvider[KT, DT, VT, RT]:
-        return DataPointProvider([])
+        return DataBucketProvider(self._dataset, [])
 
     @property
     def dataset(self) -> DataPointProvider[KT, DT, VT, RT]:
         return self._public_dataset
-
     @property
     def labels(self) -> MemoryLabelProvider[KT, LT]:
         return self._labelprovider

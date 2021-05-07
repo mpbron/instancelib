@@ -1,8 +1,8 @@
 # InstanceLib
 
 An abstract interface for datasets.
-This library is hosted on [https://git.science.uu.nl/mpbron-phd/instancelib] and available for usage according to the LGPL v3. 
-This library is derived from the data management part of [https://git.science.uu.nl/mpbron-phd/allib](ALlib). 
+This library is hosted on [https://git.science.uu.nl/mpbron-phd/instancelib](https://git.science.uu.nl/mpbron-phd/instancelib) and available for usage according to the GNU LGPL v3 license. 
+This library is derived from the data management part of [Allib](https://git.science.uu.nl/mpbron-phd/allib). 
 
 # Installation
 Clone this repository and then execute the following command within the repo directory:

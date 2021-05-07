@@ -1,13 +1,13 @@
 #%%
-from instancelib.utils.func import list_unzip
 import itertools
-from instancelib.typehints.typevars import VT
 from typing import Any, Callable, Iterable, Sequence
+from uuid import UUID, uuid4
 
 from instancelib import TextBucketProvider
 from instancelib.ingest.spreadsheet import read_csv_dataset, read_excel_dataset
 from instancelib.instances.text import TextInstance
-from uuid import UUID, uuid4
+from instancelib.typehints.typevars import VT
+from instancelib.utils.func import list_unzip
 
 
 #%%

@@ -34,7 +34,7 @@ setuptools.setup( # type: ignore
     author_email="m.p.bron@uu.nl",
     license="GNU LGPL v3",
     classifiers=[
-        "License :: OSI Approved :: GNU LGPL v3",
+        "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
         "Programming Language :: Python"
     ],
     packages=setuptools.find_packages(), # type: ignore

@@ -27,7 +27,7 @@ README = (HERE / "README.md").read_text()
 setuptools.setup( # type: ignore
     name="instancelib",
     version="0.1",
-    description="A type-safe Active Learning library",
+    description="A typed dataset abstraction toolkit for machine learning projects",
     long_description=README,
     long_description_content_type="text/markdown",
     author="Michiel Bron",

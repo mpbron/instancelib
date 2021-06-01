@@ -1,13 +1,21 @@
 #%%
+from instancelib.pertubations.base import TokenPertubator
 import itertools
-from typing import Any, Callable, Iterable, Sequence
-from uuid import UUID, uuid4
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Generic, Iterable, Sequence, TypeVar, Union
+from uuid import UUID
+
+import numpy as np
 
 from instancelib import TextBucketProvider
 from instancelib.ingest.spreadsheet import read_csv_dataset, read_excel_dataset
-from instancelib.instances.text import TextInstance
-from instancelib.typehints.typevars import VT
+from instancelib.instances import Instance
+from instancelib.instances.text import TextInstance, TextInstanceProvider
+from instancelib.typehints.typevars import KT, VT
 from instancelib.utils.func import list_unzip
+
+
+
 
 
 #%%
@@ -69,30 +77,10 @@ class TokenizerWrapper:
         instance.tokenized = tokenized
         return instance
 
-class DeTokenizerWrapper:
-    def __init__(self, detokenizer: Callable[[str], Sequence[str]]):
-        self.detokenizer = detokenizer
 
-class TokenPertubator:
-    def __init__(self, 
-                 detokenizer: Callable[[Iterable[str]], str], 
-                 pertubator: Callable[[str], str]):
-        self.detokenizer = detokenizer
-        self.pertubator = pertubator
-
-    def __call__(self, instance: TextInstance[Any, VT]) -> TextInstance[UUID, VT]:
-        assert instance.tokenized
-        new_tokenized = list(map(self.pertubator, instance.tokenized))
-        new_data = self.detokenizer(new_tokenized)
-        new_id = uuid4() # TODO This has to be improved. 
-        # Current Provider architecture does not have functionality for **unique** new 
-        # id generation. Or KT should be equal to UUID
-        # (For Active Learning we did not need to create new Instances)
-        new_instance = TextInstance[UUID, VT](new_id, new_data, None, new_data, new_tokenized)
-        return new_instance
         
-
-
+# %%
+# Some function that we want to use on the instancess
 def tokenizer(input: str) -> Sequence[str]:
     return input.split(" ")
 
@@ -104,15 +92,15 @@ def dutch_article_pertubator(word: str) -> str:
         return "een"
     return word
 
-wrapped_tokenizer = TokenizerWrapper(tokenizer)
-pertubator = TokenPertubator(detokenizer, dutch_article_pertubator)
 # %%
-
-# Map this function over all instances in this provider 
-# Mutates in place
-instanceprovider.map_mutate(wrapped_tokenizer) # type: ignore
-#%%
 pertubated_instances = tweakers_env.create_empty_provider()
+
+#%%
+wrapped_tokenizer = TokenizerWrapper(tokenizer)
+pertubator = TokenPertubator[int, np.ndarray](
+    pertubated_instances, tokenizer, detokenizer, dutch_article_pertubator) # type: ignore
+#%%
+instanceprovider.map_mutate(wrapped_tokenizer) # type: ignore
 #%%
 #Pertubate an instance
 assert isinstance(instance, TextInstance)

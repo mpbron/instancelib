@@ -15,15 +15,18 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
-import itertools
 
-from typing import Generic, Optional, Sequence
-from .memory import DataBucketProvider, DataPoint, DataPointProvider
+import itertools
+from typing import Any, Generic, Optional, Sequence, Union
+from uuid import UUID
+
 from ..typehints import KT, VT
+from .memory import DataBucketProvider, DataPoint, DataPointProvider
+
 
 class TextInstance(DataPoint[KT, str, VT, str], Generic[KT, VT]):
     def __init__(self, 
-                 identifier: KT, 
+                 identifier: Union[KT, UUID], 
                  data: str, 
                  vector: Optional[VT], 
                  representation: Optional[str] = None, 
@@ -60,6 +63,11 @@ class TextInstanceProvider(DataPointProvider[KT, str, VT, str], Generic[KT, VT])
         vectors = [None] * len(raw_data)
         datapoints = itertools.starmap(TextInstance[KT, VT], zip(indices, raw_data, vectors, raw_data))
         return cls(datapoints)
+
+    def create(self, *args: Any, **kwargs: Any):  # type: ignore
+        new_instance = TextInstance[KT, VT](self._new_key(), *args, **kwargs)
+        self.add(new_instance)
+        return new_instance
 
 class TextBucketProvider(DataBucketProvider[KT, str, VT, str], Generic[KT, VT]):
     pass

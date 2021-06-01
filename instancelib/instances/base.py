@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import (Callable, Generic, Iterator, List, MutableMapping,
+from typing import (Any, Callable, Generic, Iterator, List, MutableMapping,
                     Optional, Sequence, Tuple, Union)
 
 import numpy as np  # type: ignore
@@ -26,6 +26,7 @@ from ..utils.chunks import divide_iterable_in_lists
 from ..utils.func import filter_snd_none_zipped
 
 from ..typehints import KT, DT, VT, RT, CT
+
 
 class Instance(ABC, Generic[KT, DT, VT, RT]):
 
@@ -68,7 +69,7 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
         raise NotImplementedError
 
     @vector.setter
-    def vector(self, value: Optional[VT]) -> None: # type: ignore
+    def vector(self, value: Optional[VT]) -> None:  # type: ignore
         raise NotImplementedError
 
     @property
@@ -83,13 +84,16 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
         """
         raise NotImplementedError
 
+    @identifier.setter
+    def identifier(self, value: KT) -> None:
+        raise NotImplementedError
+
     def __str__(self) -> str:
         str_rep = f"Instance:\n Identifier => {self.identifier} \n Data => {self.data} \n Vector present => {self.vector is not None}"
         return str_rep
 
     def __repr__(self) -> str:
         return self.__str__()
-
 
 
 class ContextInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT, CT]):
@@ -102,7 +106,7 @@ class ContextInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT, CT]
         -------
         CT
             The context of this instance
-        """        
+        """
         raise NotImplementedError
 
 
@@ -116,7 +120,7 @@ class ChildInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT]):
         -------
         Instance[KT, DT, VT, RT]
             The parent of the instance
-        """        
+        """
         raise NotImplementedError
 
 
@@ -130,11 +134,11 @@ class ParentInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT]):
         -------
         Sequence[ChildInstance[KT, DT, VT, RT]]
             The children instances of this Instance
-        """        
+        """
         raise NotImplementedError
 
 
-class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Generic[KT, DT, VT, RT]):
+class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generic[KT, DT, VT, RT]):
     """[summary]
 
     Parameters
@@ -156,9 +160,10 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
     [type]
         [description]
     """
-    def add_child(self, 
-                  parent: Union[KT, Instance[KT, DT, VT, RT]], 
-                  child: Union[KT, Instance[KT,DT,  VT, RT]]) -> None:
+
+    def add_child(self,
+                  parent: Union[KT, Instance[KT, DT, VT, RT]],
+                  child: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
         raise NotImplementedError
 
     def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[Instance[KT, DT, VT, RT]]:
@@ -167,7 +172,6 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
     def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> Instance[KT, DT, VT, RT]:
         raise NotImplementedError
 
-    
     @abstractmethod
     def __contains__(self, item: object) -> bool:
         """Special method that checks if something is contained in this 
@@ -192,7 +196,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         >>> provider = InstanceProvider()
         >>> if doc_id in provider:
         ...     del provider[doc_id]
-        """        
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -208,7 +212,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         ------
         NotImplementedError
             [description]
-        """        
+        """
         raise NotImplementedError
 
     def add(self, instance: Instance[KT, DT, VT, RT]) -> None:
@@ -219,7 +223,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         ----------
         instance : Instance[KT, DT, VT, RT]
             The instance that should be added to the provider
-        """        
+        """
         self.__setitem__(instance.identifier, instance)
 
     def discard(self, instance: Instance[KT, DT, VT, RT]) -> None:
@@ -230,7 +234,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         ----------
         instance : Instance[KT, DT, VT, RT]
             The instance that should be removed from the provider
-        """        
+        """
         try:
             self.__delitem__(instance.identifier)
         except KeyError:
@@ -244,7 +248,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         -------
         List[KT]
             A list of instance keys
-        """        
+        """
         return list(self.keys())
 
     @property
@@ -256,7 +260,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         -------
         bool
             True if the provider is empty
-        """        
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -267,7 +271,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         ------
         Instance[KT, DT, VT, RT]
             An iterator that iterates over all instances
-        """        
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -280,7 +284,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         use with providers that function as temporary user queues, not
         for large proportions of the dataset like `unlabeled` and `labeled`
         sets.
-        """        
+        """
         raise NotImplementedError
 
     def bulk_add_vectors(self, keys: Sequence[KT], values: Sequence[VT]) -> None:
@@ -298,7 +302,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
             A sequence of keys
         values : Sequence[VT]
             A sequence of vectors
-        
+
         Warning
         -------
         We assume that the indices and length of the parameters `keys` and `values`
@@ -327,10 +331,10 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         Some underlying implementations do not preserve the ordering of the parameter
         `keys`. Therefore, always use the keys variable from the returned tuple for 
         the correct matching.
-        """        
-        vector_pairs = ((key, self[key].vector)  for key in keys)
+        """
+        vector_pairs = ((key, self[key].vector) for key in keys)
         ret_keys, ret_vectors = filter_snd_none_zipped(vector_pairs)
-        return ret_keys, ret_vectors # type: ignore
+        return ret_keys, ret_vectors  # type: ignore
 
     def data_chunker(self, batch_size: int) -> Iterator[Sequence[Instance[KT, DT, VT, RT]]]:
         """Iterate over all instances (with or without vectors) in 
@@ -346,7 +350,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         Sequence[Instance[KT, DT, VT, RT]]]
             A sequence of instances with length `batch_size`. The last list may have
             a shorter length.
-        """        
+        """
         chunks = divide_iterable_in_lists(self.values(), batch_size)
         yield from chunks
 
@@ -358,24 +362,25 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         ----------
         batch_size : int
             The batch size, the generator will return lists with size `batch_size`
-        
+
         Returns
         -------
         Iterator[Sequence[Tuple[KT, VT]]]
             An iterator over sequences of key vector tuples
-        
+
         Yields
         -------
         Iterator[Sequence[Tuple[KT, VT]]]
             Sequences of key vector tuples
-        """        
-        id_vecs = ((elem.identifier, elem.vector) for elem in self.values() if elem.vector is not None)
+        """
+        id_vecs = ((elem.identifier, elem.vector)
+                   for elem in self.values() if elem.vector is not None)
         chunks = divide_iterable_in_lists(id_vecs, batch_size)
         return chunks
 
     def bulk_get_all(self) -> List[Instance[KT, DT, VT, RT]]:
         """Returns a list of all instances in this provider.
-        
+
         Returns
         -------
         List[Instance[KT, DT, VT, RT]]
@@ -386,7 +391,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
         When using this method on very large providers with lazily loaded instances, this
         may yield Out of Memory errors, as all the data will be loaded into RAM.
         Use with caution!
-        """        
+        """
         return list(self.get_all())
 
     def map_mutate(self, func: Callable[[Instance[KT, DT, VT, RT]], Instance[KT, DT, VT, RT]]) -> None:
@@ -395,11 +400,16 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC , Gener
             instance = self[key]
             upd_instance = func(instance)
             self[key] = upd_instance
-    
-    @classmethod
+
     @abstractmethod
-    def train_test_split(cls, 
-                         source: InstanceProvider[KT, DT, VT, RT], 
-                         train_size: int) -> Tuple[InstanceProvider[KT, DT, VT, RT], InstanceProvider[KT, DT, VT, RT]]:
+    def create(self, *args: Any, **kwargs: Any) -> Instance[KT, DT, VT, RT]:
         raise NotImplementedError
 
+    @classmethod
+    @abstractmethod
+    def train_test_split(cls,
+                         source: InstanceProvider[KT, DT, VT, RT],
+                         train_size: int) -> Tuple[
+                             InstanceProvider[KT, DT, VT, RT], 
+                             InstanceProvider[KT, DT, VT, RT]]:
+        raise NotImplementedError

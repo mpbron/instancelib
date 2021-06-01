@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Generic, Sequence, Iterable, Dict
+from typing import Generic, Sequence, Iterable, Dict, Union
 import numpy as np # type: ignore
 
 from ..instances.memory import DataPointProvider, DataBucketProvider
@@ -24,13 +24,15 @@ from ..labels.memory import MemoryLabelProvider
 
 from .base import AbstractEnvironment
 
+from uuid import UUID
+
 from ..typehints import KT, DT, VT, RT, LT
 
-class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT, VT, RT, LT]):
+class MemoryEnvironment(AbstractEnvironment[Union[KT, UUID], DT, VT, RT, LT], Generic[KT, DT, VT, RT, LT]):
     def __init__(
             self,
             dataset: DataPointProvider[KT, DT, VT, RT],
-            labelprovider: MemoryLabelProvider[KT, LT]
+            labelprovider: MemoryLabelProvider[Union[KT, UUID], LT]
         ):
         self._dataset = dataset
         self._public_dataset = DataBucketProvider[KT, DT, VT, RT](dataset, dataset.key_list)
@@ -45,7 +47,7 @@ class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT,
             ground_truth: Sequence[Iterable[LT]],
             vectors: Sequence[VT]) -> MemoryEnvironment[KT, DT, VT, RT, LT]:
         dataset = DataPointProvider[KT, DT, VT, RT].from_data_and_indices(indices, data, vectors)
-        truth = MemoryLabelProvider[KT, LT].from_data(target_labels, indices, ground_truth)
+        truth = MemoryLabelProvider[Union[KT, UUID], LT].from_data(target_labels, indices, ground_truth)
         return cls(dataset, truth)
 
     def set_named_provider(self, name: str, value: DataPointProvider[KT, DT, VT, RT]):
@@ -68,7 +70,7 @@ class MemoryEnvironment(AbstractEnvironment[KT, DT, VT, RT, LT], Generic[KT, DT,
     def dataset(self) -> DataPointProvider[KT, DT, VT, RT]:
         return self._public_dataset
     @property
-    def labels(self) -> MemoryLabelProvider[KT, LT]:
+    def labels(self) -> MemoryLabelProvider[Union[KT, UUID], LT]:
         return self._labelprovider
     
     

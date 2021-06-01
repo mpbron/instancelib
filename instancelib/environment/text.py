@@ -16,12 +16,13 @@
 
 from __future__ import annotations
 
-from typing import Generic, Optional, Sequence, Iterable
+from typing import Generic, Optional, Sequence, Iterable, Union
 
 from ..instances.text import TextInstanceProvider, TextBucketProvider
 from ..labels.memory import MemoryLabelProvider
 from .memory import MemoryEnvironment
 
+from uuid import UUID
 
 from ..typehints import KT, VT, LT
 
@@ -34,7 +35,7 @@ class TextEnvironment(MemoryEnvironment[KT, str, VT, str, LT], Generic[KT, VT, L
                   ground_truth: Sequence[Iterable[LT]],
                   vectors: Optional[Sequence[VT]]) -> TextEnvironment[KT, VT, LT]:
         dataset = TextInstanceProvider[KT, VT].from_data_and_indices(indices, data, vectors)
-        truth = MemoryLabelProvider[KT, LT].from_data(target_labels, indices, ground_truth)
+        truth = MemoryLabelProvider[Union[KT, UUID], LT].from_data(target_labels, indices, ground_truth)
         return cls(dataset, truth)
     
     def create_empty_provider(self):

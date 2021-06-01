@@ -49,6 +49,12 @@ class HDF5Instance(Instance[int, str, np.ndarray, str]):
     def identifier(self) -> int:
         return int(self._identifier)
 
+    @identifier.setter
+    def identifier(self, value: Union[int]) -> None:
+        self._identifier = value
+
+    
+
     @property
     def vector(self) -> Optional[np.ndarray]:
         if self._vector is None:

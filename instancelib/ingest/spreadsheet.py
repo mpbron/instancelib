@@ -23,8 +23,6 @@ from typing import (Any, Callable, FrozenSet, Iterable, Iterator, List,
 import numpy as np
 import pandas as pd
 
-from ..environment import AbstractEnvironment
-from ..environment.memory import MemoryEnvironment
 from ..environment.text import TextEnvironment
 from ..utils.func import list_unzip3
 
@@ -101,7 +99,7 @@ def build_environment(df: pd.DataFrame,
                       labels: Optional[Iterable[str]],
                       data_cols: Sequence[str],
                       label_cols: Sequence[str],
-                     ) -> MemoryEnvironment[int, str, np.ndarray, str, str]:
+                     ) -> TextEnvironment[int, np.ndarray, str]:
     """Build an environment from a data frame
 
     Parameters
@@ -136,7 +134,7 @@ def read_excel_dataset(path: "Union[str, PathLike[str]]",
                        label_cols: Sequence[str], 
                        labels: Optional[Iterable[str]] = None,
                        label_mapper: Callable[[Any], Optional[str]] = identity_mapper
-                       ) -> AbstractEnvironment[int, str, np.ndarray, str, str]:
+                       ) -> TextEnvironment[int, np.ndarray, str]:
     """Convert a Excel Dataset
 
     Parameters
@@ -158,7 +156,7 @@ def read_csv_dataset(path: "Union[str, PathLike[str]]",
                        label_cols: Sequence[str], 
                        labels: Optional[Iterable[str]] = None,
                        label_mapper: Callable[[Any], Optional[str]] = identity_mapper
-                       ) -> AbstractEnvironment[int, str, np.ndarray, str, str]:
+                       ) -> TextEnvironment[int, np.ndarray, str]:
     """Convert a Excel Dataset
 
     Parameters

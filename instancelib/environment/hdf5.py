@@ -68,6 +68,10 @@ class HDF5Environment(AbstractEnvironment[int, str, np.ndarray, str, str]):
         return self._dataset
 
     @property
+    def all_datapoints(self):
+        return self._dataset
+
+    @property
     def labels(self):
         return self._labelprovider
 

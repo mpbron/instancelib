@@ -38,8 +38,22 @@ class AbstractEnvironment(ABC, Generic[KT, DT, VT, RT, LT]):
     @abstractmethod
     def dataset(self) -> InstanceProvider[KT, DT, VT, RT]:
         """This property contains the `InstanceProvider` that contains
-        the whole dataset. This provider should include all instances
+        the original dataset. This provider should include all instances
         that are contained in the other providers.
+
+        Returns
+        -------
+        InstanceProvider[KT, DT, VT, RT]
+            The dataset `InstanceProvider`
+        """        
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def all_datapoints(self) -> InstanceProvider[KT, DT, VT, RT]:
+        """This provider should include all instances in all providers.
+        If there are any synthethic datapoints constructed, they should be also 
+         in here.
 
         Returns
         -------
@@ -75,4 +89,4 @@ class AbstractEnvironment(ABC, Generic[KT, DT, VT, RT, LT]):
             A sequence of vectors that should be associated with the instances 
             of the sequence `keys`
         """        
-        self.dataset.bulk_add_vectors(keys, vectors)
+        self.all_datapoints.bulk_add_vectors(keys, vectors)

@@ -20,16 +20,20 @@ import functools
 import os
 import pickle
 import uuid
-from typing import Any, Callable, Generic, List, Optional, TypeVar
+from typing import Any, Callable, List, Optional, TypeVar
 
 MT = TypeVar("MT")
 
 F = TypeVar('F', bound=Callable[..., Any])
 
-class SaveableInnerModel(Generic[MT]):
+class SaveableInnerModel():
     _name = "SaveableInnerModel"
 
-    def __init__(self, innermodel: Optional[MT], storage_location: Optional[str], filename: Optional[str] = None, taboo_fields: Optional[List[str]] = None):
+    def __init__(self, 
+                 innermodel: Optional[Any], 
+                 storage_location: Optional[str], 
+                 filename: Optional[str] = None, 
+                 taboo_fields: Optional[List[str]] = None):
         self.storage_location = storage_location
         self.saved = False
         self.innermodel = innermodel
@@ -71,7 +75,7 @@ class SaveableInnerModel(Generic[MT]):
     @staticmethod
     def load_model_fallback(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(self: SaveableInnerModel[MT], *args: Any, **kwargs: Any) -> Any:
+        def wrapper(self: SaveableInnerModel, *args: Any, **kwargs: Any) -> Any:
             if not self.is_loaded and self.is_stored:
                 self.load()
             return func(self, *args, **kwargs)

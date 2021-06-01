@@ -39,6 +39,9 @@ class MemoryEnvironment(AbstractEnvironment[Union[KT, UUID], DT, VT, RT, LT], Ge
         self._labelprovider = labelprovider
         self._named_providers: Dict[str, DataPointProvider[KT, DT, VT, RT]] = dict()
         
+
+
+
     @classmethod
     def from_data(cls, 
             target_labels: Iterable[LT], 
@@ -69,6 +72,11 @@ class MemoryEnvironment(AbstractEnvironment[Union[KT, UUID], DT, VT, RT, LT], Ge
     @property
     def dataset(self) -> DataPointProvider[KT, DT, VT, RT]:
         return self._public_dataset
+
+    @property
+    def all_datapoints(self) -> DataPointProvider[KT, DT, VT, RT]:
+        return self._dataset
+    
     @property
     def labels(self) -> MemoryLabelProvider[Union[KT, UUID], LT]:
         return self._labelprovider

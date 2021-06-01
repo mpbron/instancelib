@@ -7,3 +7,5 @@ sphinx-rtd-theme
 sphinx-autodoc-typehints
 xlrd
 openpyxl
+scikit-learn
+gensim

@@ -1,21 +1,20 @@
 #%%
-from instancelib.pertubations.base import TokenPertubator
 import itertools
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Iterable, Sequence, TypeVar, Union
-from uuid import UUID
+from typing import Any, Callable, Iterable, Sequence
 
 import numpy as np
+from sklearn.feature_extraction.text import (CountVectorizer,  # type: ignore
+                                             TfidfVectorizer)
 
 from instancelib import TextBucketProvider
+from instancelib.feature_extraction.textinstance import TextInstanceVectorizer
+from instancelib.feature_extraction.textsklearn import SklearnVectorizer
+from instancelib.functions.vectorize import vectorize
 from instancelib.ingest.spreadsheet import read_csv_dataset, read_excel_dataset
-from instancelib.instances import Instance
-from instancelib.instances.text import TextInstance, TextInstanceProvider
-from instancelib.typehints.typevars import KT, VT
+from instancelib.instances.text import TextInstance
+from instancelib.pertubations.base import TokenPertubator
+from instancelib.typehints.typevars import VT
 from instancelib.utils.func import list_unzip
-
-
-
 
 
 #%%
@@ -116,6 +115,14 @@ pertubated_instances.add_child(instance, new_instance) # type: ignore
 pertubated_instances.get_parent(new_instance) # type: ignore
 pertubated_instances.get_children(instance) # type: ignore
 
+# %%
+vectorizer = TextInstanceVectorizer(
+    SklearnVectorizer(
+        TfidfVectorizer(max_features=1000)))
+
+vectorize(vectorizer, tweakers_env)
+
+#%%
 
 
 #%%

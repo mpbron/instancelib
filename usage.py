@@ -1,20 +1,15 @@
 #%%
-import itertools
 from typing import Any, Callable, Iterable, Sequence
 
 import numpy as np
-from sklearn.feature_extraction.text import (CountVectorizer,  # type: ignore
-                                             TfidfVectorizer)
+from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 
-from instancelib import TextBucketProvider
 from instancelib.feature_extraction.textinstance import TextInstanceVectorizer
 from instancelib.feature_extraction.textsklearn import SklearnVectorizer
 from instancelib.functions.vectorize import vectorize
 from instancelib.ingest.spreadsheet import read_csv_dataset, read_excel_dataset
 from instancelib.instances.text import TextInstance
 from instancelib.pertubations.base import TokenPertubator
-from instancelib.typehints.typevars import VT
-from instancelib.utils.func import list_unzip
 
 
 #%%
@@ -37,7 +32,7 @@ labelprovider = tweakers_env.labels
 #%%
 n_docs = len(instanceprovider)
 n_train = round(0.70 * n_docs)
-train, test = TextBucketProvider.train_test_split(instanceprovider, train_size=n_train)
+train, test = tweakers_env.train_test_split(instanceprovider, train_size=n_train)
 
 #%%
 # Test if we indeed got the right length
@@ -70,7 +65,7 @@ class TokenizerWrapper:
     def __init__(self, tokenizer: Callable[[str], Sequence[str]]):
         self.tokenizer = tokenizer
 
-    def __call__(self, instance: TextInstance[Any, VT]) -> TextInstance[Any, VT]:
+    def __call__(self, instance: TextInstance[Any, Any]) -> TextInstance[Any, Any]:
         data = instance.data
         tokenized = self.tokenizer(data)
         instance.tokenized = tokenized
@@ -97,23 +92,33 @@ pertubated_instances = tweakers_env.create_empty_provider()
 #%%
 wrapped_tokenizer = TokenizerWrapper(tokenizer)
 pertubator = TokenPertubator[int, np.ndarray](
-    pertubated_instances, tokenizer, detokenizer, dutch_article_pertubator) # type: ignore
+    pertubated_instances, tokenizer, detokenizer, dutch_article_pertubator)
 #%%
-instanceprovider.map_mutate(wrapped_tokenizer) # type: ignore
+instanceprovider.map_mutate(wrapped_tokenizer) 
+
 #%%
 #Pertubate an instance
 assert isinstance(instance, TextInstance)
 instance.tokenized
 
-new_instance = pertubator(instance) # type: ignore
+new_instance = pertubator(instance)
 #%%
-pertubated_instances.add(new_instance) # type: ignore
+pertubated_instances.add(new_instance)
 #%%
-pertubated_instances.add_child(instance, new_instance) # type: ignore
+pertubated_instances.add_child(instance, new_instance)
+#%%
+pertubated_instances.get_parent(new_instance)
+pertubated_instances.get_children(instance)
 
 #%%
-pertubated_instances.get_parent(new_instance) # type: ignore
-pertubated_instances.get_children(instance) # type: ignore
+# Perform the pertubation on all test data
+pertubated_test_data = frozenset(test.map(pertubator))
+
+#%%
+# Add the data to the test set
+# add_range is type safe with * expansion from immutable data structures like frozenset, tuple, sequence
+# But works with other data structures as well
+test.add_range(*pertubated_test_data)
 
 # %%
 vectorizer = TextInstanceVectorizer(
@@ -121,17 +126,3 @@ vectorizer = TextInstanceVectorizer(
         TfidfVectorizer(max_features=1000)))
 
 vectorize(vectorizer, tweakers_env)
-
-#%%
-
-
-#%%
-# Fitting a machine learning model (Assuming vectors are available)
-batch_size = 50
-key_vector_pairs = itertools.chain.from_iterable(train.vector_chunker(batch_size))
-keys, vectors = list_unzip(key_vector_pairs)
-labelings = list(map(labelprovider.get_labels, keys))
-# classifier.fit_vectors(vectors, labelings) # Cf. allib
-
-
-# %%

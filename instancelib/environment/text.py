@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Generic, Optional, Sequence, Iterable, Union
 
-from ..instances.text import TextInstanceProvider, TextBucketProvider
+from ..instances.text import TextInstanceProvider, TextInstance
 from ..labels.memory import MemoryLabelProvider
 from .memory import MemoryEnvironment
 
@@ -26,7 +26,7 @@ from uuid import UUID
 
 from ..typehints import KT, VT, LT
 
-class TextEnvironment(MemoryEnvironment[KT, str, VT, str, LT], Generic[KT, VT, LT]):
+class TextEnvironment(MemoryEnvironment[TextInstance[KT, VT], Union[KT, UUID], str, VT, str, LT], Generic[KT, VT, LT]):
     @classmethod
     def from_data(cls, 
                   target_labels: Iterable[LT], 
@@ -37,9 +37,6 @@ class TextEnvironment(MemoryEnvironment[KT, str, VT, str, LT], Generic[KT, VT, L
         dataset = TextInstanceProvider[KT, VT].from_data_and_indices(indices, data, vectors)
         truth = MemoryLabelProvider[Union[KT, UUID], LT].from_data(target_labels, indices, ground_truth)
         return cls(dataset, truth)
-    
-    def create_empty_provider(self):
-        return TextBucketProvider(self._dataset, [])
     
 
 

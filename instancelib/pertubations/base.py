@@ -1,35 +1,36 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Iterable, Sequence, TypeVar, Union
+from typing import Callable, Generic, Iterable, Sequence, TypeVar, Union
 from uuid import UUID
 
-from ..instances.base import Instance
-from ..instances.text import TextInstance, TextInstanceProvider
-from ..typehints.typevars import KT, VT
+from ..instances.base import InstanceProvider
+from ..instances.text import TextInstance
 
-InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
+from ..typehints import KT, VT
 
 
-class AbstractPertubator(ABC, Generic[InstanceType]):
+IT = TypeVar("IT")
+
+class AbstractPertubator(ABC, Generic[IT]):
 
     @abstractmethod
-    def register_child(self, parent: InstanceType, child: InstanceType) -> None:
+    def register_child(self, parent: IT, child: IT) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def __call__(self, instance: InstanceType) -> InstanceType:
+    def __call__(self, instance: IT) -> IT:
         raise NotImplementedError
 
 
 class TextPertubator(AbstractPertubator[TextInstance[KT, VT]], Generic[KT, VT]):
     def __init__(self,
-                 provider: TextInstanceProvider[KT, VT],
+                 provider: InstanceProvider[TextInstance[KT, VT], Union[KT, UUID], str, VT, str],
                  pertubator:  Callable[[str], str]):
         self.provider = provider
         self.pertubator = pertubator
 
     def register_child(self,
-                       parent: Instance[Union[KT, UUID], str, VT, str],
-                       child: Instance[Union[KT, UUID], str, VT, str]):
+                       parent: TextInstance[KT, VT],
+                       child:  TextInstance[KT, VT]):
         self.provider.add_child(parent, child)
 
     def __call__(self, instance: TextInstance[KT, VT]) -> TextInstance[KT, VT]:
@@ -43,7 +44,7 @@ class TextPertubator(AbstractPertubator[TextInstance[KT, VT]], Generic[KT, VT]):
 
 class TokenPertubator(TextPertubator[KT, VT], Generic[KT, VT]):
     def __init__(self,
-                 provider: TextInstanceProvider[KT, VT],
+                 provider: InstanceProvider[TextInstance[KT, VT], Union[KT, UUID], str, VT, str],
                  tokenizer: Callable[[str], Sequence[str]],
                  detokenizer: Callable[[Iterable[str]], str],
                  pertubator: Callable[[str], str]):

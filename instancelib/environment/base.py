@@ -16,15 +16,17 @@
 
 from __future__ import annotations
 
-from typing import Generic, Sequence
+from typing import Generic, Iterable, Sequence, Tuple, TypeVar, Any
 from abc import ABC, abstractmethod
-from ..instances import InstanceProvider
+from ..instances import InstanceProvider, Instance
 from ..labels import LabelProvider
 
 from ..typehints import KT, DT, VT, RT, LT
-class AbstractEnvironment(ABC, Generic[KT, DT, VT, RT, LT]):
+
+InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]", covariant=True)
+class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
     @abstractmethod
-    def create_empty_provider(self) -> InstanceProvider[KT, DT, VT, RT]:
+    def create_empty_provider(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """Use this method to create an empty `InstanceProvider`
 
         Returns
@@ -36,7 +38,7 @@ class AbstractEnvironment(ABC, Generic[KT, DT, VT, RT, LT]):
 
     @property
     @abstractmethod
-    def dataset(self) -> InstanceProvider[KT, DT, VT, RT]:
+    def dataset(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """This property contains the `InstanceProvider` that contains
         the original dataset. This provider should include all instances
         that are contained in the other providers.
@@ -50,7 +52,7 @@ class AbstractEnvironment(ABC, Generic[KT, DT, VT, RT, LT]):
 
     @property
     @abstractmethod
-    def all_datapoints(self) -> InstanceProvider[KT, DT, VT, RT]:
+    def all_datapoints(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """This provider should include all instances in all providers.
         If there are any synthethic datapoints constructed, they should be also 
          in here.
@@ -90,3 +92,15 @@ class AbstractEnvironment(ABC, Generic[KT, DT, VT, RT, LT]):
             of the sequence `keys`
         """        
         self.all_datapoints.bulk_add_vectors(keys, vectors)
+
+    @abstractmethod
+    def create_bucket(self, keys: Iterable[KT]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def train_test_split(self,
+                         source: InstanceProvider[InstanceType, KT, DT, VT, RT], 
+                         train_size: int
+                         ) -> Tuple[InstanceProvider[InstanceType, KT, DT, VT, RT], 
+                                    InstanceProvider[InstanceType, KT, DT, VT, RT]]:
+        raise NotImplementedError

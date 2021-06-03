@@ -15,71 +15,96 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
+from abc import ABC
+import random
 
-from typing import Generic, Sequence, Iterable, Dict, Union
+from typing import Generic, Iterable, Dict, Tuple, TypeVar, Any
 import numpy as np # type: ignore
 
-from ..instances.memory import DataPointProvider, DataBucketProvider
+from ..instances.base import Instance, InstanceProvider
+from ..instances.memory import MemoryBucketProvider
 from ..labels.memory import MemoryLabelProvider
 
 from .base import AbstractEnvironment
 
-from uuid import UUID
-
 from ..typehints import KT, DT, VT, RT, LT
 
-class MemoryEnvironment(AbstractEnvironment[Union[KT, UUID], DT, VT, RT, LT], Generic[KT, DT, VT, RT, LT]):
-    def __init__(
-            self,
-            dataset: DataPointProvider[KT, DT, VT, RT],
-            labelprovider: MemoryLabelProvider[Union[KT, UUID], LT]
-        ):
-        self._dataset = dataset
-        self._public_dataset = DataBucketProvider[KT, DT, VT, RT](dataset, dataset.key_list)
-        self._labelprovider = labelprovider
-        self._named_providers: Dict[str, DataPointProvider[KT, DT, VT, RT]] = dict()
-        
 
+InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
+class AbstractMemoryEnvironment(
+        AbstractEnvironment[InstanceType, KT, DT, VT, RT, LT],
+        ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
 
-    @classmethod
-    def from_data(cls, 
-            target_labels: Iterable[LT], 
-            indices: Sequence[KT], 
-            data: Sequence[DT], 
-            ground_truth: Sequence[Iterable[LT]],
-            vectors: Sequence[VT]) -> MemoryEnvironment[KT, DT, VT, RT, LT]:
-        dataset = DataPointProvider[KT, DT, VT, RT].from_data_and_indices(indices, data, vectors)
-        truth = MemoryLabelProvider[Union[KT, UUID], LT].from_data(target_labels, indices, ground_truth)
-        return cls(dataset, truth)
-
-    def set_named_provider(self, name: str, value: DataPointProvider[KT, DT, VT, RT]):
-        self._named_providers[name] = value
-
-
-    def create_named_provider(self, name: str) -> DataPointProvider[KT, DT, VT, RT]:
-        self._named_providers[name] = self.create_empty_provider()
-        return self._named_providers[name]
-
-    def get_named_provider(self, name: str) -> DataPointProvider[KT, DT, VT, RT]:
-        if name in self._named_providers:
-            self.create_named_provider(name)
-        return self._named_providers[name]
-
-    def create_empty_provider(self) -> DataPointProvider[KT, DT, VT, RT]:
-        return DataBucketProvider(self._dataset, [])
+    _public_dataset: InstanceProvider[InstanceType, KT, DT, VT, RT]
+    _dataset: InstanceProvider[InstanceType, KT, DT, VT, RT]
+    _labelprovider: MemoryLabelProvider[KT, LT]
+    _named_providers: Dict[str, InstanceProvider[InstanceType, KT, DT, VT, RT]] = dict()
 
     @property
-    def dataset(self) -> DataPointProvider[KT, DT, VT, RT]:
+    def dataset(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         return self._public_dataset
 
     @property
-    def all_datapoints(self) -> DataPointProvider[KT, DT, VT, RT]:
+    def all_datapoints(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         return self._dataset
     
     @property
-    def labels(self) -> MemoryLabelProvider[Union[KT, UUID], LT]:
+    def labels(self) -> MemoryLabelProvider[KT, LT]:
         return self._labelprovider
+
+    def create_bucket(self, keys: Iterable[KT]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        return MemoryBucketProvider[InstanceType, KT, DT, VT, RT](self._dataset, keys)
+
+    def create_empty_provider(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        return self.create_bucket([])
+
+    def set_named_provider(self, name: str, value: InstanceProvider[InstanceType, KT, DT, VT, RT]):
+        self._named_providers[name] = value
+
+    def create_named_provider(self, name: str) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        self._named_providers[name] = self.create_empty_provider()
+        return self._named_providers[name]
+
+    def train_test_split(self,
+                         source: InstanceProvider[InstanceType, KT, DT, VT, RT], 
+                         train_size: int) -> Tuple[
+                             InstanceProvider[InstanceType, KT, DT, VT, RT], 
+                             InstanceProvider[InstanceType, KT, DT, VT, RT]]:
+        source_keys = list(frozenset(source.key_list))
+        
+        # Randomly sample train keys
+        train_keys = random.sample(source_keys, train_size)
+        # The remainder should be used for testing        
+        test_keys = frozenset(source_keys).difference(train_keys)
+        
+        train_provider = self.create_bucket(train_keys)
+        test_provider = self.create_bucket(test_keys)
+        return train_provider, test_provider
+    
+    
+
+
+class MemoryEnvironment(
+    AbstractMemoryEnvironment[InstanceType, KT, DT, VT, RT, LT],
+        Generic[InstanceType, KT, DT, VT, RT, LT]):
+    
+    def __init__(
+            self,
+            dataset: InstanceProvider[InstanceType, KT, DT, VT, RT],
+            labelprovider: MemoryLabelProvider[KT, LT]
+        ):
+        self._dataset = dataset
+        self._public_dataset = MemoryBucketProvider[InstanceType, KT, DT, VT, RT](dataset, dataset.key_list)
+        self._labelprovider = labelprovider
+        self._named_providers = dict()
+
+    
+
+
+
+    
+
     
     
     

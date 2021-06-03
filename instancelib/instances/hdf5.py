@@ -18,7 +18,6 @@ from __future__ import annotations
 from os import PathLike
 
 import functools
-import random
 from typing import Iterable, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np  # type: ignore
@@ -75,7 +74,7 @@ class HDF5Instance(Instance[int, str, np.ndarray, str]):
         return cls(row[0], row[1], None, vectorstorage)  # type: ignore
 
 
-class HDF5Provider(InstanceProvider[int, str, np.ndarray, str]):
+class HDF5Provider(InstanceProvider[HDF5Instance, int, str, np.ndarray, str]):
     def __init__(self, data_storage: "PathLike[str]", vector_storage_location: "PathLike[str]") -> None:
         self.data_storage = data_storage
         self.vector_storage_location = vector_storage_location
@@ -159,72 +158,3 @@ class HDF5Provider(InstanceProvider[int, str, np.ndarray, str]):
         self.vectors.reload()
         results = self.vectors.vectors_chunker(batch_size)
         yield from results
-
-    @classmethod
-    def train_test_split(cls, 
-                         source: InstanceProvider[int, str, np.ndarray, str], 
-                         train_size: int) -> Tuple[InstanceProvider[int, str, np.ndarray, str], InstanceProvider[int, str, np.ndarray, str]]:
-        raise NotImplementedError(f"Train test split creation for this type of InstanceProvider ({type(source)}) is not yet supported")
-
-
-class HDF5BucketProvider(HDF5Provider):
-    def __init__(self, dataset: HDF5Provider, identifiers: Iterable[int]):
-        self._elements = set(identifiers)
-        self.dataset = dataset
-        self.vectors = dataset.vectors
-
-    def __iter__(self):
-        yield from self._elements
-
-    def __getitem__(self, key: int):
-        if key in self._elements:
-            return self.dataset[key]
-        raise KeyError(
-            f"This datapoint with key {key} does not exist in this provider")
-
-    def __setitem__(self, key: int, _: Instance[int, str, np.ndarray, str]) -> None:
-        self._elements.add(key)
-
-    def __delitem__(self, key: int) -> None:
-        self._elements.discard(key)
-
-    def __len__(self) -> int:
-        return len(self._elements)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self._elements
-
-    @property
-    def empty(self) -> bool:
-        return not self._elements
-
-    @classmethod
-    def copy(cls, provider: HDF5BucketProvider) -> HDF5BucketProvider:
-        return cls(provider.dataset, provider.key_list)
-
-    def vector_chunker(self, batch_size: int):
-        results = self.dataset.vectors.get_vectors_zipped(self.key_list, batch_size)
-        yield from results
-
-    def data_chunker(self, batch_size: int) -> Iterator[Sequence[HDF5Instance]]:
-        results = self.dataset.data_chunker(batch_size)
-        in_set = functools.partial(
-            filter, lambda ins: ins.identifier in self._elements) # type: ignore
-        filtered = map(list, map(in_set, results)) # type: ignore
-        return filtered # type: ignore
-
-    @classmethod
-    def train_test_split(cls, 
-                         source: InstanceProvider[int, str, np.ndarray, str], 
-                         train_size: int) -> Tuple[InstanceProvider[int, str, np.ndarray, str], InstanceProvider[int, str, np.ndarray, str]]:
-        source_keys = list(frozenset(source.key_list))
-        
-        # Randomly sample train keys
-        train_keys = random.sample(source_keys, train_size)
-        # The remainder should be used for testing        
-        test_keys = frozenset(source_keys).difference(train_keys)
-        if isinstance(source, HDF5Provider):
-            train_provider = cls(source, train_keys)
-            test_provider = cls(source, test_keys)
-            return train_provider, test_provider
-        raise NotImplementedError(f"Train test split for this type of InstanceProvider ({type(source)}) is not yet supported")

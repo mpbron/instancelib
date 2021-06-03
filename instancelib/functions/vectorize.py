@@ -15,7 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 import itertools
-from typing import TypeVar, List, Any
+from typing import List, Any
 
 import numpy as np  # type: ignore
 
@@ -25,14 +25,11 @@ from ..instances import Instance
 from ..utils.to_key import to_key
 from ..utils.numpy import matrix_tuple_to_vectors
 
-KT = TypeVar("KT")
-DT = TypeVar("DT")
-LT = TypeVar("LT")
-RT = TypeVar("RT")
-VT = TypeVar("VT")
+from ..typehints.typevars import KT
 
-def vectorize(vectorizer: BaseVectorizer[Instance[KT, DT, np.ndarray, Any]], 
-              environment: AbstractEnvironment[KT, DT, np.ndarray, Any,  Any], fit: bool = True, 
+def vectorize(vectorizer: BaseVectorizer[Instance[Any, Any, np.ndarray, Any]], 
+              environment: AbstractEnvironment[Instance[Any, Any, np.ndarray, Any], Any, Any, np.ndarray, Any, Any],
+              fit: bool = True, 
               chunk_size: int = 200) -> None:
     def fit_vector() -> None:
         instances = list(

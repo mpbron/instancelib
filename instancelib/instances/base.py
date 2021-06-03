@@ -17,8 +17,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import (Any, Callable, Generic, Iterator, List, MutableMapping,
-                    Optional, Sequence, Tuple, Union)
+from typing import (Any, Callable, Generic, Iterable, Iterator, List, MutableMapping,
+                    Optional, Sequence, Tuple, TypeVar, Union)
 
 import numpy as np  # type: ignore
 
@@ -137,8 +137,11 @@ class ParentInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT]):
         """
         raise NotImplementedError
 
+InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
+_V = TypeVar("_V")
 
-class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generic[KT, DT, VT, RT]):
+class InstanceProvider(MutableMapping[KT, InstanceType], 
+                       ABC, Generic[InstanceType, KT, DT, VT, RT]):
     """[summary]
 
     Parameters
@@ -162,14 +165,14 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generi
     """
 
     def add_child(self,
-                  parent: Union[KT, Instance[KT, DT, VT, RT]],
-                  child: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+                  parent: Union[KT, InstanceType],
+                  child: Union[KT, InstanceType]) -> None:
         raise NotImplementedError
 
-    def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[Instance[KT, DT, VT, RT]]:
+    def get_children(self, parent: Union[KT, InstanceType]) -> Sequence[InstanceType]:
         raise NotImplementedError
 
-    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> Instance[KT, DT, VT, RT]:
+    def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
         raise NotImplementedError
 
     @abstractmethod
@@ -215,7 +218,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generi
         """
         raise NotImplementedError
 
-    def add(self, instance: Instance[KT, DT, VT, RT]) -> None:
+    def add(self, instance: InstanceType) -> None:
         """Add an instance to this provider. If the 
         provider already contains `instance`, nothing happens.
 
@@ -226,7 +229,19 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generi
         """
         self.__setitem__(instance.identifier, instance)
 
-    def discard(self, instance: Instance[KT, DT, VT, RT]) -> None:
+    def add_range(self, *instances: InstanceType) -> None:
+        """Add an instance to this provider. If the 
+        provider already contains `instance`, nothing happens.
+
+        Parameters
+        ----------
+        instance : Instance[KT, DT, VT, RT]
+            The instance that should be added to the provider
+        """
+        for instance in instances:
+            self.add(instance)
+
+    def discard(self, instance: InstanceType) -> None:
         """Remove an instance from this provider. If the 
         provider does not contain `instance`, nothing happens.
 
@@ -264,7 +279,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generi
         raise NotImplementedError
 
     @abstractmethod
-    def get_all(self) -> Iterator[Instance[KT, DT, VT, RT]]:
+    def get_all(self) -> Iterator[InstanceType]:
         """Get an iterator that iterates over all instances
 
         Yields
@@ -336,7 +351,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generi
         ret_keys, ret_vectors = filter_snd_none_zipped(vector_pairs)
         return ret_keys, ret_vectors  # type: ignore
 
-    def data_chunker(self, batch_size: int) -> Iterator[Sequence[Instance[KT, DT, VT, RT]]]:
+    def data_chunker(self, batch_size: int) -> Iterator[Sequence[InstanceType]]:
         """Iterate over all instances (with or without vectors) in 
         this provider
 
@@ -353,6 +368,13 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generi
         """
         chunks = divide_iterable_in_lists(self.values(), batch_size)
         yield from chunks
+
+    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        included_ids = frozenset(self.key_list).intersection(keys)
+        id_vecs = ((elem.identifier, elem.vector)
+                   for elem in self.values() if elem.vector is not None and elem.identifier in included_ids)
+        chunks = divide_iterable_in_lists(id_vecs, batch_size)
+        return chunks
 
     def vector_chunker(self, batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
         """Iterate over all pairs of keys and vectors in 
@@ -378,7 +400,7 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generi
         chunks = divide_iterable_in_lists(id_vecs, batch_size)
         return chunks
 
-    def bulk_get_all(self) -> List[Instance[KT, DT, VT, RT]]:
+    def bulk_get_all(self) -> List[InstanceType]:
         """Returns a list of all instances in this provider.
 
         Returns
@@ -394,22 +416,102 @@ class InstanceProvider(MutableMapping[KT, Instance[KT, DT, VT, RT]], ABC, Generi
         """
         return list(self.get_all())
 
-    def map_mutate(self, func: Callable[[Instance[KT, DT, VT, RT]], Instance[KT, DT, VT, RT]]) -> None:
+    def map_mutate(self, func: Callable[[InstanceType], InstanceType]) -> None:
         keys = self.key_list
         for key in keys:
             instance = self[key]
             upd_instance = func(instance)
             self[key] = upd_instance
 
+    def map(self, func: Callable[[InstanceType], _V]) -> Iterator[_V]:
+        keys = self.key_list
+        for key in keys:
+            instance = self[key]
+            result = func(instance)
+            yield result
+
+
     @abstractmethod
-    def create(self, *args: Any, **kwargs: Any) -> Instance[KT, DT, VT, RT]:
+    def create(self, *args: Any, **kwargs: Any) -> InstanceType:
         raise NotImplementedError
 
-    @classmethod
+class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC, 
+                                   Generic[InstanceType, KT, DT, VT, RT]):
+    dataset: InstanceProvider[InstanceType, KT, DT, VT, RT]
+    
     @abstractmethod
-    def train_test_split(cls,
-                         source: InstanceProvider[KT, DT, VT, RT],
-                         train_size: int) -> Tuple[
-                             InstanceProvider[KT, DT, VT, RT], 
-                             InstanceProvider[KT, DT, VT, RT]]:
+    def _add_to_bucket(self, key: KT) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def _remove_from_bucket(self, key: KT) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _in_bucket(self, key: KT) -> bool:
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _clear_bucket(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _len_bucket(self) -> int:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def _bucket(self) -> Iterable[KT]:
+        raise NotImplementedError
+
+    def __iter__(self) -> Iterator[KT]:
+        yield from self._bucket
+
+    def __getitem__(self, key: KT):
+        if self._in_bucket(key):
+            return self.dataset[key]
+        raise KeyError(
+            f"This datapoint with key {key} does not exist in this provider")
+
+    def __setitem__(self, key: KT, value: InstanceType) -> None:
+        self._add_to_bucket(key)
+        self.dataset[key] = value  # type: ignore
+
+    def __delitem__(self, key: KT) -> None:
+        self._remove_from_bucket(key)
+
+    def __len__(self) -> int:
+        return self._len_bucket()
+
+    def __contains__(self, key: object) -> bool:
+        return self._in_bucket(key)
+
+    def get_all(self) -> Iterator[InstanceType]:
+        yield from list(self.values())
+
+    def vector_chunker(self, batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        results = self.dataset.vector_chunker_selector(self.key_list, batch_size)
+        return results
+
+    def clear(self) -> None:
+        self._clear_bucket()
+
+    @property
+    def empty(self) -> bool:
+        return not self._bucket
+
+    def add_child(self, 
+                  parent: Union[KT, InstanceType], 
+                  child: Union[KT, InstanceType]) -> None:
+        self.dataset.add_child(parent, child)
+
+    def get_children(self, parent: Union[KT, InstanceType]) -> Sequence[InstanceType]:
+        return self.dataset.get_children(parent)
+
+    def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
+        return self.dataset.get_parent(child)
+
+    def create(self, *args: Any, **kwargs: Any) -> InstanceType:
+        new_instance = self.dataset.create(*args, **kwargs)
+        self.add(new_instance)
+        return new_instance

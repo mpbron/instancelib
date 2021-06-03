@@ -1,1 +1,1 @@
-from .typevars import KT, DT, RT, VT, DT, LVT, CT, LT, PVT # type: ignore
+from .typevars import KT, DT, RT, VT, LVT, CT, LT, PVT # type: ignore

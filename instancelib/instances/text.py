@@ -17,11 +17,11 @@
 from __future__ import annotations
 
 import itertools
-from typing import Any, Generic, Optional, Sequence, Union
-from uuid import UUID
+from typing import Any, Generic, Iterable, Optional, Sequence, Union
+from uuid import UUID, uuid4
 
 from ..typehints import KT, VT
-from .memory import DataBucketProvider, DataPoint, DataPointProvider
+from .memory import AbstractMemoryProvider, DataPoint
 
 
 class TextInstance(DataPoint[KT, str, VT, str], Generic[KT, VT]):
@@ -44,7 +44,14 @@ class TextInstance(DataPoint[KT, str, VT, str], Generic[KT, VT]):
     def tokenized(self, value: Sequence[str]) -> None:
         self._tokenized = value
 
-class TextInstanceProvider(DataPointProvider[KT, str, VT, str], Generic[KT, VT]):
+class TextInstanceProvider(AbstractMemoryProvider[TextInstance[KT, VT], Union[KT, UUID], str, VT, str], Generic[KT, VT]):
+
+    def __init__(self, 
+                 datapoints: Iterable[TextInstance[KT, VT]],
+                    ) -> None:
+        self.dictionary = {data.identifier: data for data in datapoints}
+        self.children = dict()
+        self.parents = dict()
 
     @classmethod
     def from_data_and_indices(cls, # type: ignore
@@ -65,10 +72,8 @@ class TextInstanceProvider(DataPointProvider[KT, str, VT, str], Generic[KT, VT])
         return cls(datapoints)
 
     def create(self, *args: Any, **kwargs: Any):  # type: ignore
-        new_instance = TextInstance[KT, VT](self._new_key(), *args, **kwargs)
+        new_key = uuid4()
+        new_instance = TextInstance[KT, VT](new_key, *args, **kwargs)
         self.add(new_instance)
         return new_instance
-
-class TextBucketProvider(DataBucketProvider[KT, str, VT, str], Generic[KT, VT]):
-    pass
 

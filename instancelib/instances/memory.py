@@ -15,8 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
-
-import random
+from abc import ABC
 
 from uuid import UUID, uuid4
 
@@ -24,14 +23,14 @@ from ..utils.func import filter_snd_none
 from ..utils.to_key import to_key
 
 import itertools
-from typing import (Any, Dict, Generic, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, Union)
+from typing import (Any, Dict, Generic, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, TypeVar, Union)
 
-from .base import Instance, InstanceProvider
+from .base import AbstractBucketProvider, Instance, InstanceProvider
 
 
 from ..typehints import KT, DT, VT, RT
 
-
+InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
 class DataPoint(Instance[Union[KT, UUID], DT, VT, RT], Generic[KT, DT, VT, RT]):
 
     def __init__(self, identifier: Union[KT, UUID], data: DT, vector: Optional[VT], representation: RT) -> None:
@@ -65,17 +64,101 @@ class DataPoint(Instance[Union[KT, UUID], DT, VT, RT], Generic[KT, DT, VT, RT]):
         self._vector = value
 
     @classmethod
-    def from_instance(cls, instance: Instance[Union[KT, UUID], DT, VT, RT]):
+    def from_instance(cls, instance: Instance[KT, DT, VT, RT]):
         return cls(instance.identifier, instance.data, instance.vector, instance.representation)
 
 
-class DataPointProvider(InstanceProvider[Union[KT, UUID], DT, VT, RT], Generic[KT, DT, VT, RT]):
 
-    def __init__(self, datapoints: Iterable[DataPoint[KT, DT, VT, RT]]) -> None:
+
+class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], 
+                             ABC, Generic[InstanceType, KT, DT, VT, RT]):
+    
+    dictionary: Dict[KT, InstanceType]
+    children: Dict[KT, Set[KT]]
+    parents: Dict[KT, KT]
+
+    def __iter__(self) -> Iterator[KT]:
+        yield from self.dictionary.keys()
+
+    def __getitem__(self, key: KT) -> InstanceType:
+        return self.dictionary[key]
+
+    def __setitem__(self, key: KT, value: InstanceType) -> None:
+        self.dictionary[key] = value  # type: ignore
+
+    def __delitem__(self, key: KT) -> None:
+        del self.dictionary[key]
+
+    def __len__(self) -> int:
+        return len(self.dictionary)
+
+    def __contains__(self, key: object) -> bool:
+        return key in self.dictionary
+
+    @property
+    def empty(self) -> bool:
+        return not self.dictionary
+
+    def get_all(self) -> Iterator[InstanceType]:
+        yield from list(self.values())
+
+    def clear(self) -> None:
+        self.dictionary = {}
+       
+    def bulk_get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:
+        vectors = [self[key].vector  for key in keys]
+        ret_keys, ret_vectors = filter_snd_none(keys, vectors) # type: ignore
+        return ret_keys, ret_vectors
+
+    def bulk_get_all(self) -> List[InstanceType]:
+        return list(self.get_all())
+   
+    def add_child(self, 
+                  parent: Union[KT, InstanceType], 
+                  child:  Union[KT, InstanceType]) -> None:
+        parent_key: KT = to_key(parent)
+        child_key: KT = to_key(child)
+        assert parent_key != child_key
+        if parent_key in self and child_key in self:
+            self.children.setdefault(parent_key, set()).add(child_key)
+            self.parents[child_key] = parent_key
+        else:
+            raise KeyError("Either the parent or child does not exist in this Provider")
+
+    def get_children(self, 
+                     parent: Union[KT, InstanceType]) -> Sequence[InstanceType]:
+        parent_key: KT = to_key(parent)
+        if parent_key in self.children:
+            children = [self.dictionary[child_key] for child_key in self.children[parent_key]]
+            return children # type: ignore
+        return []
+
+    def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
+        child_key: KT= to_key(child)
+        if child_key in self.parents:
+            parent_key = self.parents[child_key]
+            parent = self.dictionary[parent_key]
+            return parent # type: ignore
+        raise KeyError(f"The instance with key {child_key} has no parent")
+
+
+
+ 
+class DataPointProvider(AbstractMemoryProvider[DataPoint[KT, DT, VT, RT], Union[KT, UUID], DT, VT, RT], 
+                        Generic[KT, DT, VT, RT]):
+
+    def __init__(self, 
+                 datapoints: Iterable[DataPoint[KT, DT, VT, RT]],
+                    ) -> None:
         self.dictionary = {data.identifier: data for data in datapoints}
-        self.children: Dict[Union[KT, UUID], Set[Union[KT, UUID]]] = dict()
-        self.parents: Dict[Union[KT, UUID], Union[KT, UUID]] = dict()
+        self.children = dict()
+        self.parents = dict()
 
+    def create(self, *args: Any, **kwargs: Any):
+        new_key = uuid4()
+        new_instance = DataPoint[KT, DT, VT, RT](new_key, *args, **kwargs)
+        self.add(new_instance)
+        return new_instance
 
     @classmethod
     def from_data_and_indices(cls,
@@ -96,166 +179,36 @@ class DataPointProvider(InstanceProvider[Union[KT, UUID], DT, VT, RT], Generic[K
             DataPoint[KT, DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
         return cls(datapoints)
 
-    def __iter__(self) -> Iterator[Union[KT, UUID]]:
-        yield from self.dictionary.keys()
 
-    def __getitem__(self, key: Union[KT, UUID]) -> Instance[Union[KT, UUID], DT, VT, RT]:
-        return self.dictionary[key]
-
-    def __setitem__(self, key: KT, value: Instance[Union[KT, UUID], DT, VT, RT]) -> None:
-        self.dictionary[key] = value  # type: ignore
-
-    def __delitem__(self, key: KT) -> None:
-        del self.dictionary[key]
-
-    def __len__(self) -> int:
-        return len(self.dictionary)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self.dictionary
-
-    @property
-    def empty(self) -> bool:
-        return not self.dictionary
-
-    def get_all(self) -> Iterator[Instance[Union[KT, UUID], DT, VT, RT]]:
-        yield from list(self.values())
-
-    def clear(self) -> None:
-        self.dictionary = {}
-       
-    def bulk_get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:
-        vectors = [self[key].vector  for key in keys]
-        ret_keys, ret_vectors = filter_snd_none(keys, vectors) # type: ignore
-        return ret_keys, ret_vectors
-
-    def bulk_get_all(self) -> List[Instance[Union[KT, UUID], DT, VT, RT]]:
-        return list(self.get_all())
-
-    @classmethod
-    def train_test_split(cls, 
-                         source: InstanceProvider[Union[KT, UUID], DT, VT, RT], 
-                         train_size: int) -> Tuple[
-                             InstanceProvider[Union[KT, UUID], DT, VT, RT], 
-                             InstanceProvider[Union[KT, UUID], DT, VT, RT]]:
-        
-        source_keys = list(frozenset(source.key_list))
-        
-        # Randomly sample train keys
-        train_keys = random.sample(source_keys, train_size)
-        # The remainder should be used for testing        
-        test_keys = frozenset(source_keys).difference(train_keys)
-        
-        train_provider = cls([DataPoint.from_instance(source[key]) for key in train_keys])
-        test_provider = cls([DataPoint.from_instance(source[key]) for key in test_keys])
-        return train_provider, test_provider
-
-    def add_child(self, 
-                  parent: Union[KT, UUID, Instance[Union[KT, UUID], DT, VT, RT]], 
-                  child:  Union[KT, UUID, Instance[Union[KT, UUID], DT, VT, RT]]) -> None:
-        parent_key: Union[KT, UUID] = to_key(parent)
-        child_key: Union[KT, UUID] = to_key(child)
-        assert parent_key != child_key
-        if parent_key in self and child_key in self:
-            self.children.setdefault(parent_key, set()).add(child_key)
-            self.parents[child_key] = parent_key
-        else:
-            raise KeyError("Either the parent or child does not exist in this Provider")
-
-    def get_children(self, 
-                     parent: Union[KT, UUID, Instance[Union[KT, UUID], DT, VT, RT]]) -> Sequence[Instance[Union[KT, UUID], DT, VT, RT]]:
-        parent_key: Union[KT, UUID] = to_key(parent)
-        if parent_key in self.children:
-            children = [self.dictionary[child_key] for child_key in self.children[parent_key]]
-            return children # type: ignore
-        return []
-
-    def get_parent(self, child: Union[KT, UUID, Instance[Union[KT, UUID], DT, VT, RT]]) -> Instance[Union[KT, UUID], DT, VT, RT]:
-        child_key: Union[KT, UUID]= to_key(child)
-        if child_key in self.parents:
-            parent_key = self.parents[child_key]
-            parent = self.dictionary[parent_key]
-            return parent # type: ignore
-        raise KeyError(f"The instance with key {child_key} has no parent")
-
-    def _new_key(self) -> UUID:
-        new_key = uuid4()
-        while new_key in self:
-            new_key = uuid4()
-        return new_key
-
-    def create(self, *args: Any, **kwargs: Any):
-        new_instance = DataPoint[KT, DT, VT, RT](self._new_key(), *args, **kwargs)
-        self.add(new_instance)
-        return new_instance
-
-    
-
-
-class DataBucketProvider(DataPointProvider[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
+class MemoryBucketProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT], Generic[InstanceType, KT, DT, VT, RT]):
     def __init__(self, 
-                 dataset: InstanceProvider[Union[KT, UUID], DT, VT, RT], 
-                 instances: Iterable[Union[KT, UUID]]):
-        self._elements = set(instances)
+                 dataset: InstanceProvider[InstanceType, KT, DT, VT, RT], 
+                 instances: Iterable[KT]):
+        self._elements: Set[KT] = set(instances)
         self.dataset = dataset
 
-    def __iter__(self) -> Iterator[Union[KT, UUID]]:
-        yield from self._elements
-
-    def __getitem__(self, key: Union[KT, UUID]):
-        if key in self._elements:
-            return self.dataset[key]
-        raise KeyError(
-            f"This datapoint with key {key} does not exist in this provider")
-
-    def __setitem__(self, key: Union[KT, UUID], value: Instance[Union[KT, UUID], DT, VT, RT]) -> None:
+    def _add_to_bucket(self, key: KT) -> None:
         self._elements.add(key)
-        self.dataset[key] = value  # type: ignore
 
-    def __delitem__(self, key: KT) -> None:
+    def _remove_from_bucket(self, key: KT) -> None:
         self._elements.discard(key)
 
-    def __len__(self) -> int:
+    def _clear_bucket(self) -> None:
+        self._elements = set()
+
+    def _in_bucket(self, key: KT) -> bool:
+        return key in self._elements
+    
+    def _len_bucket(self) -> int:
         return len(self._elements)
 
-    def __contains__(self, key: object) -> bool:
-        return key in self._elements
-
     @property
-    def empty(self) -> bool:
-        return not self._elements
-
-    @classmethod
-    def train_test_split(cls, 
-                         source: InstanceProvider[Union[KT, UUID], DT, VT, RT], 
-                         train_size: int) -> Tuple[
-                             InstanceProvider[Union[KT, UUID], DT, VT, RT], 
-                             InstanceProvider[Union[KT, UUID], DT, VT, RT]]:
-        source_keys = list(frozenset(source.key_list))
-        
-        # Randomly sample train keys
-        train_keys = random.sample(source_keys, train_size)
-        # The remainder should be used for testing        
-        test_keys = frozenset(source_keys).difference(train_keys)
-        
-        train_provider = cls(source, train_keys)
-        test_provider = cls(source, test_keys)
-        return train_provider, test_provider
+    def _bucket(self) -> Iterable[KT]:
+        iterable = iter(self._elements)
+        return iterable
     
-    def add_child(self, 
-                  parent: Union[KT, UUID, Instance[Union[KT, UUID], DT, VT, RT]], 
-                  child: Union[KT, UUID, Instance[Union[KT, UUID], DT, VT, RT]]) -> None:
-        self.dataset.add_child(parent, child)
 
-    def get_children(self, parent: Union[KT, UUID, Instance[Union[KT, UUID], DT, VT, RT]]) -> Sequence[Instance[Union[KT, UUID], DT, VT, RT]]:
-        return self.dataset.get_children(parent)
-
-    def get_parent(self, child: Union[KT, UUID, Instance[Union[KT, UUID], DT, VT, RT]]) -> Instance[Union[KT, UUID], DT, VT, RT]:
-        return self.dataset.get_parent(child)
-
-    def create(self, *args: Any, **kwargs: Any): # type: ignore
-        new_instance = self.dataset.create(*args, **kwargs)
-        self.add(new_instance)
-        return new_instance
+    
 
 
+   

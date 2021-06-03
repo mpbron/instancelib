@@ -19,11 +19,14 @@ import itertools
 from os import PathLike
 from typing import (Any, Callable, FrozenSet, Iterable, Iterator, List,
                     Optional, Sequence, Tuple, Union)
+from uuid import UUID
 
 import numpy as np
 import pandas as pd
 
+from ..environment.base import AbstractEnvironment
 from ..environment.text import TextEnvironment
+from ..instances.text import TextInstance
 from ..utils.func import list_unzip3
 
 
@@ -99,7 +102,9 @@ def build_environment(df: pd.DataFrame,
                       labels: Optional[Iterable[str]],
                       data_cols: Sequence[str],
                       label_cols: Sequence[str],
-                     ) -> TextEnvironment[int, np.ndarray, str]:
+                     ) -> AbstractEnvironment[
+                TextInstance[int, np.ndarray], 
+                Union[int, UUID], str, np.ndarray, str, str]:
     """Build an environment from a data frame
 
     Parameters
@@ -128,13 +133,18 @@ def build_environment(df: pd.DataFrame,
         [])
     return environment
 
+Environment = AbstractEnvironment[
+                TextInstance[int, np.ndarray], 
+                Union[int, UUID], str, np.ndarray,str, str]
 
 def read_excel_dataset(path: "Union[str, PathLike[str]]", 
                        data_cols: Sequence[str], 
                        label_cols: Sequence[str], 
                        labels: Optional[Iterable[str]] = None,
                        label_mapper: Callable[[Any], Optional[str]] = identity_mapper
-                       ) -> TextEnvironment[int, np.ndarray, str]:
+                       ) -> AbstractEnvironment[
+                TextInstance[int, np.ndarray], 
+                Union[int, UUID], str, np.ndarray, str, str]:
     """Convert a Excel Dataset
 
     Parameters
@@ -156,7 +166,9 @@ def read_csv_dataset(path: "Union[str, PathLike[str]]",
                        label_cols: Sequence[str], 
                        labels: Optional[Iterable[str]] = None,
                        label_mapper: Callable[[Any], Optional[str]] = identity_mapper
-                       ) -> TextEnvironment[int, np.ndarray, str]:
+                       ) -> AbstractEnvironment[
+                TextInstance[int, np.ndarray], 
+                Union[int, UUID], str, np.ndarray, str, str]:
     """Convert a Excel Dataset
 
     Parameters

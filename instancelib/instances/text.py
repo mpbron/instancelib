@@ -24,7 +24,7 @@ from ..typehints import KT, VT
 from .memory import AbstractMemoryProvider, DataPoint
 
 
-class TextInstance(DataPoint[KT, str, VT, str], Generic[KT, VT]):
+class TextInstance(DataPoint[Union[KT, UUID], str, VT, str], Generic[KT, VT]):
     def __init__(self, 
                  identifier: Union[KT, UUID], 
                  data: str, 

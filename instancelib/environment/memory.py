@@ -16,10 +16,8 @@
 
 from __future__ import annotations
 from abc import ABC
-import random
 
-from typing import Generic, Iterable, Dict, Tuple, TypeVar, Any
-import numpy as np # type: ignore
+from typing import Generic, Iterable, Dict, TypeVar, Any
 
 from ..instances.base import Instance, InstanceProvider
 from ..instances.memory import MemoryBucketProvider
@@ -64,27 +62,8 @@ class AbstractMemoryEnvironment(
 
     def create_named_provider(self, name: str) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         self._named_providers[name] = self.create_empty_provider()
-        return self._named_providers[name]
-
-    def train_test_split(self,
-                         source: InstanceProvider[InstanceType, KT, DT, VT, RT], 
-                         train_size: int) -> Tuple[
-                             InstanceProvider[InstanceType, KT, DT, VT, RT], 
-                             InstanceProvider[InstanceType, KT, DT, VT, RT]]:
-        source_keys = list(frozenset(source.key_list))
-        
-        # Randomly sample train keys
-        train_keys = random.sample(source_keys, train_size)
-        # The remainder should be used for testing        
-        test_keys = frozenset(source_keys).difference(train_keys)
-        
-        train_provider = self.create_bucket(train_keys)
-        test_provider = self.create_bucket(test_keys)
-        return train_provider, test_provider
+        return self._named_providers[name]   
     
-    
-
-
 class MemoryEnvironment(
     AbstractMemoryEnvironment[InstanceType, KT, DT, VT, RT, LT],
         Generic[InstanceType, KT, DT, VT, RT, LT]):
@@ -98,6 +77,9 @@ class MemoryEnvironment(
         self._public_dataset = MemoryBucketProvider[InstanceType, KT, DT, VT, RT](dataset, dataset.key_list)
         self._labelprovider = labelprovider
         self._named_providers = dict()
+
+    
+    
 
     
 

@@ -92,7 +92,7 @@ pertubated_instances = tweakers_env.create_empty_provider()
 #%%
 wrapped_tokenizer = TokenizerWrapper(tokenizer)
 pertubator = TokenPertubator[int, np.ndarray](
-    pertubated_instances, tokenizer, detokenizer, dutch_article_pertubator)
+    tweakers_env, tokenizer, detokenizer, dutch_article_pertubator)
 #%%
 instanceprovider.map_mutate(wrapped_tokenizer) 
 

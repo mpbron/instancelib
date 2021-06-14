@@ -31,9 +31,9 @@ from .base import AbstractBucketProvider, Instance, InstanceProvider
 from ..typehints import KT, DT, VT, RT
 
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
-class DataPoint(Instance[Union[KT, UUID], DT, VT, RT], Generic[KT, DT, VT, RT]):
+class DataPoint(Instance[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
 
-    def __init__(self, identifier: Union[KT, UUID], data: DT, vector: Optional[VT], representation: RT) -> None:
+    def __init__(self, identifier: KT, data: DT, vector: Optional[VT], representation: RT) -> None:
         self._identifier = identifier
         self._data = data
         self._vector = vector
@@ -48,11 +48,11 @@ class DataPoint(Instance[Union[KT, UUID], DT, VT, RT], Generic[KT, DT, VT, RT]):
         return self._representation
 
     @property
-    def identifier(self) -> Union[KT, UUID]:
+    def identifier(self) -> KT:
         return self._identifier
 
     @identifier.setter
-    def identifier(self, value: Union[KT, UUID]) -> None:
+    def identifier(self, value: KT) -> None:
         self._identifier = value
 
     @property
@@ -144,11 +144,11 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
 
 
  
-class DataPointProvider(AbstractMemoryProvider[DataPoint[KT, DT, VT, RT], Union[KT, UUID], DT, VT, RT], 
+class DataPointProvider(AbstractMemoryProvider[DataPoint[Union[KT, UUID], DT, VT, RT], Union[KT, UUID], DT, VT, RT], 
                         Generic[KT, DT, VT, RT]):
 
     def __init__(self, 
-                 datapoints: Iterable[DataPoint[KT, DT, VT, RT]],
+                 datapoints: Iterable[DataPoint[Union[KT, UUID], DT, VT, RT]],
                     ) -> None:
         self.dictionary = {data.identifier: data for data in datapoints}
         self.children = dict()
@@ -156,7 +156,7 @@ class DataPointProvider(AbstractMemoryProvider[DataPoint[KT, DT, VT, RT], Union[
 
     def create(self, *args: Any, **kwargs: Any):
         new_key = uuid4()
-        new_instance = DataPoint[KT, DT, VT, RT](new_key, *args, **kwargs)
+        new_instance = DataPoint[Union[KT, UUID], DT, VT, RT](new_key, *args, **kwargs)
         self.add(new_instance)
         return new_instance
 
@@ -168,7 +168,7 @@ class DataPointProvider(AbstractMemoryProvider[DataPoint[KT, DT, VT, RT], Union[
         if vectors is None or len(vectors) != len(indices):
             vectors = [None] * len(indices)
         datapoints = itertools.starmap(
-            DataPoint[KT, DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
+            DataPoint[Union[KT, UUID], DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
         return cls(datapoints)
 
     @classmethod
@@ -176,7 +176,7 @@ class DataPointProvider(AbstractMemoryProvider[DataPoint[KT, DT, VT, RT], Union[
         indices = range(len(raw_data))
         vectors = [None] * len(raw_data)
         datapoints = itertools.starmap(
-            DataPoint[KT, DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
+            DataPoint[Union[KT, UUID], DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
         return cls(datapoints)
 
 

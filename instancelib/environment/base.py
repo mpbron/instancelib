@@ -16,7 +16,9 @@
 
 from __future__ import annotations
 
-from typing import Generic, Iterable, Sequence, Tuple, TypeVar, Any
+import random
+
+from typing import Generic, Iterable, Sequence, Tuple, TypeVar, Any, Union
 from abc import ABC, abstractmethod
 from ..instances import InstanceProvider, Instance
 from ..labels import LabelProvider
@@ -93,14 +95,30 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         """        
         self.all_datapoints.bulk_add_vectors(keys, vectors)
 
+    def create(self, *args: Any, **kwargs: Any) -> InstanceType:
+        new_instance = self.all_datapoints.create(*args, **kwargs)
+        return new_instance
+
     @abstractmethod
     def create_bucket(self, keys: Iterable[KT]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         raise NotImplementedError
 
-    @abstractmethod
-    def train_test_split(self,
-                         source: InstanceProvider[InstanceType, KT, DT, VT, RT], 
-                         train_size: int
+    def train_test_split(self, 
+                         source: InstanceProvider[InstanceType, KT, DT, VT, RT],
+                         train_size: Union[float, int]
                          ) -> Tuple[InstanceProvider[InstanceType, KT, DT, VT, RT], 
                                     InstanceProvider[InstanceType, KT, DT, VT, RT]]:
-        raise NotImplementedError
+        if isinstance(train_size, float):
+            n_train_docs = round(train_size*len(source))
+        else:
+            n_train_docs = train_size
+        source_keys = list(frozenset(source.key_list))
+        
+        # Randomly sample train keys
+        train_keys = random.sample(source_keys, n_train_docs)
+        # The remainder should be used for testing        
+        test_keys = frozenset(source_keys).difference(train_keys)
+        
+        train_provider = self.create_bucket(train_keys)
+        test_provider = self.create_bucket(test_keys)
+        return train_provider, test_provider

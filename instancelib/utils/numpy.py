@@ -14,14 +14,26 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-from typing import Iterable, Optional, Sequence, Tuple, TypeVar, Union
+import itertools
+from typing import Iterable, Optional, Sequence, Tuple, Union
 
-from h5py._hl.dataset import Dataset # type: ignore
+from h5py._hl.dataset import Dataset  # type: ignore
 
-import numpy as np  # type: ignore
+import numpy as np
 
-KT = TypeVar("KT")
-VT = TypeVar("VT")
+from ..typehints import KT
+
+
+def get_lists(slices: Iterable[Tuple[int, Optional[int]]]) -> Sequence[int]:
+    def convert_back(slice: Tuple[int, Optional[int]]) -> Sequence[int]:
+        start, end = slice
+        if end is None:
+            return [start]
+        idxs = list(range(start, end))
+        return idxs
+
+    result = list(itertools.chain.from_iterable(map(convert_back, slices)))
+    return result
 
 def slicer(matrix: Union[Dataset, np.ndarray], slices: Iterable[Tuple[int, Optional[int]]]) -> np.ndarray:
         def get_slices_1d(): # type: ignore
@@ -40,6 +52,29 @@ def slicer(matrix: Union[Dataset, np.ndarray], slices: Iterable[Tuple[int, Optio
         if dims == 1:
             return np.hstack(list(get_slices_1d())) # type: ignore
         return np.vstack(list(get_slices_2d())) # type: ignore
+
+def memslicer(matrix: Union[Dataset, np.ndarray], slices: Iterable[Tuple[int, Optional[int]]]) -> np.ndarray:
+    idxs = get_lists(slices)
+    min_idx, max_idx= min(idxs), max(idxs)
+    new_idxs = tuple([idx - min_idx for idx in idxs])
+    dims = len(matrix.shape) # type: ignore
+    
+    def get_slice_1d() -> np.ndarray:
+        big_slice_mat: np.ndarray = matrix[min_idx:(max_idx + 1)] # type: ignore 
+        small_slice_mat = big_slice_mat[new_idxs]
+        return small_slice_mat
+    def get_slice_2d() -> np.ndarray:
+        big_slice_mat: np.ndarray = matrix[min_idx:(max_idx + 1),:] # type: ignore
+        small_slice_mat = big_slice_mat[new_idxs, :] # type: ignore
+        return small_slice_mat
+   
+    if dims == 1:
+        mat = get_slice_1d()
+        return mat
+    if dims == 2:
+        mat = get_slice_2d()
+        return mat
+    raise NotImplementedError("No Slicing for 3d yet")
 
 def matrix_to_vector_list(matrix: np.ndarray) -> Sequence[np.ndarray]:
     def get_vector(index: int) -> np.ndarray:

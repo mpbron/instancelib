@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+
 from typing import (Any, Callable, Generic, Iterable, Iterator, List, MutableMapping,
                     Optional, Sequence, Tuple, TypeVar, Union)
 
@@ -25,8 +26,9 @@ import numpy as np  # type: ignore
 from ..utils.chunks import divide_iterable_in_lists
 from ..utils.func import filter_snd_none_zipped
 
-from ..typehints import KT, DT, VT, RT, CT
+from ..typehints import KT, DT, VT, RT
 
+_V = TypeVar("_V")
 
 class Instance(ABC, Generic[KT, DT, VT, RT]):
 
@@ -95,50 +97,31 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
     def __repr__(self) -> str:
         return self.__str__()
 
+    @staticmethod
+    def map_data(func: Callable[[DT], _V]) -> Callable[[Instance[KT, DT, VT, RT]], _V]:
+        def wrapped(instance: Instance[KT, DT, VT, RT]) -> _V:
+            return(func(instance.data))
+        return wrapped
 
-class ContextInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT, CT]):
-    @property
-    @abstractmethod
-    def context(self) -> CT:
-        """Get the context of this instance
+    @staticmethod
+    def map_vector(func: Callable[[VT], _V]) -> Callable[[Instance[KT, DT, VT, RT]], Optional[_V]]:
+        def wrapped(instance: Instance[KT, DT, VT, RT]) -> Optional[_V]:
+            if instance.vector is not None:
+                return(func(instance.vector))
+            return None
+        return wrapped
 
-        Returns
-        -------
-        CT
-            The context of this instance
-        """
-        raise NotImplementedError
-
-
-class ChildInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT]):
-    @property
-    @abstractmethod
-    def parent(self) -> Instance[KT, DT, VT, RT]:
-        """Retrieve the parent of this instance
-
-        Returns
-        -------
-        Instance[KT, DT, VT, RT]
-            The parent of the instance
-        """
-        raise NotImplementedError
-
-
-class ParentInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT]):
-    @property
-    @abstractmethod
-    def children(self) -> Sequence[ChildInstance[KT, DT, VT, RT]]:
-        """Retrieve the children of this instance
-
-        Returns
-        -------
-        Sequence[ChildInstance[KT, DT, VT, RT]]
-            The children instances of this Instance
-        """
-        raise NotImplementedError
+    @staticmethod
+    def vectorized_data_map(
+        func: Callable[[Iterable[DT]], _V]
+        ) -> Callable[[Iterable[Instance[KT, DT, VT, RT]]], _V]:
+        def wrapped(instances: Iterable[Instance[KT, DT, VT, RT]]) -> _V:
+            data = (instance.data for instance in instances)
+            results = func(data)
+            return results
+        return wrapped
 
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
-_V = TypeVar("_V")
 
 class InstanceProvider(MutableMapping[KT, InstanceType], 
                        ABC, Generic[InstanceType, KT, DT, VT, RT]):
@@ -218,7 +201,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """
         raise NotImplementedError
 
-    def add(self, instance: InstanceType) -> None:
+    def add(self, instance: Instance[KT, DT, VT, RT]) -> None:
         """Add an instance to this provider. If the 
         provider already contains `instance`, nothing happens.
 
@@ -229,8 +212,8 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """
         self.__setitem__(instance.identifier, instance)
 
-    def add_range(self, *instances: InstanceType) -> None:
-        """Add an instance to this provider. If the 
+    def add_range(self, *instances: Instance[KT, DT, VT, RT]) -> None:
+        """Add multiple instances to this provider. If the 
         provider already contains `instance`, nothing happens.
 
         Parameters
@@ -241,7 +224,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         for instance in instances:
             self.add(instance)
 
-    def discard(self, instance: InstanceType) -> None:
+    def discard(self, instance: Instance[KT, DT, VT, RT]) -> None:
         """Remove an instance from this provider. If the 
         provider does not contain `instance`, nothing happens.
 
@@ -430,6 +413,30 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
             result = func(instance)
             yield result
 
+    def data_map(self, func: Callable[[DT], _V]) -> Iterator[_V]:
+        instances = self.values()
+        mapped_f = Instance[KT, DT, VT, RT].map_data(func)
+        results = map(mapped_f, instances)
+        yield from results
+
+    def all_data(self) -> Iterator[DT]:
+        yield from (instance.data for instance in self.values())
+
+    def vectorized_map(self, 
+                       func: Callable[[Iterable[InstanceType]], _V], 
+                       batch_size: int = 200) -> Iterator[_V]:
+        chunks = divide_iterable_in_lists(self.values(), batch_size)
+        results = map(func, chunks)
+        yield from results
+
+    def vectorized_data_map(self, 
+                            func: Callable[[Iterable[DT]], _V],
+                            batch_size: int = 200
+                            ) -> Iterator[_V]:
+        chunks = divide_iterable_in_lists(self.values(), batch_size)
+        mapped_f = Instance[KT, DT, VT, RT].vectorized_data_map(func)
+        results = map(mapped_f, chunks)
+        yield from results
 
     @abstractmethod
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:

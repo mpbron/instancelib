@@ -126,3 +126,4 @@ vectorizer = TextInstanceVectorizer(
         TfidfVectorizer(max_features=1000)))
 
 vectorize(vectorizer, tweakers_env)
+#%%

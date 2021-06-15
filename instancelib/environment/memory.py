@@ -77,7 +77,6 @@ class MemoryEnvironment(
         self._public_dataset = MemoryBucketProvider[InstanceType, KT, DT, VT, RT](dataset, dataset.key_list)
         self._labelprovider = labelprovider
         self._named_providers = dict()
-
     
     
 

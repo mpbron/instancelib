@@ -16,8 +16,7 @@
 
 from __future__ import annotations
 
-import itertools
-from typing import Any, Generic, Iterable, Optional, Sequence, Union
+from typing import Any, Generic, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
 from ..typehints import KT, VT
@@ -46,34 +45,12 @@ class TextInstance(DataPoint[Union[KT, UUID], str, VT, str], Generic[KT, VT]):
 
 class TextInstanceProvider(AbstractMemoryProvider[TextInstance[KT, VT], Union[KT, UUID], str, VT, str], Generic[KT, VT]):
 
-    def __init__(self, 
-                 datapoints: Iterable[TextInstance[KT, VT]],
-                    ) -> None:
-        self.dictionary = {data.identifier: data for data in datapoints}
-        self.children = dict()
-        self.parents = dict()
-
-    @classmethod
-    def from_data_and_indices(cls, # type: ignore
-                              indices: Sequence[KT],
-                              raw_data: Sequence[str],
-                              vectors: Optional[Sequence[Optional[VT]]] = None) -> TextInstanceProvider[KT, VT]:
-        if vectors is None or len(vectors) != len(indices):
-            vectors = [None] * len(indices)
-        datapoints = itertools.starmap(
-            TextInstance[KT,VT], zip(indices, raw_data, vectors, raw_data))
-        return cls(datapoints)
-
-    @classmethod
-    def from_data(cls, raw_data: Sequence[str]) -> TextInstanceProvider[KT, VT]:
-        indices = range(len(raw_data))
-        vectors = [None] * len(raw_data)
-        datapoints = itertools.starmap(TextInstance[KT, VT], zip(indices, raw_data, vectors, raw_data))
-        return cls(datapoints)
-
-    def create(self, *args: Any, **kwargs: Any):  # type: ignore
+    def create(self, *args: Any, **kwargs: Any):
         new_key = uuid4()
         new_instance = TextInstance[KT, VT](new_key, *args, **kwargs)
         self.add(new_instance)
         return new_instance
 
+    @staticmethod
+    def construct(*args: Any, **kwargs: Any) -> TextInstance[KT, VT]:
+        return TextInstance[KT, VT](*args, **kwargs)

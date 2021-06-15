@@ -15,7 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from uuid import UUID, uuid4
 
@@ -77,6 +77,11 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
     children: Dict[KT, Set[KT]]
     parents: Dict[KT, KT]
 
+    def __init__(self, instances: Iterable[InstanceType]):
+        self.dictionary = {instance.identifier: instance for instance in instances}
+        self.children = dict()
+        self.parents = dict()
+
     def __iter__(self) -> Iterator[KT]:
         yield from self.dictionary.keys()
 
@@ -134,50 +139,55 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
         return []
 
     def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
-        child_key: KT= to_key(child)
+        child_key: KT = to_key(child)
         if child_key in self.parents:
             parent_key = self.parents[child_key]
             parent = self.dictionary[parent_key]
             return parent # type: ignore
         raise KeyError(f"The instance with key {child_key} has no parent")
 
+    @staticmethod
+    @abstractmethod
+    def construct(*args: Any, **kwargs: Any) -> InstanceType:
+        raise NotImplementedError
+
+    @classmethod
+    def from_data_and_indices(cls,
+                              indices: Sequence[KT],
+                              raw_data: Sequence[DT],
+                              vectors: Optional[Sequence[Optional[VT]]] = None
+                              ) -> AbstractMemoryProvider[InstanceType, KT, DT, VT, RT]:
+        if vectors is None or len(vectors) != len(indices):
+            vectors = [None] * len(indices)
+        datapoints = itertools.starmap(cls.construct, zip(indices, raw_data, vectors, raw_data))
+        return cls(datapoints)
+
+    @classmethod
+    def from_data(cls, 
+                  raw_data: Sequence[DT]
+                 ) -> AbstractMemoryProvider[InstanceType, KT, DT, VT, RT]:
+        indices = range(len(raw_data))
+        vectors = [None] * len(raw_data)
+        datapoints = itertools.starmap(cls.construct, zip(indices, raw_data, vectors, raw_data))
+        return cls(datapoints)
 
 
  
 class DataPointProvider(AbstractMemoryProvider[DataPoint[Union[KT, UUID], DT, VT, RT], Union[KT, UUID], DT, VT, RT], 
                         Generic[KT, DT, VT, RT]):
 
-    def __init__(self, 
-                 datapoints: Iterable[DataPoint[Union[KT, UUID], DT, VT, RT]],
-                    ) -> None:
-        self.dictionary = {data.identifier: data for data in datapoints}
-        self.children = dict()
-        self.parents = dict()
+    
+
+    @staticmethod
+    def construct(*args: Any, **kwargs: Any):
+        new_instance = DataPoint[Union[KT, UUID], DT, VT, RT](*args, **kwargs)
+        return new_instance
 
     def create(self, *args: Any, **kwargs: Any):
         new_key = uuid4()
         new_instance = DataPoint[Union[KT, UUID], DT, VT, RT](new_key, *args, **kwargs)
         self.add(new_instance)
         return new_instance
-
-    @classmethod
-    def from_data_and_indices(cls,
-                              indices: Sequence[KT],
-                              raw_data: Sequence[DT],
-                              vectors: Optional[Sequence[Optional[VT]]] = None) -> DataPointProvider[KT, DT, VT, RT]:
-        if vectors is None or len(vectors) != len(indices):
-            vectors = [None] * len(indices)
-        datapoints = itertools.starmap(
-            DataPoint[Union[KT, UUID], DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
-        return cls(datapoints)
-
-    @classmethod
-    def from_data(cls, raw_data: Sequence[DT]) -> DataPointProvider[KT, DT, VT, RT]:
-        indices = range(len(raw_data))
-        vectors = [None] * len(raw_data)
-        datapoints = itertools.starmap(
-            DataPoint[Union[KT, UUID], DT, VT, RT], zip(indices, raw_data, vectors, raw_data))
-        return cls(datapoints)
 
 
 class MemoryBucketProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT], Generic[InstanceType, KT, DT, VT, RT]):

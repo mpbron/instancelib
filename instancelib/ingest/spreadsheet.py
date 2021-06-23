@@ -31,6 +31,19 @@ from ..utils.func import list_unzip3
 
 
 def identity_mapper(value: Any) -> Optional[str]:
+    """Coerces any value to its string represenation
+
+    Parameters
+    ----------
+    value : Any
+        Any value that can be coerced into a string
+
+    Returns
+    -------
+    Optional[str]
+        The string representation of the value. If 
+        coercion somehow failed, it will return None.
+    """    
     if isinstance(value, str):
         return value
     coerced = str(value)
@@ -145,41 +158,65 @@ def read_excel_dataset(path: "Union[str, PathLike[str]]",
                        ) -> AbstractEnvironment[
                 TextInstance[int, np.ndarray], 
                 Union[int, UUID], str, np.ndarray, str, str]:
-    """Convert a Excel Dataset
+    """Read csv datasets that contain text data
 
     Parameters
     ----------
-    path : PathLike
-        The path to the Excel file
+    path : Union[str, PathLike[str]]
+        The path to the csv file
+    data_cols : Sequence[str]
+        The columns that contain the text data
+    label_cols : Sequence[str]
+        The columns that contain the columns
+    labels : Optional[Iterable[str]], optional
+        The set of labels that are possible.
+        If None, the set will be inferred from data
+        This parameter is by default None
+    label_mapper : Callable[[Any], Optional[str]], optional
+        A function that transferm labels into another representation
+        This paramater is by default :func:`identity_mapper`, which just
+        outputs its input.
 
     Returns
     -------
-    MemoryEnvironment[int, str, np.ndarray, str]
-        A MemoryEnvironment. The labels that 
+    AbstractEnvironment[TextInstance[int, np.ndarray], Union[int, UUID], str, np.ndarray, str, str]
+        An environment that contains all the information from the CSV file
     """    
     df: pd.DataFrame = pd.read_excel(path) # type: ignore
     env = build_environment(df, label_mapper, labels, data_cols, label_cols)
     return env
 
 def read_csv_dataset(path: "Union[str, PathLike[str]]", 
-                       data_cols: Sequence[str], 
-                       label_cols: Sequence[str], 
-                       labels: Optional[Iterable[str]] = None,
-                       label_mapper: Callable[[Any], Optional[str]] = identity_mapper
-                       ) -> AbstractEnvironment[
+                     data_cols: Sequence[str], 
+                     label_cols: Sequence[str], 
+                     labels: Optional[Iterable[str]] = None,
+                     label_mapper: Callable[[Any], Optional[str]] = identity_mapper
+                     ) -> AbstractEnvironment[
                 TextInstance[int, np.ndarray], 
                 Union[int, UUID], str, np.ndarray, str, str]:
-    """Convert a Excel Dataset
+    """Read Excel filse that contain text data
 
     Parameters
     ----------
-    path : PathLike
-        The path to the CSV file
+    path : Union[str, PathLike[str]]
+        The path to the Excel file
+    data_cols : Sequence[str]
+        The columns that contain the text data
+    label_cols : Sequence[str]
+        The columns that contain the columns
+    labels : Optional[Iterable[str]], optional
+        The set of labels that are possible.
+        If None, the set will be inferred from data
+        This parameter is by default None
+    label_mapper : Callable[[Any], Optional[str]], optional
+        A function that transferm labels into another representation
+        This paramater is by default :func:`identity_mapper`, which just
+        outputs its input.
 
     Returns
     -------
-    MemoryEnvironment[int, str, np.ndarray, str]
-        A MemoryEnvironment. The labels that 
+    AbstractEnvironment[TextInstance[int, np.ndarray], Union[int, UUID], str, np.ndarray, str, str]
+        An environment that contains all the information from the Excel file
     """    
     df: pd.DataFrame = pd.read_csv(path) # type: ignore
     env = build_environment(df, label_mapper, labels, data_cols, label_cols)

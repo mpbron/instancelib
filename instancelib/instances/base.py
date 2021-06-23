@@ -500,6 +500,10 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         results = self.dataset.vector_chunker_selector(self.key_list, batch_size)
         return results
 
+    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        results = self.dataset.vector_chunker_selector(keys, batch_size)
+        return results
+
     def clear(self) -> None:
         self._clear_bucket()
 
@@ -522,3 +526,32 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         new_instance = self.dataset.create(*args, **kwargs)
         self.add(new_instance)
         return new_instance
+
+class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT], 
+                          ABC, 
+                          Generic[InstanceType, KT, DT, VT, RT]):
+    bucket: InstanceProvider[InstanceType, KT, DT, VT, RT]
+
+    @property
+    def _bucket(self) -> Iterable[KT]:
+        ds_keys = frozenset(self.dataset)
+        bu_keys = frozenset(self.bucket)
+        difference = ds_keys.difference(bu_keys)
+        return iter(difference)
+
+    def _in_bucket(self, key: KT) -> bool:
+        return key not in self.bucket and key in self.dataset
+
+    def _add_to_bucket(self, key: KT) -> None:
+        instance = self.dataset[key]
+        self.bucket.discard(instance)
+
+    def create(self, *args: Any, **kwargs: Any) -> InstanceType:
+        new_instance = self.dataset.create(*args, **kwargs)
+        return new_instance
+
+    def clear(self) -> None:
+        pass
+
+
+        

@@ -33,7 +33,7 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
 
         Returns
         -------
-        InstanceProvider[KT, DT, VT, RT]
+        InstanceProvider[InstanceType, KT, DT, VT, RT]
             The newly created provider
         """        
         raise NotImplementedError
@@ -42,12 +42,12 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
     @abstractmethod
     def dataset(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """This property contains the `InstanceProvider` that contains
-        the original dataset. This provider should include all instances
-        that are contained in the other providers.
+        the original dataset. This provider should include all original
+        instances.
 
         Returns
         -------
-        InstanceProvider[KT, DT, VT, RT]
+        InstanceProvider[InstanceType, KT, DT, VT, RT]
             The dataset `InstanceProvider`
         """        
         raise NotImplementedError
@@ -56,15 +56,28 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
     @abstractmethod
     def all_datapoints(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """This provider should include all instances in all providers.
-        If there are any synthethic datapoints constructed, they should be also 
-         in here.
+        If there are any synthethic datapoints constructed, 
+        they should be also in here.
 
         Returns
         -------
-        InstanceProvider[KT, DT, VT, RT]
-            The dataset `InstanceProvider`
+        InstanceProvider[InstancType, KT, DT, VT, RT]
+            The all_datapoints `InstanceProvider`
         """        
         raise NotImplementedError
+    
+    @property
+    def all_instances(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        """This provider should include all instances in all providers.
+        If there are any synthethic datapoints constructed, 
+        they should be also in here.
+
+        Returns
+        -------
+        InstanceProvider[InstancType, KT, DT, VT, RT]
+            The all_instances `InstanceProvider`
+        """        
+        return self.all_datapoints
 
     @property
     @abstractmethod
@@ -93,14 +106,28 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
             A sequence of vectors that should be associated with the instances 
             of the sequence `keys`
         """        
-        self.all_datapoints.bulk_add_vectors(keys, vectors)
+        self.all_instances.bulk_add_vectors(keys, vectors)
 
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
-        new_instance = self.all_datapoints.create(*args, **kwargs)
+        new_instance = self.all_instances.create(*args, **kwargs)
         return new_instance
 
     @abstractmethod
     def create_bucket(self, keys: Iterable[KT]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        """Create an InstanceProvider that contains certain keys found in this 
+        environment.
+
+        Parameters
+        ----------
+        keys : Iterable[KT]
+            The keys that should be included in this bucket
+
+        Returns
+        -------
+        InstanceProvider[InstanceType, KT, DT, VT, RT]
+            An InstanceProvider that contains the instances specified in `keys`
+
+        """        
         raise NotImplementedError
 
     def train_test_split(self, 

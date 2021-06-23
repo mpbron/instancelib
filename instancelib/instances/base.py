@@ -546,6 +546,10 @@ class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
         instance = self.dataset[key]
         self.bucket.discard(instance)
 
+    def _remove_from_bucket(self, key: KT) -> None:
+        instance = self.dataset[key]
+        self.bucket.add(instance)
+
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
         new_instance = self.dataset.create(*args, **kwargs)
         return new_instance

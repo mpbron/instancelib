@@ -23,7 +23,8 @@ tweakers_env = read_excel_dataset("./datasets/testdataset.xlsx",
                                   data_cols=["fulltext"],
                                   label_cols=["label"])
 halldataset_env = read_csv_dataset("./datasets/Software_Engineering_Hall.csv", 
-                                   data_cols=["title", "abstract"], label_cols=["included"], label_mapper=binary_mapper)
+                                   data_cols=["title", "abstract"], 
+                                   label_cols=["included"], label_mapper=binary_mapper)
 
 #%%
 instanceprovider = tweakers_env.dataset

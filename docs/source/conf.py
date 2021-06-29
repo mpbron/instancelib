@@ -33,13 +33,21 @@ release = '0.1'
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinxcontrib.apidoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosectionlabel",
+    "sphinx_toolbox.more_autodoc.typehints",
     "sphinx_autodoc_typehints",
-    "sphinx.ext.doctest"
+    "sphinx.ext.doctest",
+    "sphinx_toolbox.more_autodoc.typevars"
+    
 ]
 
+apidoc_module_dir = '../../instancelib/'
+apidoc_output_dir = 'reference'
+apidoc_excluded_paths = ['tests']
+apidoc_separate_modules = True
 autosectionlabel_prefix_document = True
 
 # Add any paths that contain templates here, relative to this directory.

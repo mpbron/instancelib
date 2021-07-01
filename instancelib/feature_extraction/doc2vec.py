@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Sequence, Optional, Callable, List, Dict, Any
 from tempfile import NamedTemporaryFile
 
-import numpy as np # type: ignore
+import numpy as np
 from sklearn.exceptions import NotFittedError # type: ignore
 
 from gensim.models.doc2vec import Doc2Vec, TaggedLineDocument #type: ignore

@@ -46,7 +46,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
     datasets.
 
     Parameters
-        ----------
+    ----------
         h5path : str
             The path to the hdf5 file
         mode : str, optional

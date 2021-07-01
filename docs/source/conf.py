@@ -24,24 +24,23 @@ author = 'Michiel Bron MSc, Utrecht University'
 # The full version, including alpha/beta/rc tags
 release = '0.1'
 
-
+github_username = "mpbron"
+github_repository = "mpbron"
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "sphinxcontrib.apidoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinxcontrib.apidoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosectionlabel",
-    "sphinx_toolbox.more_autodoc.typehints",
     "sphinx_autodoc_typehints",
     "sphinx.ext.doctest",
-    "sphinx_toolbox.more_autodoc.typevars"
-    
+       
 ]
 
 apidoc_module_dir = '../../instancelib/'
@@ -84,9 +83,15 @@ napoleon_include_special_with_doc = True
 napoleon_use_admonition_for_examples = False
 napoleon_use_admonition_for_notes = True
 napoleon_use_admonition_for_references = True
-napoleon_use_ivar = False
+napoleon_use_ivar = True
 napoleon_use_param = True
 napoleon_use_rtype = True
 always_document_param_types = True
 typehints_document_rtype = True
 autodoc_typehints = "signature"
+napoleon_type_aliases = {
+    "Instance[KT, DT, VT, RT]": ":class:`Instance`[:data:`~instancelib.typehints.KT`, :data:`~instancelib.typehints.DT`, :data:`~instancelib.typehints.VT`, :data:`~instancelib.typehints.RT`]",
+    "KT": ":data:`instancelib.typehints.KT`",
+    "~KT": ":data:`instancelib.typehints.KT`",
+    "dict-like": ":term:`dict-like <mapping>`",
+}

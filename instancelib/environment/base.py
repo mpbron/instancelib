@@ -97,7 +97,6 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         associated with the keys in the first parameters. The sequences
         `keys` and `vectors` should have the same length.
 
-
         Parameters
         ----------
         keys : Sequence[KT]
@@ -105,6 +104,7 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         vectors : Sequence[VT]
             A sequence of vectors that should be associated with the instances 
             of the sequence `keys`
+        
         """        
         self.all_instances.bulk_add_vectors(keys, vectors)
 
@@ -135,6 +135,32 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
                          train_size: Union[float, int]
                          ) -> Tuple[InstanceProvider[InstanceType, KT, DT, VT, RT], 
                                     InstanceProvider[InstanceType, KT, DT, VT, RT]]:
+        """Divide an InstanceProvider into two different providers containing a random 
+        division of the input according to the parameter `train_size`.
+
+        Parameters
+        ----------
+        source : InstanceProvider[InstanceType, KT, DT, VT, RT]
+            The InstanceProvider that should be divided
+        train_size : Union[float, int]
+            The number (int) of instances that should be included in the training
+            or a float (between 0 and 1) of train / test ratio.
+
+        Examples
+        --------
+        Example usage
+
+        >>> train_val, test = env.train_test_split(provider, 0.70)
+        >>> train, val = env.train_test_split(train_val, 0.70)
+
+
+        Returns
+        -------
+        Tuple[InstanceProvider[InstanceType, KT, DT, VT, RT], InstanceProvider[InstanceType, KT, DT, VT, RT]]
+            A Tuple containing two InstanceProviders:
+                - The training set (containing `train_size` documents)
+                - The test set
+        """        
         if isinstance(train_size, float):
             n_train_docs = round(train_size*len(source))
         else:

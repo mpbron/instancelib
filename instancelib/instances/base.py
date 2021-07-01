@@ -21,8 +21,6 @@ from abc import ABC, abstractmethod
 from typing import (Any, Callable, Generic, Iterable, Iterator, List, MutableMapping,
                     Optional, Sequence, Tuple, TypeVar, Union)
 
-import numpy as np  # type: ignore
-
 from ..utils.chunks import divide_iterable_in_lists
 from ..utils.func import filter_snd_none_zipped
 
@@ -31,6 +29,25 @@ from ..typehints import KT, DT, VT, RT
 _V = TypeVar("_V")
 
 class Instance(ABC, Generic[KT, DT, VT, RT]):
+    """A base Instance Class. 
+
+    Every Instance contains 4 properties:
+
+        - A unique identifier (`identifier`)
+        - The raw data (`data`)
+        - A vector representation of the data (`vector`)
+        - A human readable representation (`representation`)
+
+    The ABC Instance has four Generic types:
+
+        - :data:`~instancelib.typehints.KT`: The type of the key
+        - :data:`~instancelib.typehints.DT`: The type of the data
+        - :data:`~instancelib.typehints.VT`: The type of the vector
+        - :data:`~instancelib.typehints.RT`: The type of the representation
+
+    Combining these four items in a single object enables easy transfer between
+    different operations like predictions, annotatation and transformation.
+    """    
 
     @property
     @abstractmethod
@@ -88,6 +105,13 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
     @identifier.setter
     def identifier(self, value: KT) -> None:
+        """Set the identifier of the instance
+
+        Parameters
+        ----------
+        value : KT
+            The new identifier
+        """        
         raise NotImplementedError
 
     def __str__(self) -> str:
@@ -99,12 +123,38 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
     @staticmethod
     def map_data(func: Callable[[DT], _V]) -> Callable[[Instance[KT, DT, VT, RT]], _V]:
+        """Transform function that works on raw data into a function that works on
+        :class:`Instance` objects.
+
+        Parameters
+        ----------
+        func : Callable[[DT], _V]
+            The function that works on raw data
+
+        Returns
+        -------
+        Callable[[Instance[KT, DT, VT, RT]], _V]
+            The transformed function
+        """        
         def wrapped(instance: Instance[KT, DT, VT, RT]) -> _V:
             return(func(instance.data))
         return wrapped
 
     @staticmethod
     def map_vector(func: Callable[[VT], _V]) -> Callable[[Instance[KT, DT, VT, RT]], Optional[_V]]:
+        """Transform function that works on vectors into a function that works on
+        :class:`Instance` objects.
+
+        Parameters
+        ----------
+        func : Callable[[VT], _V]
+            The function that works on vectors
+
+        Returns
+        -------
+        Callable[[Instance[KT, DT, VT, RT]], _V]
+            The transformed function
+        """        
         def wrapped(instance: Instance[KT, DT, VT, RT]) -> Optional[_V]:
             if instance.vector is not None:
                 return(func(instance.vector))
@@ -115,6 +165,19 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
     def vectorized_data_map(
         func: Callable[[Iterable[DT]], _V]
         ) -> Callable[[Iterable[Instance[KT, DT, VT, RT]]], _V]:
+        """Transform function that works on sequences of raw data  
+        into a function that works on sequences of :class:`Instance` objects.
+
+        Parameters
+        ----------
+        func : Callable[[Iterable[DT]], _V]
+            The function that works on sequences of raw data
+
+        Returns
+        -------
+        Callable[[Iterable[Instance[KT, DT, VT, RT]]], _V]
+            The transformed function
+        """        
         def wrapped(instances: Iterable[Instance[KT, DT, VT, RT]]) -> _V:
             data = (instance.data for instance in instances)
             results = func(data)
@@ -125,37 +188,92 @@ InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
 
 class InstanceProvider(MutableMapping[KT, InstanceType], 
                        ABC, Generic[InstanceType, KT, DT, VT, RT]):
-    """[summary]
+    """The Base InstanceProvider class.
 
-    Parameters
-    ----------
-    MutableMapping : [type]
-        [description]
-    ABC : [type]
-        [description]
-    Generic : [type]
-        [description]
+    This class provides an abstract implementation for a dataset.
+    The InstanceProvider has five Generic types:
 
-    Returns
-    -------
-    [type]
-        [description]
+        - :data:`InstanceType` : A subclass of :class:`Instance`
+        - :data:`~instancelib.typehints.KT`: The type of the key
+        - :data:`~instancelib.typehints.DT`: The type of the data
+        - :data:`~instancelib.typehints.VT`: The type of the vector
+        - :data:`~instancelib.typehints.RT`: The type of the representation
 
-    Yields
-    -------
-    [type]
-        [description]
+    Examples
+    --------
+    
+    Instance access:
+
+    >>> provider = InstanceProvider() # Replace with your implementation's constructor
+    >>> first_key = next(iter(textprovider))
+    >>> first_doc = textprovider[first_key]
+
+    Set operations:
+
+    >>> new_instance = Instance()
+    >>> provider.add(new_instance)
+    >>> provider.discard(new_instance)
+
+    Example implementation:
+    
+    >>> class TextProvider(InstanceProvider[
+    ...                          Instance[int, str, np.ndarray, str],
+    ...                          int, str, np.ndarray, str]):
+    ...     # Further implementation is needed
+    >>> textprovider = TextProvider()
+
+    There are a number of :func:`~abc.abstractmethod` that need to be implemented
+    in your own implementation. See the source of this file to see what you need to
+    implement.
     """
 
     def add_child(self,
                   parent: Union[KT, InstanceType],
                   child: Union[KT, InstanceType]) -> None:
+        """Register a parent child relation between two instances
+
+        Parameters
+        ----------
+        parent : Union[KT, InstanceType]
+            The parent instance (or identifier)
+        child : Union[KT, InstanceType]
+            The child instance (or identifier)
+        """        
         raise NotImplementedError
 
     def get_children(self, parent: Union[KT, InstanceType]) -> Sequence[InstanceType]:
+        """Get the children that are registered to this parent
+
+        Parameters
+        ----------
+        parent : Union[KT, InstanceType]
+            The parent from which you want to get the children from.
+
+        Returns
+        -------
+        Sequence[InstanceType]
+            A list containing the children
+        """        
         raise NotImplementedError
 
     def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
+        """Get the parent of a child
+
+        Parameters
+        ----------
+        child : Union[KT, InstanceType]
+            A child instance from which you want to get the children from.
+
+        Returns
+        -------
+        InstanceType
+            The parent of this child instance
+
+        Raises
+        ------
+        KeyError
+            If there is no parent associated with this :class:`Instance`
+        """        
         raise NotImplementedError
 
     @abstractmethod
@@ -190,20 +308,16 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """Enables you to iterate over Instances
 
         Yields
-        -------
-        Iterator[KT]
-            [description]
-
-        Raises
         ------
-        NotImplementedError
-            [description]
+        :class:`KT`
+            Keys included in the provider 
         """
         raise NotImplementedError
 
     def add(self, instance: Instance[KT, DT, VT, RT]) -> None:
-        """Add an instance to this provider. If the 
-        provider already contains `instance`, nothing happens.
+        """Add an instance to this provider. 
+        
+        If the provider already contains `instance`, nothing happens.
 
         Parameters
         ----------
@@ -213,8 +327,9 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         self.__setitem__(instance.identifier, instance)
 
     def add_range(self, *instances: Instance[KT, DT, VT, RT]) -> None:
-        """Add multiple instances to this provider. If the 
-        provider already contains `instance`, nothing happens.
+        """Add multiple instances to this provider. 
+        
+        If the provider already contains `instance`, nothing happens.
 
         Parameters
         ----------
@@ -267,7 +382,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
 
         Yields
         ------
-        Instance[KT, DT, VT, RT]
+        InstanceType
             An iterator that iterates over all instances
         """
         raise NotImplementedError
@@ -296,9 +411,9 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
 
         Parameters
         ----------
-        keys : Sequence[KT]
+        keys : :class:`Sequence`[KT]
             A sequence of keys
-        values : Sequence[VT]
+        values : :class:`Sequence`[VT]
             A sequence of vectors
 
         Warning
@@ -375,7 +490,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
 
         Yields
         -------
-        Iterator[Sequence[Tuple[KT, VT]]]
+        Sequence[Tuple[KT, VT]]
             Sequences of key vector tuples
         """
         id_vecs = ((elem.identifier, elem.vector)
@@ -400,6 +515,13 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         return list(self.get_all())
 
     def map_mutate(self, func: Callable[[InstanceType], InstanceType]) -> None:
+        """Run a function on this provider that modifies all Instances in place
+
+        Parameters
+        ----------
+        func : Callable[[InstanceType], InstanceType]
+            A function that modifies instances in place
+        """        
         keys = self.key_list
         for key in keys:
             instance = self[key]
@@ -407,6 +529,20 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
             self[key] = upd_instance
 
     def map(self, func: Callable[[InstanceType], _V]) -> Iterator[_V]:
+        """A higher order function that maps any function that works on
+        individual :class:`Instance` objects on every contained object in
+        this provider. 
+
+        Parameters
+        ----------
+        func : Callable[[InstanceType], _V]
+            A function that works on :class:`Instance` objects of type `InstanceType`
+
+        Yields
+        -------
+        Iterator[_V]
+            The values produced by the function `func`
+        """        
         keys = self.key_list
         for key in keys:
             instance = self[key]
@@ -414,17 +550,57 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
             yield result
 
     def data_map(self, func: Callable[[DT], _V]) -> Iterator[_V]:
+        """A higher order function that maps any function that works on
+        individual :class:`~instancelib.typehints.KT` object 
+        on every  :class:`Instance` object in this provider. 
+
+        Parameters
+        ----------
+        func
+            The function that should be applied
+
+        Yields
+        -------
+        _V
+            The values produced by the function `func`
+        """
         instances = self.values()
         mapped_f = Instance[KT, DT, VT, RT].map_data(func)
         results = map(mapped_f, instances)
         yield from results
 
     def all_data(self) -> Iterator[DT]:
+        """Return all the raw data from the instances in this provider
+
+        Yields
+        ------
+        DT
+            Raw data
+        """        
         yield from (instance.data for instance in self.values())
 
     def vectorized_map(self, 
                        func: Callable[[Iterable[InstanceType]], _V], 
                        batch_size: int = 200) -> Iterator[_V]:
+        """Maps a function that works on multiple instances
+        onto all the instances in batches of size `batch_size`.
+
+        Note: If you run a function that combines multiple instances into
+        a single result, this may possibly lead to undiserable results if 
+        batches are not taken into account.
+
+        Parameters
+        ----------
+        func : Callable[[Iterable[InstanceType]], _V]
+            The function that should be applied
+        batch_size : int, optional
+            The size of the batch, by default 200
+
+        Yields
+        -------
+        _V
+            The result type of the function in parameter `func`
+        """        
         chunks = divide_iterable_in_lists(self.values(), batch_size)
         results = map(func, chunks)
         yield from results
@@ -433,6 +609,25 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
                             func: Callable[[Iterable[DT]], _V],
                             batch_size: int = 200
                             ) -> Iterator[_V]:
+        """Maps a function that works on multiple raw data points
+        onto all the instances in batches of size `batch_size`.
+
+        Note: If you run a function that combines multiple instances into
+        a single result, this may possibly lead to undiserable results if 
+        batches are not taken into account.
+
+        Parameters
+        ----------
+        func
+            The function that should be applied
+        batch_size : int, optional
+            The size of the batch, by default 200
+
+        Yields
+        -------
+        _V
+            The result type of the function in parameter `func`
+        """        
         chunks = divide_iterable_in_lists(self.values(), batch_size)
         mapped_f = Instance[KT, DT, VT, RT].vectorized_data_map(func)
         results = map(mapped_f, chunks)
@@ -440,35 +635,102 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
 
     @abstractmethod
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
+        """Create a new instance of type :data:`InstanceType`.
+        The created instance is subsequently added to the provider.
+        
+        Note: The number of arguments and keyword arguments may differ
+        in actual implementation, so there are no standard arguments.
+
+        Returns
+        -------
+        InstanceType
+            The new instance Type
+        """        
         raise NotImplementedError
 
 class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC, 
                                    Generic[InstanceType, KT, DT, VT, RT]):
+    """This class allows the creation of subsets (`buckets`) from a provider,
+    without copying data, while still preserving the :class:`InstanceProvider`
+    API.
+
+    For example, in Poolbased Active Learning, the dataset is partitioned
+    in several sets; e.g., the `labeled` and `unlabeled` parts of the dataset. 
+    Or in traditional supervised learning, the train, test and validation sets.
+    No data is copied, only a set of identifiers is kept in this provider.
+    All data resides in the original provider.
+
+    Attributes
+    ----------
+    dataset
+        The :class:`InstanceProvider` that you want to take a subset from
+    """    
+
     dataset: InstanceProvider[InstanceType, KT, DT, VT, RT]
+    """The original dataset. All data will remain there"""    
     
     @abstractmethod
     def _add_to_bucket(self, key: KT) -> None:
+        """Adds the :class:`Instance` with identifier `key` to the bucket
+
+        Parameters
+        ----------
+        key : KT
+            The identifier for the :class:`Instance` that should be added
+        """        
         raise NotImplementedError
 
     @abstractmethod
     def _remove_from_bucket(self, key: KT) -> None:
+        """Removes the :class:`Instance` with identifier `key` from the bucket
+
+        Parameters
+        ----------
+        key : KT
+            The identifier for the :class:`Instance` that should be removed
+        """        
         raise NotImplementedError
 
     @abstractmethod
     def _in_bucket(self, key: KT) -> bool:
+        """Returns if the :class:`Instance` with identifier `key` exists 
+        within this bucket
+
+        Parameters
+        ----------
+        key : KT
+            The identifier for the :class:`Instance` that should be added
+        """        
         raise NotImplementedError
     
     @abstractmethod
     def _clear_bucket(self) -> None:
+        """Removes all elements from this bucket
+        """        
         raise NotImplementedError
 
     @abstractmethod
     def _len_bucket(self) -> int:
+        """Returns the number of elements in the buckets
+
+        Returns
+        -------
+        int
+            The size of the bucket
+        """        
         raise NotImplementedError
 
     @property
     @abstractmethod
     def _bucket(self) -> Iterable[KT]:
+        """Return an iterable of all identifiers in the bucket.
+
+        Returns
+        -------
+        Iterable[KT]
+            An :class:`Iterable` that contains all identifiers
+            present in this bucket
+        """        
         raise NotImplementedError
 
     def __iter__(self) -> Iterator[KT]:
@@ -530,7 +792,31 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
 class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT], 
                           ABC, 
                           Generic[InstanceType, KT, DT, VT, RT]):
+    """This abstract class allows the creation of large subsets (`buckets`) that 
+    do not contain some elements, specified in a `bucket`.
+    No data is copied, however, the :class:`InstanceProvider` API is preserved.
+
+    In some underlying implementations (like a Many to Many relation in Django),
+    the creation of a large elements set takes a lot of time.
+    This class allows the creation of 
+
+    For example, in Poolbased Active Learning, the dataset is partitioned
+    in several sets; e.g., the `labeled` and `unlabeled` parts of the dataset. 
+    Or in supervised learning, the `train`, `test` and `validation` sets.
+    No data is copied, only a set of identifiers is kept in this provider.
+    All data resides in the original `dataset` provider.
+
+    Attributes
+    ----------
+    dataset
+        The :class:`InstanceProvider` that you want to take a subset from
+
+    bucket
+        The :class:`InstanceProvider` that you want to exclude from the dataset
+    """
+    
     bucket: InstanceProvider[InstanceType, KT, DT, VT, RT]
+    """The provider that should be excluded from the original `dataset`."""
 
     @property
     def _bucket(self) -> Iterable[KT]:

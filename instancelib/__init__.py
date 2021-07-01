@@ -1,10 +1,23 @@
-from .instances.base import Instance, InstanceProvider # type: ignore
-from .instances.memory import DataPoint, DataPointProvider # type: ignore
-from .instances.text import TextInstance, TextInstanceProvider # type: ignore
+from .instances.base import Instance, InstanceProvider
+from .instances.memory import DataPoint, DataPointProvider
+from .instances.text import TextInstance, TextInstanceProvider
 
-from .environment.base import AbstractEnvironment # type: ignore
-from .environment.memory import MemoryEnvironment  # type: ignore
-from .environment.text import TextEnvironment  # type: ignore
+from .environment.base import AbstractEnvironment
+from .environment.memory import MemoryEnvironment
+from .environment.text import TextEnvironment
 
-from .labels import LabelProvider # type: ignore
-from .labels.memory import MemoryLabelProvider # type: ignore
+from .labels import LabelProvider
+from .labels.memory import MemoryLabelProvider
+
+__author__ = "Michiel Bron"
+__email__ = "m.p.bron@uu.nl"
+
+__all__= [
+    "Instance", "InstanceProvider", 
+    "DataPointProvider", "DataPoint",
+    "TextInstance", "TextInstanceProvider",
+    "AbstractEnvironment", "MemoryEnvironment",
+    "TextEnvironment",
+    "LabelProvider",
+    "MemoryLabelProvider"
+]

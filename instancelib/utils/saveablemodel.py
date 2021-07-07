@@ -17,7 +17,8 @@
 from __future__ import annotations
 
 import functools
-import os
+from pathlib import Path
+from os import PathLike
 import pickle
 import uuid
 from typing import Any, Callable, List, Optional, TypeVar
@@ -31,8 +32,8 @@ class SaveableInnerModel():
 
     def __init__(self, 
                  innermodel: Optional[Any], 
-                 storage_location: Optional[str], 
-                 filename: Optional[str] = None, 
+                 storage_location: "Optional[PathLike[str]]" = None, 
+                 filename: "Optional[PathLike[str]]" = None, 
                  taboo_fields: Optional[List[str]] = None):
         self.storage_location = storage_location
         self.saved = False
@@ -59,9 +60,10 @@ class SaveableInnerModel():
         return filename
 
     @property
-    def filepath(self) -> Optional[str]:
-        if self.storage_location is not None:
-            return os.path.join(self.storage_location, self.filename)
+    def filepath(self) -> "Optional[PathLike[str]]":
+        if self.storage_location is not None: 
+            full_path = Path(self.storage_location) / self.filename
+            return full_path
         return None
 
     @property

@@ -1,7 +1,12 @@
 #%%
-from typing import Any, Callable, Iterable, Sequence
+from uuid import UUID
+from instancelib.machinelearning.sklearn import MultilabelSkLearnVectorClassifier, SkLearnVectorClassifier
+from typing import Any, Callable, Iterable, Sequence, Union
 
 import numpy as np
+
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.preprocessing import LabelEncoder, LabelBinarizer, MultiLabelBinarizer
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 
 from instancelib.feature_extraction.textinstance import TextInstanceVectorizer
@@ -116,6 +121,7 @@ pertubated_instances.get_children(instance)
 pertubated_test_data = frozenset(test.map(pertubator))
 
 #%%
+#%%
 # Add the data to the test set
 # add_range is type safe with * expansion from immutable data structures like frozenset, tuple, sequence
 # But works with other data structures as well
@@ -128,3 +134,10 @@ vectorizer = TextInstanceVectorizer(
 
 vectorize(vectorizer, tweakers_env)
 #%%
+classifier = MultinomialNB()
+labelencoder = LabelEncoder()
+model = SkLearnVectorClassifier[Union[int, UUID], str](classifier, labelencoder)(tweakers_env.labels.labelset)
+
+#%%
+model.fit_provider(train, tweakers_env.labels)
+# %%

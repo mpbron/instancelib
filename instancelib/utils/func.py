@@ -17,7 +17,7 @@
 import functools
 import itertools
 
-from typing import Any, Dict, FrozenSet, Iterable, List, TypeVar, Callable,  Tuple, Optional, Sequence
+from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, TypeVar, Callable,  Tuple, Optional, Sequence
 
 _T = TypeVar("_T")
 _U = TypeVar("_U")
@@ -244,6 +244,10 @@ def all_equal(iterable: Iterable[Any]) -> bool:
     g = itertools.groupby(iterable)
     return next(g, True) and not next(g, False) # type: ignore
 
+
+    
+
+
 def list_unzip(iterable: Iterable[Tuple[_T, _U]]) -> Tuple[Sequence[_T], Sequence[_U]]:
     """Unzips an iterable of tuples of two elements, and returns a tuple of two lists,
     where the first contains all the first elements of the tuples and the latter the second
@@ -387,6 +391,17 @@ def filter_snd_none(fst_iter: Iterable[_T],
     """    
     zipped: Iterable[Tuple[_T, _U]] = filter(lambda x: x[1] is not None, zip(fst_iter, snd_iter)) # type: ignore
     return list_unzip(zipped)
+
+
+
+def zip_chain(iterable: Iterable[Tuple[Sequence[_T], Sequence[_U]]]) -> Iterator[Tuple[_T, _U]]:
+    combined = (zip(a,b) for (a,b) in iterable)
+    chained = itertools.chain.from_iterable(combined)
+    yield from chained
+
+def unzip_chain(iterable: Iterable[Tuple[Sequence[_T], Sequence[_U]]]) -> Tuple[Sequence[_T], Sequence[_U]]:
+    results = list_unzip(zip_chain(iterable))
+    return results
 
 def sort_on(index: int, seq: Sequence[Tuple[_T, _U]]) -> Sequence[Tuple[_T, _U]]:
     """A function that allows you to sort a sequence on the `n-th` element of a tuple

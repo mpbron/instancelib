@@ -1,2 +1,4 @@
-from .base import AbstractEnvironment # type: ignore
-from .memory import MemoryEnvironment # type: ignore
+from .base import AbstractEnvironment, Environment
+from .memory import MemoryEnvironment
+
+__all__ = ["AbstractEnvironment", "Environment", "MemoryEnvironment"]

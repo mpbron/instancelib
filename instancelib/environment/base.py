@@ -25,8 +25,40 @@ from ..labels import LabelProvider
 
 from ..typehints import KT, DT, VT, RT, LT
 
+import warnings
+
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]", covariant=True)
-class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
+
+class Environment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
+    """Environments provide an interface that enable you to access all data stored in the datasets.
+    If there are labels stored in the environment, you can access these as well from here.
+
+    There are two important properties in every :class:`Environment`:
+
+    - :meth:`dataset`: Contains all Instances of the original dataset
+    - :meth:`labels`: Contains an object that allows you to access labels easily
+
+    Besides these properties, this object also provides methods to create new 
+    :class:`~instancelib.InstanceProvider` objects that contain a subset of 
+    the set of all instances stored in this environment.
+
+    Examples
+    --------
+
+    Access the dataset:
+
+    >>> dataset = env.dataset
+    >>> instance = next(iter(dataset.values()))
+
+    Access the labels:
+
+    >>> labels = env.labels
+    >>> ins_lbls = labels.get_labels(instance)
+
+    Create a train-test split on the dataset (70 % train, 30 % test):
+
+    >>> train, test = env.train_test_split(dataset, 0.70)
+    """    
     @abstractmethod
     def create_empty_provider(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """Use this method to create an empty `InstanceProvider`
@@ -48,25 +80,14 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         Returns
         -------
         InstanceProvider[InstanceType, KT, DT, VT, RT]
-            The dataset `InstanceProvider`
+            The dataset :class:`InstanceProvider`
         """        
         raise NotImplementedError
 
-    @property
-    @abstractmethod
-    def all_datapoints(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
-        """This provider should include all instances in all providers.
-        If there are any synthethic datapoints constructed, 
-        they should be also in here.
-
-        Returns
-        -------
-        InstanceProvider[InstancType, KT, DT, VT, RT]
-            The all_datapoints `InstanceProvider`
-        """        
-        raise NotImplementedError
+    
     
     @property
+    @abstractmethod
     def all_instances(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """This provider should include all instances in all providers.
         If there are any synthethic datapoints constructed, 
@@ -74,10 +95,29 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
 
         Returns
         -------
-        InstanceProvider[InstancType, KT, DT, VT, RT]
-            The all_instances `InstanceProvider`
+        InstanceProvider[InstanceType, KT, DT, VT, RT]
+            The all_instances :class:`InstanceProvider`
         """        
-        return self.all_datapoints
+        raise NotImplementedError
+
+    @property
+    def all_datapoints(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        """This provider should include all instances in all providers.
+        If there are any synthethic datapoints constructed, 
+        they should be also in here.
+
+        Returns
+        -------
+        InstanceProvider[InstanceType, KT, DT, VT, RT]
+            The all_datapoints :class:`InstanceProvider`
+
+        Warning
+        -------
+        Deprecated, use the all_instances property instead!
+
+        """
+        warnings.warn("Use the `all_instances` property instead!", category=DeprecationWarning)      
+        return self.all_instances
 
     @property
     @abstractmethod
@@ -109,6 +149,13 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         self.all_instances.bulk_add_vectors(keys, vectors)
 
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
+        """Create a new Instance
+
+        Returns
+        -------
+        InstanceType
+            A new instance
+        """        
         new_instance = self.all_instances.create(*args, **kwargs)
         return new_instance
 
@@ -175,3 +222,45 @@ class AbstractEnvironment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         train_provider = self.create_bucket(train_keys)
         test_provider = self.create_bucket(test_keys)
         return train_provider, test_provider
+
+    def combine(self, 
+                a: InstanceProvider[InstanceType, KT, DT, VT, RT],
+                b: InstanceProvider[InstanceType, KT, DT, VT, RT]
+                ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        keys = frozenset(a.key_list).union(b.key_list)
+        combined_provider = self.create_bucket(keys)
+        return combined_provider
+                                
+
+class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT], 
+                  ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
+    """Environments provide an interface that enable you to access all data stored in the datasets.
+    If there are labels stored in the environment, you can access these as well from here.
+
+    There are two important properties in every :class:`Environment`:
+
+    - :meth:`dataset`: Contains all Instances of the original dataset
+    - :meth:`labels`: Contains an object that allows you to access labels easily
+
+    Besides these properties, this object also provides methods to create new 
+    :class:`~instancelib.InstanceProvider` objects that contain a subset of 
+    the set of all instances stored in this environment.
+
+    Examples
+    --------
+
+    Access the dataset:
+
+    >>> dataset = env.dataset
+    >>> instance = next(iter(dataset.values()))
+
+    Access the labels:
+
+    >>> labels = env.labels
+    >>> ins_lbls = labels.get_labels(instance)
+
+    Create a train-test split on the dataset (70 % train, 30 % test):
+
+    >>> train, test = env.train_test_split(dataset, 0.70)
+    """    
+    pass

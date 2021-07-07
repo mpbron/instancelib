@@ -119,8 +119,8 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
         return list(self.get_all())
    
     def add_child(self, 
-                  parent: Union[KT, InstanceType], 
-                  child:  Union[KT, InstanceType]) -> None:
+                  parent: Union[KT, Instance[KT, DT, VT, RT]], 
+                  child:  Union[KT, Instance[KT, DT, VT, RT]]) -> None:
         parent_key: KT = to_key(parent)
         child_key: KT = to_key(child)
         assert parent_key != child_key
@@ -131,14 +131,14 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
             raise KeyError("Either the parent or child does not exist in this Provider")
 
     def get_children(self, 
-                     parent: Union[KT, InstanceType]) -> Sequence[InstanceType]:
+                     parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[InstanceType]:
         parent_key: KT = to_key(parent)
         if parent_key in self.children:
             children = [self.dictionary[child_key] for child_key in self.children[parent_key]]
             return children # type: ignore
         return []
 
-    def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
+    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceType:
         child_key: KT = to_key(child)
         if child_key in self.parents:
             parent_key = self.parents[child_key]

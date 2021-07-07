@@ -89,6 +89,19 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
     @vector.setter
     def vector(self, value: Optional[VT]) -> None:  # type: ignore
+        """Set the vector representation of the raw data
+
+        Parameters
+        ----------
+        value : Optional[VT]
+            A vector value (this may be `None`)
+
+        Note
+        ----
+        It may be better to use the 
+        :meth:`InstanceProvider.bulk_add_vectors` method
+        if you want update the vectors of many instances
+        """        
         raise NotImplementedError
 
     @property
@@ -199,6 +212,9 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         - :data:`~instancelib.typehints.VT`: The type of the vector
         - :data:`~instancelib.typehints.RT`: The type of the representation
 
+    Specifying these allows Python to ensure the correctness of your implementation 
+    and eases further integration in your application.
+
     Examples
     --------
     
@@ -216,9 +232,8 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
 
     Example implementation:
     
-    >>> class TextProvider(InstanceProvider[
-    ...                          Instance[int, str, np.ndarray, str],
-    ...                          int, str, np.ndarray, str]):
+    >>> class TextProvider(InstanceProvider[Instance[int, str, np.ndarray, str],
+    ...                                     int, str, np.ndarray, str]):
     ...     # Further implementation is needed
     >>> textprovider = TextProvider()
 
@@ -228,25 +243,25 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
     """
 
     def add_child(self,
-                  parent: Union[KT, InstanceType],
-                  child: Union[KT, InstanceType]) -> None:
+                  parent: Union[KT, Instance[KT, DT, VT, RT]],
+                  child: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
         """Register a parent child relation between two instances
 
         Parameters
         ----------
-        parent : Union[KT, InstanceType]
+        parent : Union[KT, Instance[KT, DT, VT, RT]]
             The parent instance (or identifier)
-        child : Union[KT, InstanceType]
+        child : Union[KT, Instance[KT, DT, VT, RT]]
             The child instance (or identifier)
         """        
         raise NotImplementedError
 
-    def get_children(self, parent: Union[KT, InstanceType]) -> Sequence[InstanceType]:
+    def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[InstanceType]:
         """Get the children that are registered to this parent
 
         Parameters
         ----------
-        parent : Union[KT, InstanceType]
+        parent : Union[KT, Instance[KT, DT, VT, RT]]
             The parent from which you want to get the children from.
 
         Returns
@@ -256,12 +271,12 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """        
         raise NotImplementedError
 
-    def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
+    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceType:
         """Get the parent of a child
 
         Parameters
         ----------
-        child : Union[KT, InstanceType]
+        child : Union[KT, Instance[KT, DT, VT, RT]]
             A child instance from which you want to get the children from.
 
         Returns
@@ -411,9 +426,9 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
 
         Parameters
         ----------
-        keys : :class:`Sequence`[KT]
+        keys
             A sequence of keys
-        values : :class:`Sequence`[VT]
+        values
             A sequence of vectors
 
         Warning
@@ -468,6 +483,28 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         yield from chunks
 
     def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        """Iterate over all instances (with or without vectors) in belonging the identifier 
+        :class:`Iterable` in the `keys` parameter.
+
+        Parameters
+        ----------
+        keys : Iterable[KT]
+            The keys that should should be chunked
+
+        batch_size : int
+            The batch size, the generator will return lists with size `batch_size`
+
+        Yields
+        -------
+        Sequence[Instance[KT, DT, VT, RT]]]
+            A sequence of instances with length `batch_size`. The last list may have
+            a shorter length.
+
+        Returns
+        -------
+        Iterator[Sequence[Tuple[KT, VT]]]
+            An iterator over sequences of key vector tuples
+        """
         included_ids = frozenset(self.key_list).intersection(keys)
         id_vecs = ((elem.identifier, elem.vector)
                    for elem in self.values() if elem.vector is not None and elem.identifier in included_ids)
@@ -493,10 +530,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         Sequence[Tuple[KT, VT]]
             Sequences of key vector tuples
         """
-        id_vecs = ((elem.identifier, elem.vector)
-                   for elem in self.values() if elem.vector is not None)
-        chunks = divide_iterable_in_lists(id_vecs, batch_size)
-        return chunks
+        yield from self.vector_chunker_selector(self.key_list, batch_size)
 
     def bulk_get_all(self) -> List[InstanceType]:
         """Returns a list of all instances in this provider.
@@ -798,13 +832,13 @@ class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
 
     In some underlying implementations (like a Many to Many relation in Django),
     the creation of a large elements set takes a lot of time.
-    This class allows the creation of 
+    This class allows the creation to subtract a (small) bucket from the dataset
+    and include only the remainder.
 
-    For example, in Poolbased Active Learning, the dataset is partitioned
-    in several sets; e.g., the `labeled` and `unlabeled` parts of the dataset. 
-    Or in supervised learning, the `train`, `test` and `validation` sets.
-    No data is copied, only a set of identifiers is kept in this provider.
-    All data resides in the original `dataset` provider.
+    This method can be used in the Poolbased Active Learning setting; suppose
+    you have a small `labeled` set and a huge dataset. 
+    You can subtract the `labeled` from the dataset and create an InstanceProvider
+    that contains all `unlabeled` examples. 
 
     Attributes
     ----------
@@ -813,6 +847,11 @@ class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
 
     bucket
         The :class:`InstanceProvider` that you want to exclude from the dataset
+
+    Warning
+    -------
+    If possible, do not use this class: a solution that is based on only :class:`InstanceProvider` objects
+    and :class:`AbstractBucketProvider` will probably be faster.
     """
     
     bucket: InstanceProvider[InstanceType, KT, DT, VT, RT]

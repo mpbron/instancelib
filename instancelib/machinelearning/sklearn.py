@@ -17,13 +17,14 @@
 
 
 from __future__ import annotations
+from instancelib.environment.base import Environment
 from instancelib.machinelearning.featurematrix import FeatureMatrix
 
 import itertools
 import logging
 from os import PathLike
 from typing import (Any, FrozenSet, Generic, Iterable, Iterator, List,
-                    Optional, Sequence, Tuple)
+                    Optional, Sequence, Tuple, TypeVar)
 
 import numpy as np  # type: ignore
 from instancelib.instances import Instance, InstanceProvider
@@ -32,7 +33,7 @@ from instancelib.labels.base import LabelProvider
 from sklearn.base import ClassifierMixin, TransformerMixin  # type: ignore
 
 from ..exceptions import NoVectorsException
-from ..environment import AbstractEnvironment
+from ..environment import Environment
 from ..typehints.typevars import KT, LT
 from ..utils import SaveableInnerModel
 from ..utils.func import list_unzip, zip_chain
@@ -40,31 +41,31 @@ from .base import AbstractClassifier
 
 LOGGER = logging.getLogger(__name__)
 
+IT = TypeVar("IT", bound="Instance[Any, Any, np.ndarray, Any]", covariant=True)
+
 class SkLearnVectorClassifier(SaveableInnerModel, 
-                              AbstractClassifier[
-                                    Instance[KT, Any, np.ndarray, Any], 
-                                    KT, Any, np.ndarray, Any, LT, 
+                              AbstractClassifier[IT, KT, Any, np.ndarray, Any, LT, 
                                     np.ndarray, np.ndarray
                               ], 
-                              Generic[KT, LT]):
+                              Generic[IT, KT, LT]):
     _name = "Sklearn"
 
     def __init__(
             self,
             estimator: ClassifierMixin, 
             encoder: TransformerMixin,
+            target_labels: Iterable[LT],
             storage_location: "Optional[PathLike[str]]"=None, 
             filename: "Optional[PathLike[str]]"=None
             ) -> None:
         SaveableInnerModel.__init__(self, estimator, storage_location, filename)
         self.encoder = encoder 
         self._fitted = False
-        self._target_labels: FrozenSet[LT] = frozenset()
-
-    def __call__(self, target_labels: Iterable[LT]) -> SkLearnVectorClassifier[KT, LT]:
         self._target_labels = frozenset(target_labels)
+        self._fit_label_encoder()
+
+    def _fit_label_encoder(self) -> None:
         self.encoder.fit(list(self._target_labels)) # type: ignore
-        return self
 
     def encode_labels(self, labels: Iterable[LT]) -> np.ndarray:
         return self.encoder.transform(list(set(labels))) # type: ignore
@@ -80,9 +81,7 @@ class SkLearnVectorClassifier(SaveableInnerModel,
     @SaveableInnerModel.load_model_fallback
     def _fit(self, x_data: np.ndarray, y_data: np.ndarray):
         assert x_data.shape[0] == y_data.shape[0]
-        x_resampled, y_resampled = x_data, y_data
-        LOGGER.info("[%s] Balanced / Resampled the data", self.name)
-        self.innermodel.fit(x_resampled, y_resampled) # type: ignore
+        self.innermodel.fit(x_data, y_data) # type: ignore
         LOGGER.info("[%s] Fitted the model", self.name)
         self._fitted = True
 
@@ -99,7 +98,8 @@ class SkLearnVectorClassifier(SaveableInnerModel,
             y_lm = np.reshape(y_lm, (y_lm.shape[0],))
         return x_fm, y_lm
 
-    def encode_x(self, instances: Sequence[Instance[KT, Any, np.ndarray, Any]]) -> np.ndarray:
+    def encode_x(self, 
+                 instances: Sequence[Instance[KT, Any, np.ndarray, Any]]) -> np.ndarray:
         # TODO Maybe convert to staticmethod
         x_data = [
             instance.vector for instance in instances if instance.vector is not None]
@@ -196,8 +196,7 @@ class SkLearnVectorClassifier(SaveableInnerModel,
         return zipped
 
     def predict_proba_provider(self, 
-                               provider: InstanceProvider[Instance[KT, Any, np.ndarray, Any], 
-                               KT, Any, np.ndarray, Any], 
+                               provider: InstanceProvider[IT, KT, Any, np.ndarray, Any], 
                                batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         preds = self.predict_proba_provider_raw(provider, batch_size)
         decoded_probas = itertools.starmap(self._decode_proba_matrix, preds)
@@ -205,16 +204,15 @@ class SkLearnVectorClassifier(SaveableInnerModel,
         return chained
 
     def predict_proba_provider_raw(self, 
-                                   provider: InstanceProvider[Instance[KT, Any, np.ndarray, Any], 
-                                   KT, Any, np.ndarray, Any], batch_size: int) -> Iterator[Tuple[Sequence[KT], np.ndarray]]:
+                                   provider: InstanceProvider[IT, KT, Any, np.ndarray, Any],
+                                   batch_size: int = 200) -> Iterator[Tuple[Sequence[KT], np.ndarray]]:
         matrices = FeatureMatrix[KT].generator_from_provider(provider, batch_size)
         preds = map(self._get_probas, matrices)
         yield from preds
 
     def predict_provider(self, 
-                         provider: InstanceProvider[Instance[KT, Any, np.ndarray, Any], KT, Any, np.ndarray, Any], 
-                         batch_size: int = 200,
-                         ) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
+                         provider: InstanceProvider[IT, KT, Any, np.ndarray, Any], 
+                         batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         matrices = FeatureMatrix[KT].generator_from_provider(provider, batch_size)
         preds = map(self._get_preds, matrices)
         results = list(zip_chain(preds))
@@ -225,14 +223,13 @@ class SkLearnVectorClassifier(SaveableInnerModel,
 
 
     def fit_provider(self, 
-                     provider: InstanceProvider[Instance[KT, Any, np.ndarray, Any], KT, Any, np.ndarray, Any], 
+                     provider: InstanceProvider[IT, KT, Any, np.ndarray, Any], 
                      labels: LabelProvider[KT, LT], 
                      batch_size: int = 200) -> None:
         LOGGER.info("[%s] Start with the fit procedure", self.name)
-        # Some sanity checks
-               
         # Collect the feature matrix for the labeled subset
-        key_vector_pairs = itertools.chain.from_iterable(provider.vector_chunker(batch_size))
+        key_vector_pairs = itertools.chain.from_iterable(
+            provider.vector_chunker(batch_size))
         keys, vectors = list_unzip(key_vector_pairs)
         if not vectors:
             raise NoVectorsException("There are no vectors available for training the classifier")
@@ -266,15 +263,43 @@ class SkLearnVectorClassifier(SaveableInnerModel,
     def fitted(self) -> bool:
         return self._fitted
 
+    @classmethod
+    def from_env(cls,
+                 estimator: ClassifierMixin, 
+                 encoder: TransformerMixin,
+                 env: Environment[IT, KT, Any, np.ndarray, Any, LT],
+                 storage_location: "Optional[PathLike[str]]"=None, 
+                 filename: "Optional[PathLike[str]]"=None
+                 ) -> SkLearnVectorClassifier[IT, KT, LT]:
+        """Construct a Sklearn Vector model from an :class:`~instancelib.Environment`.
+
+        Parameters
+        ----------
+        estimator : ClassifierMixin
+            The Sklearn Classifier (e.g., :class:`sklearn.naive_bayes.MultinomialNB`)
+        encoder : TransformerMixin
+            The label encoder (e.g, :class:`sklearn.preprocessing.LabelEncoder`)
+        env : Environment[IT, KT, Any, np.ndarray, Any, LT]
+            The environment that will be used to gather the labels from
+        storage_location : Optional[PathLike[str]], optional
+            If you want to save the model, you can specify the storage folder, by default None
+        filename : Optional[PathLike[str]], optional
+            If the model has a specific filename, you can specify it here, by default None
+
+        Returns
+        -------
+        SkLearnVectorClassifier[IT, KT, LT]
+            The model
+        """        
+        return cls(estimator, encoder, env.labels.labelset, storage_location, filename)
 
 
 
-class MultilabelSkLearnVectorClassifier(SkLearnVectorClassifier[KT, LT], Generic[KT, LT]):
+class MultilabelSkLearnVectorClassifier(SkLearnVectorClassifier[IT, KT, LT], Generic[IT, KT, LT]):
     _name = "Multilabel Sklearn"
-    def __call__(self, target_labels: Iterable[LT]) -> MultilabelSkLearnVectorClassifier[KT, LT]:
-        self._target_labels = frozenset(target_labels)
+   
+    def _fit_label_encoder(self) -> None:
         self.encoder.fit(list(map(lambda x: {x}, self._target_labels))) # type: ignore
-        return self
 
     def encode_labels(self, labels: Iterable[LT]) -> np.ndarray:
         return self.encoder.transform([list(set(labels))]) # type: ignore

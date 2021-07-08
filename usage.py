@@ -1,12 +1,11 @@
 #%%
-from uuid import UUID
-from instancelib.machinelearning.sklearn import MultilabelSkLearnVectorClassifier, SkLearnVectorClassifier
-from typing import Any, Callable, Iterable, Sequence, Union
+from instancelib.machinelearning.sklearn import SkLearnVectorClassifier
+from typing import Any, Callable, Iterable, Sequence
 
 import numpy as np
 
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.preprocessing import LabelEncoder, LabelBinarizer, MultiLabelBinarizer
+from sklearn.naive_bayes import MultinomialNB # type: ignore
+from sklearn.preprocessing import LabelEncoder # type: ignore
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 
 from instancelib.feature_extraction.textinstance import TextInstanceVectorizer
@@ -136,8 +135,10 @@ vectorize(vectorizer, tweakers_env)
 #%%
 classifier = MultinomialNB()
 labelencoder = LabelEncoder()
-model = SkLearnVectorClassifier[Union[int, UUID], str](classifier, labelencoder)(tweakers_env.labels.labelset)
-
+model = SkLearnVectorClassifier.from_env(
+    classifier, labelencoder, tweakers_env)
 #%%
 model.fit_provider(train, tweakers_env.labels)
+# %%
+predictions = model.predict_provider(test)
 # %%

@@ -32,24 +32,6 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LVT, PVT]):
     _name = "AbstractClassifier"
 
     @abstractmethod
-    def __call__(self, 
-                 target_labels: Iterable[LT],
-                 ) -> AbstractClassifier[IT, KT, DT, VT, RT, LT, LVT, PVT]:
-        """Initialize the classifier by supplying the target labels
-        
-        Parameters
-        ----------
-        target_labels : Iterable[LT]
-            A set with number of labels
-        
-        Returns
-        -------
-        AbstractClassifier
-            [description]
-        """        
-        raise NotImplementedError
-
-    @abstractmethod
     def encode_labels(self, labels: Iterable[LT]) -> LVT:
         pass
 

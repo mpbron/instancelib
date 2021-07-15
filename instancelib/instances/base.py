@@ -463,8 +463,34 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         vector_pairs = ((key, self[key].vector) for key in keys)
         ret_keys, ret_vectors = filter_snd_none_zipped(vector_pairs)
         return ret_keys, ret_vectors  # type: ignore
+    
+    def data_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        """Iterate over all instances data parts in 
+        this provider
 
-    def data_chunker(self, batch_size: int) -> Iterator[Sequence[InstanceType]]:
+        Parameters
+        ----------
+        batch_size : int
+            The batch size, the generator will return lists with size `batch_size`
+
+        Yields
+        -------
+        Sequence[Tuple[KT,DT]]
+            A sequence of instances with length `batch_size`. The last list may have
+            a shorter length.
+        """
+        datapoints = ((ins.identifier, ins.data) for ins in self.values())
+        chunks = divide_iterable_in_lists(datapoints, batch_size)
+        yield from chunks
+
+    def data_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        keyset = frozenset(keys)
+        datapoints = ((ins.identifier, ins.data) for ins in self.values() if ins.identifier in keyset)
+        chunks = divide_iterable_in_lists(datapoints, batch_size)
+        yield from chunks
+    
+
+    def instance_chunker(self, batch_size: int) -> Iterator[Sequence[InstanceType]]:
         """Iterate over all instances (with or without vectors) in 
         this provider
 
@@ -792,12 +818,22 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
     def get_all(self) -> Iterator[InstanceType]:
         yield from list(self.values())
 
-    def vector_chunker(self, batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
+    def vector_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
         results = self.dataset.vector_chunker_selector(self.key_list, batch_size)
         return results
 
+    def data_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        results = self.dataset.data_chunker_selector(self.key_list, batch_size)
+        return results
+
+    def data_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        keyset = frozenset(self.key_list).intersection(keys)
+        results = self.dataset.data_chunker_selector(keyset, batch_size)
+        return results
+
     def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
-        results = self.dataset.vector_chunker_selector(keys, batch_size)
+        keyset = frozenset(self.key_list).intersection(keys)
+        results = self.dataset.vector_chunker_selector(keyset, batch_size)
         return results
 
     def clear(self) -> None:

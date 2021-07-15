@@ -18,7 +18,7 @@ from __future__ import annotations
 from os import PathLike
 
 import functools
-from typing import Iterable, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Iterator, List, Optional, Sequence, Union
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
@@ -138,7 +138,7 @@ class HDF5Provider(InstanceProvider[HDF5Instance, int, str, np.ndarray, str]):
     def clear(self) -> None:
         pass
 
-    def data_chunker(self, batch_size: int):
+    def instance_chunker(self, batch_size: int):
         constructor = functools.partial(HDF5Instance.from_row, self.vectors)
         df = self.dataframe
         instance_df = df.apply(constructor, axis=1)  # type: ignore

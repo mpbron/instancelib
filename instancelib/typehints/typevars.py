@@ -38,3 +38,10 @@ LVT = TypeVar("LVT")
 
 PVT = TypeVar("PVT")
 """The Type of the encoded probability vector"""
+
+LMT = TypeVar("LMT")
+"""The Type of the label matrix"""
+
+PMT = TypeVar("PMT")
+"""The Type of the encoded probability matrix"""
+

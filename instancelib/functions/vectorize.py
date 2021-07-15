@@ -34,10 +34,10 @@ def vectorize(vectorizer: BaseVectorizer[Instance[Any, Any, np.ndarray, Any]],
     def fit_vector() -> None:
         instances = list(
             itertools.chain.from_iterable(
-                environment.all_datapoints.data_chunker(chunk_size)))
+                environment.all_instances.instance_chunker(chunk_size)))
         vectorizer.fit(instances)
     def set_vectors() -> None:
-        instance_chunks = environment.all_datapoints.data_chunker(chunk_size)
+        instance_chunks = environment.all_instances.instance_chunker(chunk_size)
         for instance_chunk in instance_chunks:
             matrix = vectorizer.transform(instance_chunk)
             keys: List[KT] = list(map(to_key, instance_chunk)) # type: ignore

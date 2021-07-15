@@ -46,7 +46,8 @@ setuptools.setup( # type: ignore
         "tables", 
         "scikit-learn", 
         "openpyxl", 
-        "xlrd"],
+        "xlrd",
+        "more-itertools"],
     extra_requires={
         "doc2vec": ["gensim"] 
     }

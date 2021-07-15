@@ -1,12 +1,13 @@
 #%%
-from instancelib.machinelearning.sklearn import SkLearnVectorClassifier
+from instancelib.machinelearning.skdata import SkLearnDataClassifier
+from instancelib.machinelearning import SkLearnVectorClassifier
 from typing import Any, Callable, Iterable, Sequence
 
 import numpy as np
 
+from sklearn.pipeline import Pipeline # typeL ignore
 from sklearn.naive_bayes import MultinomialNB # type: ignore
-from sklearn.preprocessing import LabelEncoder # type: ignore
-from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, TfidfTransformer # type: ignore
 
 from instancelib.feature_extraction.textinstance import TextInstanceVectorizer
 from instancelib.feature_extraction.textsklearn import SklearnVectorizer
@@ -134,11 +135,16 @@ vectorizer = TextInstanceVectorizer(
 vectorize(vectorizer, tweakers_env)
 #%%
 classifier = MultinomialNB()
-labelencoder = LabelEncoder()
-model = SkLearnVectorClassifier.from_env(
-    classifier, labelencoder, tweakers_env)
+vec_model = SkLearnVectorClassifier.build(classifier, tweakers_env)
 #%%
-model.fit_provider(train, tweakers_env.labels)
+vec_model.fit_provider(train, tweakers_env.labels)
 # %%
-predictions = model.predict_provider(test)
+predictions = vec_model.predict_proba(test)
+# %%
+pipeline = Pipeline([
+     ('vect', CountVectorizer()),
+     ('tfidf', TfidfTransformer()),
+     ('clf', MultinomialNB()),
+     ])
+data_model = SkLearnDataClassifier.build(pipeline, tweakers_env)
 # %%

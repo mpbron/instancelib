@@ -14,6 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+import functools
 import itertools
 from typing import Iterable, Optional, Sequence, Tuple, Union
 
@@ -92,3 +93,18 @@ def matrix_tuple_to_zipped(keys: Sequence[KT],
                            matrix: np.ndarray) -> Sequence[Tuple[KT, np.ndarray]]:
     result = list(zip(keys, matrix_to_vector_list(matrix)))
     return result
+
+
+
+def combiner(chunk_a: Tuple[Sequence[KT], np.ndarray], 
+             chunk_b: Tuple[Sequence[KT], np.ndarray]
+            ) -> Tuple[Sequence[KT], np.ndarray]:
+    keys_a, mat_a = chunk_a
+    keys_b, mat_b = chunk_b
+    keys: Sequence[KT] = [*keys_a, *keys_b]
+    mat = np.vstack((mat_a, mat_b))
+    return keys, mat
+
+def chunk_combiner(chunks: Iterable[Tuple[Sequence[KT], np.ndarray]]) -> Tuple[Sequence[KT], np.ndarray]:
+    result = functools.reduce(lambda a,b: combiner(a,b), chunks) 
+    return result # type: ignore

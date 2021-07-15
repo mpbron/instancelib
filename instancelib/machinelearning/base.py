@@ -19,68 +19,72 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import (FrozenSet, Generic, Iterable, Iterator,
-                    Sequence, Tuple, TypeVar, Any)
+                    Sequence, Tuple, TypeVar, Any, Union)
 
 from ..labels import LabelProvider
 from ..instances import Instance, InstanceProvider
 
-from ..typehints import KT, VT, DT, RT, LT, LVT, PVT
+import more_itertools
+
+from ..typehints import KT, VT, DT, RT, LT, LMT, PMT
 
 IT = TypeVar("IT", bound="Instance[Any,Any,Any,Any]", covariant = True)
 
-class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LVT, PVT]):
+InstanceInput = Union[InstanceProvider[IT, KT, DT, VT, RT], Iterable[Instance[KT, DT, VT, RT]]]
+
+class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
     _name = "AbstractClassifier"
 
     @abstractmethod
-    def encode_labels(self, labels: Iterable[LT]) -> LVT:
-        pass
-
-    @abstractmethod
-    def predict_instances(self, instances: Sequence[Instance[KT, DT, VT, RT]]) -> Sequence[FrozenSet[LT]]:
-        pass
+    def predict_instances(self, 
+                          instances: Iterable[Instance[KT, DT, VT, RT]], 
+                          batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
+        raise NotImplementedError
 
     @abstractmethod
     def predict_provider(self, 
-                         provider: InstanceProvider[Instance[KT, DT, VT, RT], KT, DT, VT, RT],
+                         provider: InstanceProvider[IT, KT, DT, VT, RT],
                          batch_size: int = 200
                          ) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         raise NotImplementedError
 
     @abstractmethod
     def predict_proba_provider(self, 
-                         provider: InstanceProvider[Instance[KT, DT, VT, RT], KT, DT, VT, RT],
+                         provider: InstanceProvider[IT, KT, DT, VT, RT],
                          batch_size: int = 200
                          ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         raise NotImplementedError
 
     @abstractmethod
     def predict_proba_provider_raw(self, 
-                         provider: InstanceProvider[Instance[KT, DT, VT, RT], KT, DT, VT, RT],
+                         provider: InstanceProvider[IT, KT, DT, VT, RT],
                          batch_size: int = 200
-                         ) -> Iterator[Tuple[Sequence[KT], PVT]]:
+                         ) -> Iterator[Tuple[Sequence[KT], PMT]]:
         raise NotImplementedError
 
     @abstractmethod
     def predict_proba_instances(self, 
-                                instances: Sequence[Instance[KT, DT, VT, RT]]
-                                ) -> Sequence[FrozenSet[Tuple[LT, float]]]:
+                                instances: Iterable[Instance[KT, DT, VT, RT]],
+                                batch_size: int = 200
+                                ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         raise NotImplementedError
 
     @abstractmethod
     def predict_proba_instances_raw(self, 
-                                    instances: Sequence[Instance[KT, DT, VT, RT]]
-                                    ) -> Tuple[Sequence[KT], PVT]:
+                                    instances: Iterable[Instance[KT, DT, VT, RT]],
+                                    batch_size: int = 200
+                                    ) -> Iterator[Tuple[Sequence[KT], PMT]]:
         raise NotImplementedError
 
 
     @abstractmethod
     def fit_provider(self, 
-                     provider: InstanceProvider[Instance[KT, DT, VT, RT], KT, DT, VT, RT],
+                     provider: InstanceProvider[IT, KT, DT, VT, RT],
                      labels: LabelProvider[KT, LT], batch_size: int = 200) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def fit_instances(self, instances: Sequence[Instance[KT, DT, VT, RT]], labels: Sequence[Iterable[LT]]) -> None:
+    def fit_instances(self, instances: Iterable[Instance[KT, DT, VT, RT]], labels: Iterable[Iterable[LT]]) -> None:
         raise NotImplementedError
 
    
@@ -93,6 +97,76 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LVT, PVT]):
     def fitted(self) -> bool:
         pass
 
-    @abstractmethod
-    def get_label_column_index(self, label: LT) -> int:
-        raise NotImplementedError
+    def predict(self, instances: InstanceInput[IT, KT, DT, VT, RT], batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
+        """Predict the labels on input instances.
+
+        Parameters
+        ----------
+        instances : InstanceInput[IT, KT, DT, VT, RT]
+            An :class:`InstanceProvider` or :class:`Iterable` of :class:`Instance` objects.
+        batch_size : int, optional
+            A batch size, by default 200
+
+        Returns
+        -------
+        Sequence[Tuple[KT, FrozenSet[LT]]]
+            A Tuple of Keys corresponding with their labels
+
+        Raises
+        ------
+        ValueError
+            If you supply incorrect formatted arguments
+        """        
+        if isinstance(instances, InstanceProvider):
+            typed_provider: InstanceProvider[IT, KT, DT, VT, RT] = instances # type: ignore
+            result = self.predict_provider(typed_provider, batch_size)
+            return result
+        head, iterable = more_itertools.spy(instances)
+        if isinstance(head, Instance):
+            typed_iterable: Iterable[Instance[KT, DT, VT, RT]] = iterable # type: ignore
+            result = self.predict_instances(typed_iterable, batch_size)
+            return result
+        raise ValueError("The instances argument is no InstanceProvider or Iterable of Instance objects")
+
+
+    def predict_proba(self, instances: InstanceInput[IT, KT, DT, VT, RT], batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
+        """Predict the labels and corresponding probabilities on input instances.
+
+        Parameters
+        ----------
+        instances : InstanceInput[IT, KT, DT, VT, RT]
+            An :class:`InstanceProvider` or :class:`Iterable` of :class:`Instance` objects.
+        batch_size : int, optional
+            A batch size, by default 200
+        Returns
+        -------
+        Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]
+             Tuple of Keys corresponding with tuples of probabilities and the labels
+
+        Raises
+        ------
+        ValueError
+            If you supply incorrect formatted arguments
+        """        
+        if isinstance(instances, InstanceProvider):
+            typed_provider: InstanceProvider[IT, KT, DT, VT, RT] = instances # type: ignore
+            result = self.predict_proba_provider(typed_provider, batch_size)
+            return result
+        head, iterable = more_itertools.spy(instances)
+        if isinstance(head, Instance):
+            typed_iterable: Iterable[Instance[KT, DT, VT, RT]] = iterable # type: ignore
+            preds = self.predict_proba_instances(typed_iterable, batch_size)
+            return preds
+        raise ValueError("The `instances` argument is no `InstanceProvider` or `Iterable` of `Instance` objects")
+
+    def predict_proba_raw(self, instances: InstanceInput[IT, KT, DT, VT, RT], batch_size: int = 200) -> Iterator[Tuple[Sequence[KT], PMT]]:
+        if isinstance(instances, InstanceProvider):
+            typed_provider: InstanceProvider[IT, KT, DT, VT, RT] = instances # type: ignore
+            result = self.predict_proba_provider_raw(typed_provider, batch_size)
+            return result
+        head, iterable = more_itertools.spy(instances)
+        if isinstance(head, Instance):
+            typed_iterable: Iterable[Instance[KT, DT, VT, RT]] = iterable # type: ignore
+            preds = self.predict_proba_instances_raw(typed_iterable, batch_size)
+            return preds            
+        raise ValueError("The `instances` argument is no `InstanceProvider` or `Iterable` of `Instance` objects")

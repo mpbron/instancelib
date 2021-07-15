@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from os import PathLike
+
 from typing import Sequence, Optional, Callable, List, Dict, Any
 from tempfile import NamedTemporaryFile
 
@@ -55,8 +57,8 @@ class Doc2VecVectorizer(BaseVectorizer[str], SaveableInnerModel):
         self,
         d2v_params: Dict[str, Any],
         tokenizer: DocTokenizer = split_tokenizer,
-        storage_location: Optional[str]=None,
-        filename: Optional[str] = None
+        storage_location: "Optional[PathLike[str]]" =None,
+        filename:"Optional[PathLike[str]]" = None
     ) -> None:
         BaseVectorizer.__init__(self) # type: ignore
         self.tokenizer = tokenizer # type: ignore

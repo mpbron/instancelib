@@ -26,7 +26,7 @@ import pandas as pd
 
 from ..environment.base import AbstractEnvironment
 from ..environment.text import TextEnvironment
-from ..instances.text import TextInstance
+from ..instances.text import MemoryTextInstance
 from ..utils.func import list_unzip3
 
 
@@ -116,7 +116,7 @@ def build_environment(df: pd.DataFrame,
                       data_cols: Sequence[str],
                       label_cols: Sequence[str],
                      ) -> AbstractEnvironment[
-                TextInstance[int, np.ndarray], 
+                MemoryTextInstance[int, np.ndarray], 
                 Union[int, UUID], str, np.ndarray, str, str]:
     """Build an environment from a data frame
 
@@ -147,7 +147,7 @@ def build_environment(df: pd.DataFrame,
     return environment
 
 Environment = AbstractEnvironment[
-                TextInstance[int, np.ndarray], 
+                MemoryTextInstance[int, np.ndarray], 
                 Union[int, UUID], str, np.ndarray,str, str]
 
 def read_excel_dataset(path: "Union[str, PathLike[str]]", 
@@ -156,7 +156,7 @@ def read_excel_dataset(path: "Union[str, PathLike[str]]",
                        labels: Optional[Iterable[str]] = None,
                        label_mapper: Callable[[Any], Optional[str]] = identity_mapper
                        ) -> AbstractEnvironment[
-                TextInstance[int, np.ndarray], 
+                MemoryTextInstance[int, np.ndarray], 
                 Union[int, UUID], str, np.ndarray, str, str]:
     """Read csv datasets that contain text data
 
@@ -192,7 +192,7 @@ def read_csv_dataset(path: "Union[str, PathLike[str]]",
                      labels: Optional[Iterable[str]] = None,
                      label_mapper: Callable[[Any], Optional[str]] = identity_mapper
                      ) -> AbstractEnvironment[
-                TextInstance[int, np.ndarray], 
+                MemoryTextInstance[int, np.ndarray], 
                 Union[int, UUID], str, np.ndarray, str, str]:
     """Read Excel filse that contain text data
 

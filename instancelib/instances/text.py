@@ -15,25 +15,81 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
+from abc import ABC, abstractmethod
 
+import numpy as np
 from typing import Any, Generic, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
 from ..typehints import KT, VT
 from .memory import AbstractMemoryProvider, DataPoint
+from .base import Instance
 
 
-class TextInstance(DataPoint[Union[KT, UUID], str, VT, str], Generic[KT, VT]):
+class TextInstance(Instance[KT, str, VT, str], ABC, Generic[KT, VT]):
+    
+    @property
+    @abstractmethod
+    def map_to_original(self) -> Optional[np.ndarray]:
+        raise NotImplementedError
+
+    @map_to_original.setter
+    @abstractmethod
+    def map_to_original(self, value: Optional[np.ndarray]) -> None:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def split_marker(self) -> Optional[Any]:
+        raise NotImplementedError
+
+    @split_marker.setter
+    @abstractmethod
+    def split_marker(self, value: Any) -> None:
+        raise NotImplementedError
+    
+    @property
+    @abstractmethod
+    def tokenized(self) -> Optional[Sequence[str]]:
+        raise NotImplementedError
+    
+    @tokenized.setter
+    @abstractmethod
+    def tokenized(self, value: Sequence[str]) -> None:
+        raise NotImplementedError
+
+
+class MemoryTextInstance(DataPoint[Union[KT, UUID], str, VT, str], TextInstance[Union[KT, UUID], VT], Generic[KT, VT]):
+   
     def __init__(self, 
                  identifier: Union[KT, UUID], 
                  data: str, 
                  vector: Optional[VT], 
                  representation: Optional[str] = None, 
-                 tokenized: Optional[Sequence[str]] = None) -> None:
-        
+                 tokenized: Optional[Sequence[str]] = None,
+                 map_to_original: Optional[np.ndarray] = None,
+                 split_marker: Optional[Any] = None) -> None:
         representation = data if representation is None else representation
         super().__init__(identifier, data, vector, representation)
         self._tokenized = tokenized
+        self._map_to_original = map_to_original
+        self._split_marker = split_marker
+
+    @property
+    def map_to_original(self) -> Optional[np.ndarray]:
+        return self._map_to_original
+
+    @map_to_original.setter
+    def map_to_original(self, value: Optional[np.ndarray]) -> None:
+        self._map_to_original = value
+
+    @property
+    def split_marker(self) -> Optional[Any]:
+        return self._split_marker 
+
+    @split_marker.setter
+    def split_marker(self, value: Any):
+        self._split_marker = value
     
     @property
     def tokenized(self) -> Optional[Sequence[str]]:
@@ -43,14 +99,16 @@ class TextInstance(DataPoint[Union[KT, UUID], str, VT, str], Generic[KT, VT]):
     def tokenized(self, value: Sequence[str]) -> None:
         self._tokenized = value
 
-class TextInstanceProvider(AbstractMemoryProvider[TextInstance[KT, VT], Union[KT, UUID], str, VT, str], Generic[KT, VT]):
+        
+
+class TextInstanceProvider(AbstractMemoryProvider[MemoryTextInstance[KT, VT], Union[KT, UUID], str, VT, str], Generic[KT, VT]):
 
     def create(self, *args: Any, **kwargs: Any):
         new_key = uuid4()
-        new_instance = TextInstance[KT, VT](new_key, *args, **kwargs)
+        new_instance = MemoryTextInstance[KT, VT](new_key, *args, **kwargs)
         self.add(new_instance)
         return new_instance
 
     @staticmethod
-    def construct(*args: Any, **kwargs: Any) -> TextInstance[KT, VT]:
-        return TextInstance[KT, VT](*args, **kwargs)
+    def construct(*args: Any, **kwargs: Any) -> MemoryTextInstance[KT, VT]:
+        return MemoryTextInstance[KT, VT](*args, **kwargs)

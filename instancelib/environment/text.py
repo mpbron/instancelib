@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Generic, Optional, Sequence, Iterable, Union
 
-from ..instances.text import TextInstanceProvider, TextInstance
+from ..instances.text import TextInstanceProvider, MemoryTextInstance
 from ..labels.memory import MemoryLabelProvider
 from .memory import MemoryEnvironment
 
@@ -26,7 +26,7 @@ from uuid import UUID
 
 from ..typehints import KT, VT, LT
 
-class TextEnvironment(MemoryEnvironment[TextInstance[KT, VT], Union[KT, UUID], str, VT, str, LT], Generic[KT, VT, LT]):
+class TextEnvironment(MemoryEnvironment[MemoryTextInstance[KT, VT], Union[KT, UUID], str, VT, str, LT], Generic[KT, VT, LT]):
     @classmethod
     def from_data(cls, 
                   target_labels: Iterable[LT], 

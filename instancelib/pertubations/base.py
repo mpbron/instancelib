@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from instancelib.environment.base import AbstractEnvironment
-from typing import Any, Callable, Generic, Iterable, Sequence, TypeVar, Union
-from uuid import UUID
+from typing import Any, Callable, Generic, Iterable, Sequence, TypeVar
 
 from ..instances.base import Instance
 from ..instances.text import TextInstance
@@ -33,7 +32,7 @@ class TextPertubator(
         ChildGenerator[TextInstance[KT, VT]],
         Generic[KT, VT]):
     def __init__(self,
-                 env: AbstractEnvironment[TextInstance[KT, VT], Union[KT, UUID], str, VT, str, Any],
+                 env: AbstractEnvironment[TextInstance[KT, VT], KT, str, VT, str, Any],
                  pertubator:  Callable[[str], str]):
         self.env = env
         self.pertubator = pertubator
@@ -50,7 +49,7 @@ class TokenPertubator(SinglePertubator[TextInstance[KT, VT]],
         ChildGenerator[TextInstance[KT, VT]],
         Generic[KT, VT]):
     def __init__(self,
-                 env: AbstractEnvironment[TextInstance[KT, VT], Union[KT, UUID], str, VT, str, Any],
+                 env: AbstractEnvironment[TextInstance[KT, VT], KT, str, VT, str, Any],
                  tokenizer: Callable[[str], Sequence[str]],
                  detokenizer: Callable[[Iterable[str]], str],
                  pertubator: Callable[[str], str]):

@@ -13,9 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
-
-
 from __future__ import annotations
 
 import functools
@@ -25,9 +22,10 @@ import operator
 from abc import ABC, abstractmethod
 from os import PathLike
 from typing import (Any, FrozenSet, Generic, Iterable, Iterator, Optional,
-                    Sequence, Tuple, TypeVar)
+                    Sequence, Tuple, TypeVar, Union)
 
-import numpy as np  # type: ignore
+import numpy as np
+from sklearn.pipeline import Pipeline  # type: ignore
 
 from sklearn.preprocessing import LabelEncoder as SKLabelEncoder # type: ignore
 from sklearn.preprocessing import MultiLabelBinarizer # type: ignore
@@ -55,7 +53,7 @@ class SkLearnClassifier(SaveableInnerModel,
 
     def __init__(
             self,
-            estimator: ClassifierMixin, 
+            estimator: Union[ClassifierMixin, Pipeline], 
             encoder: LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray],
             storage_location: "Optional[PathLike[str]]"=None, 
             filename: "Optional[PathLike[str]]"=None
@@ -176,7 +174,7 @@ class SkLearnClassifier(SaveableInnerModel,
 
     @classmethod
     def build(cls,
-                 estimator: ClassifierMixin,
+                 estimator: Union[ClassifierMixin, Pipeline],
                  env: Environment[IT, KT, DT, VT, Any, LT],
                  storage_location: "Optional[PathLike[str]]"=None, 
                  filename: "Optional[PathLike[str]]"=None
@@ -206,7 +204,7 @@ class SkLearnClassifier(SaveableInnerModel,
 
     @classmethod
     def build_multilabel(cls,
-                 estimator: ClassifierMixin,
+                 estimator: Union[ClassifierMixin, Pipeline],
                  env: Environment[IT, KT, Any, np.ndarray, Any, LT],
                  storage_location: "Optional[PathLike[str]]"=None, 
                  filename: "Optional[PathLike[str]]"=None

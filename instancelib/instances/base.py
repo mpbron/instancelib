@@ -574,7 +574,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """
         return list(self.get_all())
 
-    def map_mutate(self, func: Callable[[InstanceType], InstanceType]) -> None:
+    def map_mutate(self, func: Callable[[InstanceType], Instance[KT, DT, VT, RT]]) -> None:
         """Run a function on this provider that modifies all Instances in place
 
         Parameters

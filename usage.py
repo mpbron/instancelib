@@ -1,11 +1,11 @@
 #%%
+from functools import reduce
+from instancelib.typehints.typevars import KT, VT
 from instancelib.machinelearning.skdata import SkLearnDataClassifier
 from instancelib.machinelearning import SkLearnVectorClassifier
 from typing import Any, Callable, Iterable, Sequence
 
-import numpy as np
-
-from sklearn.pipeline import Pipeline # typeL ignore
+from sklearn.pipeline import Pipeline # type: ignore
 from sklearn.naive_bayes import MultinomialNB # type: ignore
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, TfidfTransformer # type: ignore
 
@@ -71,7 +71,7 @@ class TokenizerWrapper:
     def __init__(self, tokenizer: Callable[[str], Sequence[str]]):
         self.tokenizer = tokenizer
 
-    def __call__(self, instance: TextInstance[Any, Any]) -> TextInstance[Any, Any]:
+    def __call__(self, instance: TextInstance[KT, VT]) -> TextInstance[KT, VT]:
         data = instance.data
         tokenized = self.tokenizer(data)
         instance.tokenized = tokenized
@@ -97,7 +97,7 @@ pertubated_instances = tweakers_env.create_empty_provider()
 
 #%%
 wrapped_tokenizer = TokenizerWrapper(tokenizer)
-pertubator = TokenPertubator[int, np.ndarray](
+pertubator = TokenPertubator(
     tweakers_env, tokenizer, detokenizer, dutch_article_pertubator)
 #%%
 instanceprovider.map_mutate(wrapped_tokenizer) 
@@ -148,3 +148,8 @@ pipeline = Pipeline([
      ])
 data_model = SkLearnDataClassifier.build(pipeline, tweakers_env)
 # %%
+data_model.fit_provider(train, tweakers_env.labels)
+#%%
+predictions_data = data_model.predict(test)
+
+#%%

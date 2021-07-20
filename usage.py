@@ -1,5 +1,4 @@
 #%%
-from functools import reduce
 from instancelib.typehints.typevars import KT, VT
 from instancelib.machinelearning.skdata import SkLearnDataClassifier
 from instancelib.machinelearning import SkLearnVectorClassifier

@@ -20,6 +20,8 @@ import random
 
 from typing import Generic, Iterable, Sequence, Tuple, TypeVar, Any, Union
 from abc import ABC, abstractmethod
+
+from ..utils.func import union
 from ..instances import InstanceProvider, Instance
 from ..labels import LabelProvider
 
@@ -224,12 +226,67 @@ class Environment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         return train_provider, test_provider
 
     def combine(self, 
-                a: InstanceProvider[InstanceType, KT, DT, VT, RT],
-                b: InstanceProvider[InstanceType, KT, DT, VT, RT]
+                *providers: InstanceProvider[InstanceType, KT, DT, VT, RT],
                 ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
-        keys = frozenset(a.key_list).union(b.key_list)
+        """Combine Providers into a single Provider
+
+        Parameters
+        ----------
+        providers
+            The providers that should be combined into a single provider
+
+        Returns
+        -------
+        InstanceProvider[InstanceType, KT, DT, VT, RT]
+            The provider that contains all elements of the supplied Providers
+        """        
+                
+        keys = union(*(frozenset(pr.key_list) for pr in providers))
         combined_provider = self.create_bucket(keys)
         return combined_provider
+
+    def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        """Get the children that are registered to this parent
+
+        Parameters
+        ----------
+        parent : Union[KT, Instance[KT, DT, VT, RT]]
+            The parent from which you want to get the children from.
+
+        Returns
+        -------
+        InstanceProvider[InstanceType, KT, DT, VT, RT]
+            A Provider that contains all children
+        """        
+        child_keys = self.all_instances.get_children_keys(parent)
+        new_bucket = self.create_bucket(child_keys)
+        return new_bucket
+
+    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceType:
+        """Get the parent of a child
+
+        Parameters
+        ----------
+        child : Union[KT, Instance[KT, DT, VT, RT]]
+            A child instance from which you want to get the children from.
+
+        Returns
+        -------
+        InstanceType
+            The parent of this child instance
+        """        
+        return self.all_instances.get_parent(child)
+
+    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+        """Discard all children from this parent
+
+        Parameters
+        ----------
+        parent : Union[KT, Instance[KT, DT, VT, RT]]
+            The parent Instance
+        """        
+        self.all_instances.discard_children(parent)
+
                                 
 
 class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT], 

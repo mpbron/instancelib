@@ -242,6 +242,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
     implement.
     """
 
+    @abstractmethod
     def add_child(self,
                   parent: Union[KT, Instance[KT, DT, VT, RT]],
                   child: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
@@ -256,6 +257,8 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """        
         raise NotImplementedError
 
+         
+    @abstractmethod
     def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[InstanceType]:
         """Get the children that are registered to this parent
 
@@ -271,6 +274,34 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """        
         raise NotImplementedError
 
+    @abstractmethod
+    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+        """Discard the children that are registered to this parent
+
+        Parameters
+        ----------
+        parent : Union[KT, Instance[KT, DT, VT, RT]]
+            The parent from which you want to get the children from.
+        """
+        raise NotImplementedError        
+
+    def get_children_keys(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[KT]:
+        """Get the children that are registered to this parent
+
+        Parameters
+        ----------
+        parent : Union[KT, Instance[KT, DT, VT, RT]]
+            The parent from which you want to get the children from.
+
+        Returns
+        -------
+        Sequence[InstanceType]
+            A list containing the children
+        """
+        child_keys = [ins.identifier for ins in self.get_children(parent)]
+        return child_keys
+
+    @abstractmethod
     def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceType:
         """Get the parent of a child
 
@@ -848,11 +879,17 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
                   child: Union[KT, InstanceType]) -> None:
         self.dataset.add_child(parent, child)
 
+    def get_children_keys(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[KT]:
+        return self.dataset.get_children_keys(parent)
+
     def get_children(self, parent: Union[KT, InstanceType]) -> Sequence[InstanceType]:
         return self.dataset.get_children(parent)
 
     def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
         return self.dataset.get_parent(child)
+
+    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+        return self.dataset.discard_children(parent)
 
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
         new_instance = self.dataset.create(*args, **kwargs)

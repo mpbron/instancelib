@@ -138,6 +138,12 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
             return children # type: ignore
         return []
 
+    def get_children_keys(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[KT]:
+        parent_key: KT = to_key(parent)
+        if parent_key in self.children:
+            return list(self.children[parent_key])
+        return []
+
     def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceType:
         child_key: KT = to_key(child)
         if child_key in self.parents:
@@ -145,6 +151,15 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
             parent = self.dictionary[parent_key]
             return parent # type: ignore
         raise KeyError(f"The instance with key {child_key} has no parent")
+
+    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+        parent_key: KT = to_key(parent)
+        if parent_key in self.children:
+            children = self.children[parent_key]
+            self.children[parent_key] = set()
+            for child in children:
+                del self.dictionary[child]
+                
 
     @staticmethod
     @abstractmethod

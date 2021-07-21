@@ -17,13 +17,13 @@
 from __future__ import annotations
 
 from typing import (Any, Dict, FrozenSet, Generic, Iterable, Optional,
-                    Sequence, Set, Union)
+                    Sequence, Set, Tuple, Union)
 
 from ..instances import Instance
+from ..typehints import KT, LT
+from ..utils.func import list_unzip, union
 from ..utils.to_key import to_key
 from .base import LabelProvider
-
-from ..typehints import KT, LT
 
 
 class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
@@ -74,6 +74,14 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
             for key in key_list:
                 labeldict.setdefault(key, set()).add(label)
         return cls(labelset, labeldict, labeldict_inv)
+
+    @classmethod
+    def from_tuples(cls, predictions: Sequence[Tuple[KT, FrozenSet[LT]]]) -> MemoryLabelProvider[KT, LT]:
+        _, labels = list_unzip(predictions)
+        labelset = union(*labels)
+        labeldict = {key: set(labeling) for (key, labeling) in predictions}
+        provider = cls(labelset, labeldict, None)
+        return  provider
 
     @property
     def labelset(self) -> FrozenSet[LT]:

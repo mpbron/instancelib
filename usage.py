@@ -124,7 +124,6 @@ pertubated_test_data = frozenset(test.map(pertubator))
 # Add the data to the test set
 # add_range is type safe with * expansion from immutable data structures like frozenset, tuple, sequence
 # But works with other data structures as well
-test.add_range(*pertubated_test_data)
 
 # %%
 vectorizer = TextInstanceVectorizer(

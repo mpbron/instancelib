@@ -137,7 +137,12 @@ vec_model = SkLearnVectorClassifier.build(classifier, tweakers_env)
 #%%
 vec_model.fit_provider(train, tweakers_env.labels)
 # %%
-predictions = vec_model.predict_proba(test)
+
+docs = list(test.instance_chunker(20))[0]
+
+#%%
+
+predictions = vec_model.predict(docs)
 # %%
 pipeline = Pipeline([
      ('vect', CountVectorizer()),

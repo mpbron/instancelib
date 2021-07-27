@@ -22,11 +22,11 @@ from typing import (Any, Callable, Generic, Iterator, MutableMapping, Sequence,
                     Tuple, TypeVar, Union)
 
 
-from ..typehints import KT, VT
+from ..typehints import KT, VT, MT
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT]):
+class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT, MT]):
     @property
     @abstractmethod
     def writeable(self) -> bool:
@@ -53,19 +53,71 @@ class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT]):
         raise NotImplementedError
 
     @abstractmethod
-    def get_matrix(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], VT]:
+    def get_matrix(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], MT]:
         raise NotImplementedError
 
     @abstractmethod
-    def matrices_chunker(self) -> Iterator[Tuple[Sequence[KT], VT]]:
+    def get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:
+        """Return the vectors that correspond with the `keys` 
+
+        Parameters
+        ----------
+        keys : Sequence[KT]
+            A list of identifier keys
+
+        Returns
+        -------
+        Tuple[Sequence[KT], Sequence[VT]]
+            A tuple containing two lists:
+
+                - A list with identifier (order may differ from `keys` argument)
+                - A list with vectors 
+        """        
+        raise NotImplementedError
+
+
+    @abstractmethod
+    def matrices_chunker(self) -> Iterator[Tuple[Sequence[KT], MT]]:
         raise NotImplementedError
 
     @abstractmethod
-    def __enter__(self) -> VectorStorage[KT, VT]:
+    def get_vectors_chunked(self, keys: Sequence[KT], chunk_size: int = 200) -> Iterator[Tuple[Sequence[KT], Sequence[VT]]]:
+        """Return vectors in chunks of `chunk_size` containing the vectors requested in `keys`
+
+        Parameters
+        ----------
+        keys : Sequence[KT]
+            A list of identifier keys
+        chunk_size : int, optional
+            The size of the chunks, by default 200
+
+        Yields
+        -------
+        Tuple[Sequence[KT], Sequence[VT]]
+            A tuple containing two lists:
+
+                - A list with identifiers (order may differ from `keys` argument)
+                - A list with vectors 
+        """        
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_vectors_zipped(self, keys: Sequence[KT], chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def __enter__(self) -> VectorStorage[KT, VT, MT]:
         raise NotImplementedError
     @abstractmethod
     def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def reload(self) -> None:
+        """Reload the index from disk
+        """
+        raise NotImplementedError    
+
 
 def ensure_writeable(func: F) -> F:
     """A decorator that ensures that the wrapped method is only
@@ -83,7 +135,7 @@ def ensure_writeable(func: F) -> F:
     """        
     @functools.wraps(func)
     def wrapper(
-            self: VectorStorage[Any, Any], 
+            self: VectorStorage[Any, Any, Any], 
             *args: Any, **kwargs: Any) -> F:
         if not self.writeable:
             raise UnsupportedOperation(

@@ -17,7 +17,7 @@
 import itertools
 
 from typing import Optional, Tuple, TypeVar, Sequence, Iterator, Iterable
-from operator import itemgetter
+from operator import itemgetter 
 
 _T = TypeVar("_T")
 

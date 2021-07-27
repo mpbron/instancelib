@@ -34,7 +34,7 @@ from .vectorstorage import VectorStorage, ensure_writeable
 from ..typehints import KT
 
 
-class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
+class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
     """This class provides the handling of on disk vector storage in HDF5 format.
     In many cases, storing feature matrices or large sets of vectors
     in memory is not feasible.
@@ -497,7 +497,10 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
         chunks = divide_iterable_in_lists(sorted_keys, chunk_size)
         yield from map(self._get_matrix, chunks)
 
-    def get_vectors_chunked(self, keys: Sequence[KT], chunk_size: int = 200):
+    def get_vectors_chunked(self, 
+                            keys: Sequence[KT], 
+                            chunk_size: int = 200
+                            ) -> Iterator[Tuple[Sequence[KT], Sequence[np.ndarray]]]:
         """Return vectors in chunks of `chunk_size` containing the vectors requested in `keys`
 
         Parameters
@@ -516,7 +519,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray], Generic[KT]):
                 - A list with vectors 
         """        
         results = itertools.starmap(matrix_tuple_to_vectors, self.get_matrix_chunked(keys, chunk_size))
-        yield from results
+        yield from results # type: ignore
 
     def get_vectors_zipped(self, keys: Sequence[KT], chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, np.ndarray]]]:
         """Return vectors in chunks of `chunk_size` containing the vectors requested in `keys`

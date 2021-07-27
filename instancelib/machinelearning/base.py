@@ -24,8 +24,6 @@ from typing import (FrozenSet, Generic, Iterable, Iterator,
 from ..labels import LabelProvider
 from ..instances import Instance, InstanceProvider
 
-import more_itertools
-
 from ..typehints import KT, VT, DT, RT, LT, LMT, PMT
 
 IT = TypeVar("IT", bound="Instance[Any,Any,Any,Any]", covariant = True)
@@ -121,12 +119,9 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
             typed_provider: InstanceProvider[IT, KT, DT, VT, RT] = instances # type: ignore
             result = self.predict_provider(typed_provider, batch_size)
             return result
-        head, iterable = more_itertools.spy(instances)
-        if isinstance(head, Instance):
-            typed_iterable: Iterable[Instance[KT, DT, VT, RT]] = iterable # type: ignore
-            result = self.predict_instances(typed_iterable, batch_size)
-            return result
-        raise ValueError("The instances argument is no InstanceProvider or Iterable of Instance objects")
+        result = self.predict_instances(instances, batch_size)
+        return result
+        
 
 
     def predict_proba(self, instances: InstanceInput[IT, KT, DT, VT, RT], batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
@@ -152,21 +147,14 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
             typed_provider: InstanceProvider[IT, KT, DT, VT, RT] = instances # type: ignore
             result = self.predict_proba_provider(typed_provider, batch_size)
             return result
-        head, iterable = more_itertools.spy(instances)
-        if isinstance(head, Instance):
-            typed_iterable: Iterable[Instance[KT, DT, VT, RT]] = iterable # type: ignore
-            preds = self.predict_proba_instances(typed_iterable, batch_size)
-            return preds
-        raise ValueError("The `instances` argument is no `InstanceProvider` or `Iterable` of `Instance` objects")
+        preds = self.predict_proba_instances(instances, batch_size)
+        return preds
+        
 
     def predict_proba_raw(self, instances: InstanceInput[IT, KT, DT, VT, RT], batch_size: int = 200) -> Iterator[Tuple[Sequence[KT], PMT]]:
         if isinstance(instances, InstanceProvider):
             typed_provider: InstanceProvider[IT, KT, DT, VT, RT] = instances # type: ignore
             result = self.predict_proba_provider_raw(typed_provider, batch_size)
             return result
-        head, iterable = more_itertools.spy(instances)
-        if isinstance(head, Instance):
-            typed_iterable: Iterable[Instance[KT, DT, VT, RT]] = iterable # type: ignore
-            preds = self.predict_proba_instances_raw(typed_iterable, batch_size)
-            return preds            
-        raise ValueError("The `instances` argument is no `InstanceProvider` or `Iterable` of `Instance` objects")
+        preds = self.predict_proba_instances_raw(instances, batch_size)
+        return preds

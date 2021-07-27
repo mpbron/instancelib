@@ -38,7 +38,7 @@ from ..labels.encoder import (LabelEncoder, SklearnLabelEncoder,
                               SklearnMultiLabelEncoder)
 from ..typehints.typevars import DT, KT, LT, VT
 from ..utils import SaveableInnerModel
-from ..utils.chunks import divide_iterable
+from ..utils.chunks import divide_iterable_in_lists
 
 from .base import AbstractClassifier
 
@@ -105,16 +105,16 @@ class SkLearnClassifier(SaveableInnerModel,
         zipped = list(zip(x_keys, labels))
         return zipped
 
-    def _pred_proba_ins_batch(self, batch: Iterable[Instance[KT, DT, VT, Any]]) -> Tuple[Sequence[KT], np.ndarray]:
+    def _pred_proba_raw_ins_batch(self, batch: Iterable[Instance[KT, DT, VT, Any]]) -> Tuple[Sequence[KT], np.ndarray]:
         x_keys = [ins.identifier for ins in batch]
         x_vec  = self.encode_x(batch)
         y_pred = self._predict_proba(x_vec)
         return x_keys, y_pred
         
-    def _pred_proba_raw_ins_batch(self, batch: Iterable[Instance[KT, DT, VT, Any]]) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
+    def _pred_proba_ins_batch(self, batch: Iterable[Instance[KT, DT, VT, Any]]) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         x_keys = [ins.identifier for ins in batch]
         x_vec = self.encode_x(batch)
-        y_pred = self._predict_proba(x_vec).tolist()
+        y_pred = self._predict_proba(x_vec)
         labels = self.encoder.decode_proba_matrix(y_pred)
         zipped = list(zip(x_keys, labels))
         return zipped
@@ -123,8 +123,8 @@ class SkLearnClassifier(SaveableInnerModel,
                                     instances: Iterable[Instance[KT, DT, VT, Any]],
                                     batch_size: int = 200
                                     ) -> Iterator[Tuple[Sequence[KT], np.ndarray]]:
-        batches = divide_iterable(instances, batch_size)
-        processed = map(self._pred_proba_ins_batch, batches)
+        batches = divide_iterable_in_lists(instances, batch_size)
+        processed = map(self._pred_proba_raw_ins_batch, batches)
         yield from processed
 
     def predict_proba_instances(self, 
@@ -132,8 +132,8 @@ class SkLearnClassifier(SaveableInnerModel,
                                 batch_size: int = 200
                                 ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         
-        batches = divide_iterable(instances, batch_size)
-        processed = map(self._pred_proba_raw_ins_batch, batches)
+        batches = divide_iterable_in_lists(instances, batch_size)
+        processed = map(self._pred_proba_ins_batch, batches)
         combined: Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]] = functools.reduce(
             operator.concat, processed) # type: ignore
         return combined
@@ -141,7 +141,7 @@ class SkLearnClassifier(SaveableInnerModel,
     def predict_instances(self, 
                           instances: Iterable[Instance[KT, DT, VT, Any]],
                           batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:        
-        batches = divide_iterable(instances, batch_size)
+        batches = divide_iterable_in_lists(instances, batch_size)
         results = map(self._pred_ins_batch, batches)
         concatenated: Sequence[Tuple[KT, FrozenSet[LT]]] = functools.reduce(
             lambda a,b: operator.concat(a,b), results) # type: ignore

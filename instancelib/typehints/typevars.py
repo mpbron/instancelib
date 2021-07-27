@@ -25,6 +25,10 @@ DT = TypeVar("DT")
 
 VT = TypeVar("VT")
 """The Type of the vector"""
+
+MT = TypeVar("MT")
+"""The Type of the matrix"""
+
 RT = TypeVar("RT")
 """The Type of the representation of the data point"""
 

@@ -26,7 +26,7 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setuptools.setup( # type: ignore
     name="instancelib",
-    version="0.3.1.1",
+    version="0.3.1.2",
     description="A typed dataset abstraction toolkit for machine learning projects",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -37,6 +37,7 @@ setuptools.setup( # type: ignore
         "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
         "Programming Language :: Python"
     ],
+    package_data={"instancelib": ["py.typed"]},
     packages=setuptools.find_packages(), # type: ignore
     python_requires=">=3.8",
     install_requires=[

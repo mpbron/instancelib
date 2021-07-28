@@ -96,6 +96,8 @@ class HDF5TextProvider(HDF5VectorInstanceProvider[HDF5TextInstance, Union[int, s
         self.vectorstorage = HDF5VectorStorage[Union[int, str]](vector_storage_location)
 
     def build_from_external(self, k: Union[int, str]) -> HDF5TextInstance:
+        if self.vectorstorage is None:
+            self.vectorstorage = self.load_vectors()
         df = self.dataframe
         row = df[df[self.id_col] == k] # type: ignore
         vec = self.vectorstorage[k]

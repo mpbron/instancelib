@@ -948,6 +948,15 @@ class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
         instance = self.dataset[key]
         self.bucket.add(instance)
 
+    def _clear_bucket(self) -> None:
+        pass
+
+    def _len_bucket(self) -> int:
+        ds_keys = frozenset(self.dataset)
+        bu_keys = frozenset(self.bucket)
+        difference = ds_keys.difference(bu_keys)
+        return len(difference)
+
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
         new_instance = self.dataset.create(*args, **kwargs)
         return new_instance

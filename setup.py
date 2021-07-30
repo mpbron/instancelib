@@ -35,7 +35,8 @@ setuptools.setup( # type: ignore
     license="GNU LGPL v3",
     classifiers=[
         "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
-        "Programming Language :: Python"
+        "Programming Language :: Python",
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
     package_data={"instancelib": ["py.typed"]},
     packages=setuptools.find_packages(), # type: ignore

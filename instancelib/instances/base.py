@@ -521,7 +521,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         yield from chunks
     
 
-    def instance_chunker(self, batch_size: int) -> Iterator[Sequence[InstanceType]]:
+    def instance_chunker(self, batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
         """Iterate over all instances (with or without vectors) in 
         this provider
 
@@ -539,7 +539,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         chunks = divide_iterable_in_lists(self.values(), batch_size)
         yield from chunks
 
-    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
+    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
         """Iterate over all instances (with or without vectors) in belonging the identifier 
         :class:`Iterable` in the `keys` parameter.
 
@@ -568,7 +568,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         chunks = divide_iterable_in_lists(id_vecs, batch_size)
         return chunks
 
-    def vector_chunker(self, batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
+    def vector_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
         """Iterate over all pairs of keys and vectors in 
         this provider
 
@@ -862,7 +862,7 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         results = self.dataset.data_chunker_selector(keyset, batch_size)
         return results
 
-    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int) -> Iterator[Sequence[Tuple[KT, VT]]]:
+    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
         keyset = frozenset(self.key_list).intersection(keys)
         results = self.dataset.vector_chunker_selector(keyset, batch_size)
         return results

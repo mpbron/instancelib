@@ -37,7 +37,7 @@ labelprovider = tweakers_env.labels
 #%%
 n_docs = len(instanceprovider)
 n_train = round(0.70 * n_docs)
-train, test = tweakers_env.train_test_split(instanceprovider, train_size=n_train)
+train, test = tweakers_env.train_test_split(instanceprovider, train_size=0.70)
 
 #%%
 # Test if we indeed got the right length
@@ -134,6 +134,7 @@ vectorize(vectorizer, tweakers_env)
 #%%
 classifier = MultinomialNB()
 vec_model = SkLearnVectorClassifier.build(classifier, tweakers_env)
+
 #%%
 vec_model.fit_provider(train, tweakers_env.labels)
 # %%

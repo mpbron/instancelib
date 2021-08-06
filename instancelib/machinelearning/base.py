@@ -34,6 +34,10 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
     _name = "AbstractClassifier"
 
     @abstractmethod
+    def set_target_labels(self, labels: Iterable[LT]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def predict_instances(self, 
                           instances: Iterable[Instance[KT, DT, VT, RT]], 
                           batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:

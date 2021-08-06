@@ -62,6 +62,9 @@ class SkLearnClassifier(SaveableInnerModel,
         self.encoder = encoder 
         self._fitted = False
 
+    def set_target_labels(self, labels: Iterable[LT]) -> None:
+        self.encoder.initialize(labels)
+
     @SaveableInnerModel.load_model_fallback
     def _fit(self, x_data: np.ndarray, y_data: np.ndarray):
         assert x_data.shape[0] == y_data.shape[0]

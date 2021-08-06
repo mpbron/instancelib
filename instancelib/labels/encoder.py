@@ -8,7 +8,11 @@ from ..typehints import LT, LVT, LMT, PMT
 
 
 class LabelEncoder(ABC, Generic[LT, LVT, LMT, PMT]):
-    
+
+    @abstractmethod
+    def initialize(self, labels: Iterable[LT]) -> None:
+        pass
+
     @abstractmethod
     def encode(self, labels: Iterable[LT]) -> LVT:
         raise NotImplementedError
@@ -43,6 +47,11 @@ class SklearnLabelEncoder(LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray], 
     def __init__(self, encoder: sklearn.base.TransformerMixin, labels: Iterable[LT]) -> None:
         self.labelset = frozenset(labels)
         self.encoder = encoder
+        if self.labelset:
+            self._fit_label_encoder()
+
+    def initialize(self, labels: Iterable[LT]) -> None:
+        self.labelset = frozenset(labels)
         self._fit_label_encoder()
     
     def _fit_label_encoder(self) -> None:

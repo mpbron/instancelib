@@ -153,6 +153,9 @@ pipeline = Pipeline([
 data_model = SkLearnDataClassifier.build(pipeline, tweakers_env)
 # %%
 data_model.fit_provider(train, tweakers_env.labels)
+
+#%%
+fitted_model = data_model.innermodel
 #%%
 predictions_data = data_model.predict(test)
 

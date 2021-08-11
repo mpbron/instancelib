@@ -17,7 +17,7 @@
 import functools
 import itertools
 
-from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, TypeVar, Callable,  Tuple, Optional, Sequence
+from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, Mapping, TypeVar, Callable,  Tuple, Optional, Sequence
 
 _T = TypeVar("_T")
 _U = TypeVar("_U")
@@ -146,6 +146,13 @@ def union(*sets: FrozenSet[_T]) -> FrozenSet[_T]:
         return head.union(*tail)
     except ValueError:
         return frozenset()
+
+def invert_mapping(source: Mapping[_T, _V]) -> Dict[_V, _T]:
+    result = {
+        value: key  for (key, value) in source.items()
+    }
+    return result
+
 def find_subsets(s: FrozenSet[_T], n: int) -> FrozenSet[FrozenSet[_T]]:
     
     subsets_n = frozenset( # type: ignore

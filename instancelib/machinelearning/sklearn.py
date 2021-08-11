@@ -22,7 +22,7 @@ import operator
 from abc import ABC, abstractmethod
 from os import PathLike
 from typing import (Any, FrozenSet, Generic, Iterable, Iterator, Optional,
-                    Sequence, Tuple, TypeVar, Union)
+                    Sequence, Tuple, TypeVar, Union, List)
 
 import numpy as np
 from sklearn.pipeline import Pipeline  # type: ignore
@@ -34,7 +34,7 @@ from sklearn.base import ClassifierMixin, TransformerMixin  # type: ignore
 from ..environment import Environment
 from ..environment.base import Environment
 from ..instances import Instance, InstanceProvider
-from ..labels.encoder import (LabelEncoder, SklearnLabelEncoder,
+from ..labels.encoder import (DictionaryEncoder, LabelEncoder, MultilabelDictionaryEncoder, SklearnLabelEncoder,
                               SklearnMultiLabelEncoder)
 from ..typehints.typevars import DT, KT, LT, VT
 from ..utils import SaveableInnerModel
@@ -50,7 +50,7 @@ class SkLearnClassifier(SaveableInnerModel,
                         AbstractClassifier[IT, KT, DT, VT, Any, LT, np.ndarray, np.ndarray], 
                         ABC, Generic[IT, KT, DT, VT, LT]):
     _name = "Sklearn"
-
+    
     def __init__(
             self,
             estimator: Union[ClassifierMixin, Pipeline], 
@@ -174,6 +174,75 @@ class SkLearnClassifier(SaveableInnerModel,
     @property
     def fitted(self) -> bool:
         return self._fitted
+
+    @classmethod
+    def build_from_model(cls,
+                         estimator: Union[ClassifierMixin, Pipeline],
+                         classes: Optional[Sequence[LT]] = None,
+                         storage_location: "Optional[PathLike[str]]"=None, 
+                         filename: "Optional[PathLike[str]]"=None
+                         ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
+        """Construct a Sklearn Data model from a fitted Sklearn model.
+        The estimator is a classifier for a binary or multiclass classification problem.
+
+        Parameters
+        ----------
+        estimator : ClassifierMixin
+            The Sklearn Classifier (e.g., :class:`sklearn.naive_bayes.MultinomialNB`).
+            The field `classes_` is used to decode the label predictions.
+        classes : Optional[Sequence[LT]]
+            The position of each label, optional
+        storage_location : Optional[PathLike[str]], optional
+            If you want to save the model, you can specify the storage folder, by default None
+        filename : Optional[PathLike[str]], optional
+            If the model has a specific filename, you can specify it here, by default None
+
+        Returns
+        -------
+        SkLearnClassifier[IT, KT, DT, LT]
+            The model
+        """
+        if classes is None:
+            labels: List[LT] = estimator.classes_.tolist() # type: ignore
+            il_encoder = DictionaryEncoder[LT].from_list(labels)
+        else:
+            il_encoder = DictionaryEncoder[LT].from_list(classes)
+        return cls(estimator, il_encoder, storage_location, filename)
+
+    @classmethod
+    def build_from_model_multilabel(cls,
+                         estimator: Union[ClassifierMixin, Pipeline],
+                         classes: Optional[Sequence[LT]] = None,
+                         storage_location: "Optional[PathLike[str]]"=None, 
+                         filename: "Optional[PathLike[str]]"=None
+                         ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
+        """Construct a Sklearn Data model from a fitted Sklearn model.
+        The estimator is a classifier for a multilabel classification problem.
+
+        Parameters
+        ----------
+        estimator : ClassifierMixin
+            The Sklearn Classifier (e.g., :class:`sklearn.naive_bayes.MultinomialNB`).
+            The field `classes_` is used to decode the label predictions.
+        classes : Optional[Sequence[LT]]
+            The position of each label, optional
+        storage_location : Optional[PathLike[str]], optional
+            If you want to save the model, you can specify the storage folder, by default None
+        filename : Optional[PathLike[str]], optional
+            If the model has a specific filename, you can specify it here, by default None
+
+        Returns
+        -------
+        SkLearnClassifier[IT, KT, DT, LT]
+            The model
+        """
+        if classes is None:
+            labels: List[LT] = estimator.classes_.tolist() # type: ignore
+            il_encoder = MultilabelDictionaryEncoder[LT].from_list(labels)
+        else:
+            il_encoder = MultilabelDictionaryEncoder[LT].from_list(classes)
+        return cls(estimator, il_encoder, storage_location, filename)
+        
 
     @classmethod
     def build(cls,

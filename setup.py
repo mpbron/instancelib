@@ -26,7 +26,7 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setuptools.setup( # type: ignore
     name="instancelib",
-    version="0.3.2.0",
+    version="0.3.2.1",
     description="A typed dataset abstraction toolkit for machine learning projects",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -44,13 +44,13 @@ setuptools.setup( # type: ignore
     install_requires=[
         "numpy", 
         "pandas", 
-        "h5py", 
-        "tables", 
+        "h5py",  
         "scikit-learn", 
         "openpyxl", 
         "xlrd",
         "more-itertools"],
     extra_requires={
-        "doc2vec": ["gensim"] 
+        "doc2vec": ["gensim"],
+        "hdf5": ["tables"], 
     }
 )

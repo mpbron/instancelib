@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import FrozenSet, Generic, Iterable, Mapping, Optional, Sequence, TypeVar
 from abc import ABC, abstractmethod
-
-
-from instancelib.utils.func import powerset, union
+from typing import (FrozenSet, Generic, Iterable, Mapping, Optional, Sequence,
+                    TypeVar)
 
 from instancelib.typehints import LT
+from instancelib.utils.func import powerset, union
 
 NT = TypeVar("NT")
 
@@ -21,9 +20,9 @@ class BaseAttribute(ABC):
         -------
         str
             The name of the attribute
-        """        
+        """
         raise NotImplementedError
-    
+
     @property
     @abstractmethod
     def description(self) -> str:
@@ -33,32 +32,30 @@ class BaseAttribute(ABC):
         -------
         str
             A human readable description
-        """        
+        """
         raise NotImplementedError
+
 
 class NamedAttribute(BaseAttribute):
     _name: str
     _description: str
 
-    def __init__(self, 
-                 name: str, 
+    def __init__(self,
+                 name: str,
                  description: Optional[str] = None) -> None:
         self._name = name
         self._description = "" if description is None else description
-    
+
     @property
     def name(self) -> str:
         return self._name
 
     @property
     def description(self) -> str:
-        return self._description 
+        return self._description
 
 
 class Choices(ABC, Generic[LT]):
-    
-    _options: FrozenSet[LT]
-
     @property
     def options(self) -> FrozenSet[LT]:
         """The possible valid choices for this attribute
@@ -67,8 +64,8 @@ class Choices(ABC, Generic[LT]):
         -------
         FrozenSet[LT]
             A set with all possible attributes
-        """        
-        return self._options
+        """
+        raise NotImplementedError
 
     def alternatives(self, *option: LT) -> FrozenSet[LT]:
         """Give back other options for this attribute than 
@@ -83,18 +80,27 @@ class Choices(ABC, Generic[LT]):
         -------
         FrozenSet[LT]
             The alternatives without the given option(s)
-        """        
-        return self.options.difference(option) 
+        """
+        raise NotImplementedError
+
 
 class ChoiceAttribute(NamedAttribute, Choices[LT], Generic[LT]):
 
-    def __init__(self, 
-                 name: str, 
+    def __init__(self,
+                 name: str,
                  options: Iterable[LT],
                  description: Optional[str] = None,
                  ) -> None:
         super().__init__(name, description=description)
         self._options = frozenset(options)
+
+    @property
+    def options(self) -> FrozenSet[LT]:
+        return self._options
+
+    def alternatives(self, *option: LT) -> FrozenSet[LT]:
+        return self.options.difference(option)
+
 
 class BinaryChoiceAttribute(ChoiceAttribute[LT], Generic[LT]):
 
@@ -111,7 +117,7 @@ class BinaryChoiceAttribute(ChoiceAttribute[LT], Generic[LT]):
         -------
         LT
             The positive label
-        """        
+        """
         return self._positive
 
     @property
@@ -122,7 +128,7 @@ class BinaryChoiceAttribute(ChoiceAttribute[LT], Generic[LT]):
         -------
         LT
             The negative label
-        """        
+        """
         return self._negative
 
 
@@ -133,11 +139,7 @@ class MultiLabelAttribute(ChoiceAttribute[FrozenSet[LT]], Generic[LT]):
         super().__init__(name, powerset_options, description=description)
 
 
-
-
-
-
-class LabelTree(Generic[LT]):
+class LabelTree(Choices[LT], Generic[LT]):
     _label: Optional[LT]
     children: Sequence[LabelTree[LT]]
 
@@ -151,20 +153,26 @@ class LabelTree(Generic[LT]):
 
     def __str__(self) -> str:
         children = ", ".join(map(str, self.children))
-        label = "Root"
+        label = ""
         if not self.is_root:
             label = f"{self.label}"
+        if children and self.is_root:
+            return f"[{children}]"
         if children:
-            return  f"{label}: [{children}]"
+            return f"{label}: [{children}]"
         return label
+
+    def __repr__(self) -> str:
+        return str(self)
 
     @property
     def options(self) -> FrozenSet[LT]:
-        child_labels = (child.label for child in self.children if child.label is not None)
+        child_labels = (
+            child.label for child in self.children if child.label is not None)
         return frozenset(child_labels)
 
     def alternatives(self, *option: LT) -> FrozenSet[LT]:
-        if option in self.options:
+        if all(map(lambda x: x in self.options, option)):
             return self.options.difference(option)
         if self.children:
             return union(*(child.alternatives(*option) for child in self.children))
@@ -208,7 +216,8 @@ class LabelTree(Generic[LT]):
         if self.label == option:
             return self.options
         if self.is_ancestor_of(option):
-            child_results = (child.children_of(option) for child in self.children)
+            child_results = (child.children_of(option)
+                             for child in self.children)
             return union(*child_results)
         return frozenset()
 
@@ -218,22 +227,25 @@ class LabelTree(Generic[LT]):
             return frozenset()
         return union(frozenset([parent]), self.ancestors(parent))
 
+
 class LabelNode(LabelTree[LT], Generic[LT]):
     def __init__(self, label: LT, *children: LabelTree[LT]):
         super().__init__(*children)
         self._label = label
 
 
-def hierarchy_from_dict(dictionary: Mapping[LT, Sequence[LT]], root: LT) -> LabelTree[LT]:
-    def sub_func(node: LT) -> LabelTree[LT]:
-        if node in dictionary:
-            children = dictionary[node]
-            return LabelNode(node, *map(sub_func, children))
-        return LabelNode(node)
-    children = dictionary[root]
-    return LabelTree(*map(sub_func, children))
-    
+class HierarchyAttribute(NamedAttribute, LabelTree[LT], Generic[LT]):
+    def __init__(self, name: str, *children: LabelTree[LT],  description: Optional[str] = None) -> None:
+        super().__init__(name, description=description)
+        self.children = list(children)
+        self._label = None
 
-   
-        
-        
+    @classmethod
+    def from_dict(cls, name: str, dictionary: Mapping[LT, Sequence[LT]], root: LT) -> HierarchyAttribute[LT]:
+        def sub_func(node: LT) -> LabelTree[LT]:
+            if node in dictionary:
+                children = dictionary[node]
+                return LabelNode(node, *map(sub_func, children))
+            return LabelNode(node)
+        children = dictionary[root]
+        return cls(name, *map(sub_func, children))

@@ -17,11 +17,18 @@
 import functools
 import itertools
 
-from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, Mapping, TypeVar, Callable,  Tuple, Optional, Sequence
+from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, Mapping, TypeVar, Callable,  Tuple, Optional, Sequence, Union
 
 _T = TypeVar("_T")
 _U = TypeVar("_U")
 _V = TypeVar("_V")
+
+def single_or_collection(elem: Union[str, Iterable[str]]) -> Sequence[str]:
+    if isinstance(elem, str):
+        return [elem] 
+    list_variant = list(elem)
+    return list_variant
+
 
 def powerset(iterable: Iterable[_T]) -> FrozenSet[FrozenSet[_T]]:
     """Calculates the powerset of an interable.

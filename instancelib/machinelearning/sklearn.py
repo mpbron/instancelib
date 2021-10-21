@@ -90,6 +90,9 @@ class SkLearnClassifier(SaveableInnerModel,
     def encode_y(self, labelings: Sequence[Iterable[LT]]) -> np.ndarray:
         y_data = self.encoder.encode_batch(labelings)
         return y_data
+
+    def get_label_column_index(self, label: LT) -> int:
+        return self.encoder.get_label_column_index(label)
         
     @abstractmethod
     def encode_xy(self, instances: Iterable[Instance[KT, DT, VT, Any]], 

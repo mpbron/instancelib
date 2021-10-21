@@ -27,7 +27,7 @@ import pandas as pd
 from ..environment.base import AbstractEnvironment
 from ..environment.text import TextEnvironment
 from ..instances.text import MemoryTextInstance
-from ..utils.func import list_unzip3
+from ..utils.func import list_unzip3, single_or_collection
 
 
 def identity_mapper(value: Any) -> Optional[str]:
@@ -220,4 +220,15 @@ def read_csv_dataset(path: "Union[str, PathLike[str]]",
     """    
     df: pd.DataFrame = pd.read_csv(path) # type: ignore
     env = build_environment(df, label_mapper, labels, data_cols, label_cols)
+    return env
+
+def pandas_to_env(df: pd.DataFrame, 
+                  data_cols: Union[str, Sequence[str]],
+                  label_cols: Union[str, Sequence[str]],
+                  labels: Optional[Iterable[str]] = None) -> AbstractEnvironment[
+                MemoryTextInstance[int, np.ndarray], 
+                Union[int, UUID], str, np.ndarray, str, str]:
+    l_data_cols = single_or_collection(data_cols)
+    l_label_cols = single_or_collection(label_cols)
+    env = build_environment(df, identity_mapper, labels, l_data_cols, l_label_cols)
     return env

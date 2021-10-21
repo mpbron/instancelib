@@ -34,6 +34,10 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
     _name = "AbstractClassifier"
 
     @abstractmethod
+    def get_label_column_index(self, label: LT) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
     def set_target_labels(self, labels: Iterable[LT]) -> None:
         raise NotImplementedError
 

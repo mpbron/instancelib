@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from instancelib.environment.base import AbstractEnvironment
 from typing import Any, Callable, Generic, Iterable, Sequence, TypeVar
 
-from ..instances.base import Instance
+from ..instances.base import Instance, InstanceProvider
 from ..instances.text import TextInstance
 
-from ..typehints import KT, VT
+from ..typehints import KT, VT, DT, RT
 
 
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]")
@@ -25,6 +25,11 @@ class MultiplePertubator(ABC, Generic[IT]):
     
     @abstractmethod
     def __call__(self, input: IT) -> Iterable[IT]:
+        raise NotImplementedError
+
+class ProviderPertubator(ABC, Generic[IT, KT, DT, VT, RT]):
+    @abstractmethod
+    def __call__(self, input: InstanceProvider[IT, KT, DT, VT, RT]) -> InstanceProvider[IT, KT, DT, VT, RT]:
         raise NotImplementedError
 
 class TextPertubator(

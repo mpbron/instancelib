@@ -22,20 +22,40 @@ text_env = read_excel_dataset("./datasets/testdataset.xlsx",
 
 ds = text_env.dataset # A `dict-like` interface for instances
 labels = text_env.labels # An object that stores all labels
+labelset = labels.labelset # All labels that can be given to instances
 
+ins = ds[20] # Get instance with identifier key  `20`
+ins_data = ins.data # Get the raw data for instance 20
+ins_vector = ins.vector # Get the vector representation for 20 if any
 
+ins_labels = labels.get_labels(ins)
 ``` 
 
 **Dataset manipulation**: Divide the dataset in a train set
 ```python
-
-
-#%%
 train, test = text_env.train_test_split(ds, train_size=0.70)
+
+print(20 in train) # May be true or false, because of random sampling
 ```
 
 **Train a model**:
+```python
 
+from instancelib import SkLearnDataClassifier
+from sklearn.pipeline import Pipeline 
+from sklearn.naive_bayes import MultinomialNB 
+from sklearn.feature_extraction.text import TfidfTransformer
+
+pipeline = Pipeline([
+     ('vect', CountVectorizer()),
+     ('tfidf', TfidfTransformer()),
+     ('clf', MultinomialNB()),
+     ])
+
+model = SkLearnDataClassifier.build(pipeline, text_env)
+model.fit_provider(train)
+predictions = model.predict(test)
+```
 ## Installation
 See [installation.md](docs/installation.md) for an extended installation guide.
 

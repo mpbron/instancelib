@@ -31,7 +31,7 @@ ins_vector = ins.vector # Get the vector representation for 20 if any
 ins_labels = labels.get_labels(ins)
 ``` 
 
-**Dataset manipulation**: Divide the dataset in a train set
+**Dataset manipulation**: Divide the dataset in a train and test set
 ```python
 train, test = text_env.train_test_split(ds, train_size=0.70)
 

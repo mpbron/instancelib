@@ -53,11 +53,11 @@ See [CHANGELOG.md](CHANGELOG.md) for a full overview of the changes for each ver
   year = {2021}
 }
 ```
-## Library uses
+## Library usage
 This library is used in the following projects:
 - [python-allib](https://github.com/mpbron/allib). A typed Active Learning framework for Python for both Classification and Technology-Assisted Review systems.
 - [text_explainability](https://marcelrobeer.github.io/text_explainability/). A generic explainability architecture for explaining text machine learning models
-- [text_sensitivity](https://marcelrobeer.github.io/text_sensitivity/)). Sensitivity testing (fairness & robustness) for text machine learning models.
+- [text_sensitivity](https://marcelrobeer.github.io/text_sensitivity/). Sensitivity testing (fairness & robustness) for text machine learning models.
 
 ## Maintenance
 ### Contributors

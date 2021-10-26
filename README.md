@@ -40,7 +40,7 @@ Full documentation of the latest version is provided at [https://mpbron.github.i
 See [usage.py](usage.py) to see an example of how the package can be used.
 
 ## Releases
-`text_explainability` is officially released through [PyPI](https://pypi.org/project/instancelib/).
+`instancelib` is officially released through [PyPI](https://pypi.org/project/instancelib/).
 
 See [CHANGELOG.md](CHANGELOG.md) for a full overview of the changes for each version.
 

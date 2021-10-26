@@ -15,8 +15,8 @@ A generic dataset interface for Machine Learning models**
 ## Quick tour
 **Load dataset**: Load the dataset in an environment
 ```python
-from instancelib import read_excel_dataset
-text_env = read_excel_dataset("./datasets/testdataset.xlsx",
+import instancelib as il
+text_env = il.read_excel_dataset("./datasets/testdataset.xlsx",
                                   data_cols=["fulltext"],
                                   label_cols=["label"])
 
@@ -40,8 +40,6 @@ print(20 in train) # May be true or false, because of random sampling
 
 **Train a model**:
 ```python
-
-from instancelib import SkLearnDataClassifier
 from sklearn.pipeline import Pipeline 
 from sklearn.naive_bayes import MultinomialNB 
 from sklearn.feature_extraction.text import TfidfTransformer
@@ -52,8 +50,8 @@ pipeline = Pipeline([
      ('clf', MultinomialNB()),
      ])
 
-model = SkLearnDataClassifier.build(pipeline, text_env)
-model.fit_provider(train)
+model = il.SkLearnDataClassifier.build(pipeline, text_env)
+model.fit_provider(train, labels)
 predictions = model.predict(test)
 ```
 ## Installation

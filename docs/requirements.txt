@@ -1,3 +1,10 @@
+numpy
+pandas
+h5py
+xlrd
+openpyxl
+scikit-learn
+gensim
 sphinx
 sphinx-toolbox
 sphinx-rtd-theme

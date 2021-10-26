@@ -65,7 +65,7 @@ See [installation.md](docs/installation.md) for an extended installation guide.
 | Local | Clone this repository and install via `pip install -e .` or locally run `python setup.py install`.
 
 ## Documentation
-Full documentation of the latest version is provided at [https://mpbron.github.io/instancelib/](https://mpbron.github.io/instancelib/).
+Full documentation of the latest version is provided at [https://instancelib.readthedocs.org](https://instancelib.readthedocs.org).
 
 ## Example usage
 See [usage.py](usage.py) to see an example of how the package can be used.

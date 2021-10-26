@@ -7,6 +7,8 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   instancelib.analysis
+   instancelib.attributes
    instancelib.environment
    instancelib.exceptions
    instancelib.feature_extraction
@@ -14,6 +16,7 @@ Subpackages
    instancelib.ingest
    instancelib.instances
    instancelib.labels
+   instancelib.machinelearning
    instancelib.pertubations
    instancelib.typehints
    instancelib.utils

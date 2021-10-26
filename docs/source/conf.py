@@ -91,7 +91,5 @@ typehints_document_rtype = True
 autodoc_typehints = "signature"
 napoleon_type_aliases = {
     "Instance[KT, DT, VT, RT]": ":class:`Instance`[:data:`~instancelib.typehints.KT`, :data:`~instancelib.typehints.DT`, :data:`~instancelib.typehints.VT`, :data:`~instancelib.typehints.RT`]",
-    "KT": ":data:`instancelib.typehints.KT`",
-    "~KT": ":data:`instancelib.typehints.KT`",
     "dict-like": ":term:`dict-like <mapping>`",
 }

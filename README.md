@@ -9,6 +9,7 @@ A generic dataset interface for Machine Learning models**
 ---
 
 `instancelib` provides a **generic architecture** for datasets. 
+
 &copy; Michiel Bron, 2021
 
 ## Quick tour
@@ -18,12 +19,20 @@ from instancelib import read_excel_dataset
 text_env = read_excel_dataset("./datasets/testdataset.xlsx",
                                   data_cols=["fulltext"],
                                   label_cols=["label"])
+
+ds = text_env.dataset # A `dict-like` interface for instances
+labels = text_env.labels # An object that stores all labels
 ``` 
 
-**Dataset manipulation**: Divide the 
+**Dataset manipulation**: Divide the dataset in a train set
 ```python
 
+
+#%%
+train, test = text_env.train_test_split(ds, train_size=0.70)
 ```
+
+**Train a model**:
 
 ## Installation
 See [installation.md](docs/installation.md) for an extended installation guide.

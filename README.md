@@ -22,6 +22,8 @@ text_env = read_excel_dataset("./datasets/testdataset.xlsx",
 
 ds = text_env.dataset # A `dict-like` interface for instances
 labels = text_env.labels # An object that stores all labels
+
+
 ``` 
 
 **Dataset manipulation**: Divide the dataset in a train set

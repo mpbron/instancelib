@@ -2,10 +2,6 @@ numpy
 pandas
 h5py
 tables
-sphinx
-sphinx-toolbox
-sphinx-rtd-theme
-sphinx-autodoc-typehints
 xlrd
 openpyxl
 scikit-learn

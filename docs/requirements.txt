@@ -1,0 +1,5 @@
+sphinx
+sphinx-toolbox
+sphinx-rtd-theme
+sphinx-autodoc-typehints
+sphinxcontrib-apidoc

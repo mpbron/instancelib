@@ -14,9 +14,11 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-from .base import BaseVectorizer # type: ignore
-from .textsklearn import SklearnVectorizer # type: ignore
-from .textinstance import TextInstanceVectorizer #type: ignore
+from .base import BaseVectorizer 
+from .textsklearn import SklearnVectorizer 
+from .textinstance import TextInstanceVectorizer
+
+__all__ = ["BaseVectorizer", "SklearnVectorizer", "TextInstanceVectorizer"]
 
 
 

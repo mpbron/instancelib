@@ -8,6 +8,7 @@ Submodules
    :maxdepth: 4
 
    instancelib.labels.base
+   instancelib.labels.encoder
    instancelib.labels.memory
 
 Module contents

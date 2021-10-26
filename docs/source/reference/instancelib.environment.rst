@@ -10,7 +10,6 @@ Submodules
    instancelib.environment.base
    instancelib.environment.hdf5
    instancelib.environment.memory
-   instancelib.environment.pertubation
    instancelib.environment.text
 
 Module contents

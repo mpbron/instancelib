@@ -23,21 +23,17 @@ def binary_mapper(value: Any) -> str:
     return "Irrelevant"
     
 #%%
-tweakers_env = read_excel_dataset("./datasets/testdataset.xlsx",
+text_env = read_excel_dataset("./datasets/testdataset.xlsx",
                                   data_cols=["fulltext"],
                                   label_cols=["label"])
-halldataset_env = read_csv_dataset("./datasets/Software_Engineering_Hall.csv", 
-                                   data_cols=["title", "abstract"], 
-                                   label_cols=["included"], label_mapper=binary_mapper)
-
 #%%
-instanceprovider = tweakers_env.dataset
-labelprovider = tweakers_env.labels
+ins_provider = text_env.dataset
+labelprovider = text_env.labels
 
 #%%
 n_docs = len(instanceprovider)
 n_train = round(0.70 * n_docs)
-train, test = tweakers_env.train_test_split(instanceprovider, train_size=0.70)
+train, test = text_env.train_test_split(instanceprovider, train_size=0.70)
 
 #%%
 # Test if we indeed got the right length

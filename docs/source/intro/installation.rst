@@ -2,7 +2,7 @@ Installation
 ============
 
 Install InstanceLib
-----------------
+-------------------
 
 InstanceLib requires having Python 3.8 or higher installed. 
 
@@ -25,7 +25,7 @@ See `Troubleshooting`_ for common problems.
 
 
 Upgrade InstanceLib
-----------------
+-------------------
 
 Upgrade InstanceLib as follows:
 
@@ -36,7 +36,7 @@ Upgrade InstanceLib as follows:
 
 
 Uninstall InstanceLib
-------------------
+---------------------
 
 Remove InstanceLib with
 
@@ -68,19 +68,26 @@ The command line returns one of the following messages:
   'pip' is not recognized as an internal or external command, operable program or batch file.
 
 
-First, check if Python is installed with the following command:
+First, check if Python 3.8 is installed by issuing one of the following commands:
 
 .. code:: bash
 
     python --version
 
-If this does not return 3.8 or higher, then Python is not (correctly)
-installed.
+.. code:: bash
 
-However, there is a simple way to deal with correct environment variables
-by adding `python -m` in front of the command. For example:
+    python3 --version
 
 .. code:: bash
 
-  python -m pip install instancelib
+    python3.8 --version
+
+If this does not return 3.8 or higher, then Python is not (correctly) installed.
+We recommend making a virtual environment in which you install your packages.
+You can create a virtual environment `.venv` in your working directory as follows (adapt your python command if necessary).
+
+.. code:: bash
+
+    python -m venv .venv
+
 

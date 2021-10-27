@@ -8,7 +8,6 @@ Subpackages
    :maxdepth: 4
 
    instancelib.analysis
-   instancelib.attributes
    instancelib.environment
    instancelib.exceptions
    instancelib.feature_extraction

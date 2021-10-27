@@ -31,9 +31,9 @@ ins_provider = text_env.dataset
 labelprovider = text_env.labels
 
 #%%
-n_docs = len(instanceprovider)
+n_docs = len(ins_provider)
 n_train = round(0.70 * n_docs)
-train, test = text_env.train_test_split(instanceprovider, train_size=0.70)
+train, test = text_env.train_test_split(ins_provider, train_size=0.70)
 
 #%%
 # Test if we indeed got the right length
@@ -88,14 +88,14 @@ def dutch_article_pertubator(word: str) -> str:
     return word
 
 # %%
-pertubated_instances = tweakers_env.create_empty_provider()
+pertubated_instances = text_env.create_empty_provider()
 
 #%%
 wrapped_tokenizer = TokenizerWrapper(tokenizer)
 pertubator = TokenPertubator(
-    tweakers_env, tokenizer, detokenizer, dutch_article_pertubator)
+    text_env, tokenizer, detokenizer, dutch_article_pertubator)
 #%%
-instanceprovider.map_mutate(wrapped_tokenizer) 
+ins_provider.map_mutate(wrapped_tokenizer) 
 
 #%%
 #Pertubate an instance
@@ -122,17 +122,17 @@ pertubated_test_data = frozenset(test.map(pertubator))
 # But works with other data structures as well
 
 # %%
-vectorizer = TextInstanceVectorizer(
+vectorizer = TextInstanceVectorizer(tweakers_env
     SklearnVectorizer(
         TfidfVectorizer(max_features=1000)))
 
-vectorize(vectorizer, tweakers_env)
+vectorize(vectorizer, text_env)
 #%%
 classifier = MultinomialNB()
-vec_model = SkLearnVectorClassifier.build(classifier, tweakers_env)
+vec_model = SkLearnVectorClassifier.build(classifier, text_env)
 
 #%%
-vec_model.fit_provider(train, tweakers_env.labels)
+vec_model.fit_provider(train, text_env.labels)
 # %%
 
 docs = list(test.instance_chunker(20))[0]
@@ -146,13 +146,5 @@ pipeline = Pipeline([
      ('tfidf', TfidfTransformer()),
      ('clf', MultinomialNB()),
      ])
-data_model = SkLearnDataClassifier.build(pipeline, tweakers_env)
-# %%
-data_model.fit_provider(train, tweakers_env.labels)
-
-#%%
-fitted_model = data_model.innermodel
-#%%
-predictions_data = data_model.predict(test)
-
-#%%
+data_model = SkLearnDataClassifier.build(pipeline, text_env)
+# %%tweakers_env#%%

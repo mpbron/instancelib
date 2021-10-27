@@ -12,4 +12,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated documentation
 - pandas_to_env_with_id function
 
+[Unreleased]: https://github.com/mpbron/instancelib
 [0.3.4.1]: https://pypi.org/project/instancelib/0.3.4.1

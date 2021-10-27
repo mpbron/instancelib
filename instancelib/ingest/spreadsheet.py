@@ -184,7 +184,7 @@ def build_environment_with_id(df: pd.DataFrame,
                       id_col: str,
                       data_cols: Sequence[str],
                       label_cols: Sequence[str],
-                     ) -> Environment[
+                     ) -> AbstractEnvironment[
                 MemoryTextInstance[Any, np.ndarray], 
                 Union[Any, UUID], str, np.ndarray,str, str]:
     labelfunc = functools.partial(inv_transform_mapping, label_cols, label_mapper=label_mapper)
@@ -286,7 +286,7 @@ def pandas_to_env_with_id(df: pd.DataFrame,
                   data_cols: Union[str, Sequence[str]],
                   label_cols: Union[str, Sequence[str]],
                   labels: Optional[Iterable[str]] = None
-                  ) -> Environment[MemoryTextInstance[Any, np.ndarray], 
+                  ) -> AbstractEnvironment[MemoryTextInstance[Any, np.ndarray], 
                             Union[Any, UUID], str, np.ndarray, str, str]:
     l_data_cols = single_or_collection(data_cols)
     l_label_cols = single_or_collection(label_cols)

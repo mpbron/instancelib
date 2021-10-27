@@ -24,7 +24,7 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 
-from ..environment.base import AbstractEnvironment
+from ..environment import Environment, AbstractEnvironment
 from ..environment.text import TextEnvironment
 from ..instances.text import MemoryTextInstance
 from ..utils.func import list_unzip3, single_or_collection
@@ -110,6 +110,38 @@ def extract_data(dataset_df: pd.DataFrame,
     indices, texts, labels_true = list_unzip3(yield_row_values())
     return indices, texts, labels_true  # type: ignore
 
+def extract_data_with_id(dataset_df: pd.DataFrame, 
+                         id_col: str,
+                         data_cols: Sequence[str], 
+                         labelfunc: Callable[..., FrozenSet[str]]
+               ) -> Tuple[List[Any], List[str], List[FrozenSet[str]]]:
+    """Extract text data and labels from a dataframe
+
+    Parameters
+    ----------
+    dataset_df : pd.DataFrame
+        The dataset
+    id_col: str
+        The column where the identifier is stored
+    data_cols : List[str]
+        The cols in which the text is stored
+    labelfunc : Callable[..., FrozenSet[str]]
+        A function that maps rows to sets of labels
+
+    Returns
+    -------
+    Tuple[List[int], List[str], List[FrozenSet[str]]]
+        [description]
+    """    
+    def yield_row_values():
+        for _, row in dataset_df.iterrows():
+            identifier = row[id_col]
+            data = " ".join([str(row[col]) for col in data_cols])
+            labels = labelfunc(row)
+            yield identifier, str(data), labels  # type: ignore
+    indices, texts, labels_true = list_unzip3(yield_row_values())
+    return indices, texts, labels_true  # type: ignore
+
 def build_environment(df: pd.DataFrame, 
                       label_mapper: Callable[[Any], Optional[str]],
                       labels: Optional[Iterable[str]],
@@ -146,9 +178,24 @@ def build_environment(df: pd.DataFrame,
         [])
     return environment
 
-Environment = AbstractEnvironment[
-                MemoryTextInstance[int, np.ndarray], 
-                Union[int, UUID], str, np.ndarray,str, str]
+def build_environment_with_id(df: pd.DataFrame, 
+                      label_mapper: Callable[[Any], Optional[str]],
+                      labels: Optional[Iterable[str]],
+                      id_col: str,
+                      data_cols: Sequence[str],
+                      label_cols: Sequence[str],
+                     ) -> Environment[
+                MemoryTextInstance[Any, np.ndarray], 
+                Union[Any, UUID], str, np.ndarray,str, str]:
+    labelfunc = functools.partial(inv_transform_mapping, label_cols, label_mapper=label_mapper)
+    indices, texts, true_labels = extract_data_with_id(df, id_col, data_cols, labelfunc)
+    if labels is None:
+        labels = frozenset(itertools.chain.from_iterable(true_labels))
+    environment = TextEnvironment[int, np.ndarray, str].from_data(
+        labels, 
+        indices, texts, true_labels,
+        [])
+    return environment
 
 def read_excel_dataset(path: "Union[str, PathLike[str]]", 
                        data_cols: Sequence[str], 
@@ -225,10 +272,23 @@ def read_csv_dataset(path: "Union[str, PathLike[str]]",
 def pandas_to_env(df: pd.DataFrame, 
                   data_cols: Union[str, Sequence[str]],
                   label_cols: Union[str, Sequence[str]],
-                  labels: Optional[Iterable[str]] = None) -> AbstractEnvironment[
-                MemoryTextInstance[int, np.ndarray], 
-                Union[int, UUID], str, np.ndarray, str, str]:
+                  labels: Optional[Iterable[str]] = None
+                  ) -> AbstractEnvironment[
+                    MemoryTextInstance[int, np.ndarray], 
+                    Union[int, UUID], str, np.ndarray, str, str]:
     l_data_cols = single_or_collection(data_cols)
     l_label_cols = single_or_collection(label_cols)
     env = build_environment(df, identity_mapper, labels, l_data_cols, l_label_cols)
+    return env
+
+def pandas_to_env_with_id(df: pd.DataFrame, 
+                  id_col: str,
+                  data_cols: Union[str, Sequence[str]],
+                  label_cols: Union[str, Sequence[str]],
+                  labels: Optional[Iterable[str]] = None
+                  ) -> Environment[MemoryTextInstance[Any, np.ndarray], 
+                            Union[Any, UUID], str, np.ndarray, str, str]:
+    l_data_cols = single_or_collection(data_cols)
+    l_label_cols = single_or_collection(label_cols)
+    env = build_environment_with_id(df, identity_mapper, labels, id_col,l_data_cols, l_label_cols)
     return env

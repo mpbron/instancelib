@@ -69,10 +69,11 @@ We can create a random `train test split` of 70 % train and 30 % test as follows
 
 Machine Learning
 ----------------
-You can also train models with instancelib
+
+You can also train models with instancelib.
 
 .. code:: python
-    
+
     from sklearn.pipeline import Pipeline 
     from sklearn.naive_bayes import MultinomialNB 
     from sklearn.feature_extraction.text import TfidfTransformer

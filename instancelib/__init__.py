@@ -3,7 +3,7 @@ from .environment.memory import MemoryEnvironment
 from .environment.text import TextEnvironment
 from .feature_extraction import (BaseVectorizer, SklearnVectorizer,
                                  TextInstanceVectorizer)
-from .functions import vectorize
+from .functions.vectorize import vectorize
 from .ingest.spreadsheet import (pandas_to_env, pandas_to_env_with_id,
                                  read_csv_dataset, read_excel_dataset)
 from .instances.base import Instance, InstanceProvider

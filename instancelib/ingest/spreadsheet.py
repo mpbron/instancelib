@@ -24,7 +24,7 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 
-from ..environment import Environment, AbstractEnvironment
+from ..environment import AbstractEnvironment
 from ..environment.text import TextEnvironment
 from ..instances.text import MemoryTextInstance
 from ..utils.func import list_unzip3, single_or_collection

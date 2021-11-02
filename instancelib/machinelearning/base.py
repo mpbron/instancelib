@@ -31,6 +31,43 @@ IT = TypeVar("IT", bound="Instance[Any,Any,Any,Any]", covariant = True)
 InstanceInput = Union[InstanceProvider[IT, KT, DT, VT, RT], Iterable[Instance[KT, DT, VT, RT]]]
 
 class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
+    """This class provides an interface that can be used to connect your model to 
+    :class:`InstanceProvider`, :class:`LabelProvider`, and 
+    :class:`~instancelib.Environment` objects.
+   
+    The main methods of this class are listed below:
+
+    - :meth:`fit_provider`: Fit a classifier on training instances
+    - :meth:`predict`: Predict the class labels for (unseen) instances
+    - :meth:`predict_proba`: Predict the class labels and corresponding probabilities
+    - :meth:`predict_proba_raw`: Predicht the class probabilities and return them in matrix form
+
+    Examples
+    --------
+
+    Fit a classifier on train data:
+    
+    >>> model.fit_provider(train, env.labels)
+
+    Predict the class labels for a list of instances:
+
+    >>> model.predict([ins])
+    [(20, frozenset({"Games"}))]
+
+    Return the class labels and probabilities:
+
+    >>> model.predict_proba(test)
+    [(20, frozenset({("Games", 0.66), ("Bedrijfsnieuws", 0.22), ("Smartphones", 0.12)})), ... ]
+
+    Return the raw prediction matrix:
+
+    >>> preds = model.predict_proba_raw(test, batch_size=512)
+    >>> next(preds)
+    ([3, 4, 5, ...], array([[0.143, 0.622, 0.233],
+                            [0.278, 0.546, 0.175],
+                            [0.726, 0.126, 0.146], 
+                            ...]))
+    """  
     _name = "AbstractClassifier"
 
     @abstractmethod

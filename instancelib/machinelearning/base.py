@@ -32,7 +32,7 @@ InstanceInput = Union[InstanceProvider[IT, KT, DT, VT, RT], Iterable[Instance[KT
 
 class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
     """This class provides an interface that can be used to connect your model to 
-    :class:`InstanceProvider`, :class:`LabelProvider`, and 
+    :class:`~instancelib.InstanceProvider`, :class:`~instancelib.LabelProvider`, and 
     :class:`~instancelib.Environment` objects.
    
     The main methods of this class are listed below:

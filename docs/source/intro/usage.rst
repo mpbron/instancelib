@@ -113,7 +113,7 @@ In this library, you can easily integrate them in your pipeline.
 First, we define the feature extraction method:
 
 .. code:: python
-   
+
    from instancelib.feature_extraction.doc2vec import Doc2VecVectorizer
    d2v = il.TextInstanceVectorizer(Doc2VecVectorizer())
 
@@ -126,7 +126,7 @@ Then, you can give all documents the corresponding vectors by issuing the follow
 Now every instance in the ``text_env`` has a vector. Next, we can define a new model that can be used to 
 classify the documents. 
 
-Similar as in the end-to-end example, we can construct a new model by using the ``build`` method.
+Similar as in the end-to-end example, we can construct a new model by using the :func:`~instancelib.machinelearning.sklearn.SkLearnClassifier.build` method.
 
 .. code:: python
 
@@ -138,3 +138,17 @@ Similar as in the end-to-end example, we can construct a new model by using the 
    predictions = vec_model.predict(test)
 
 
+Predictions
+^^^^^^^^^^^
+
+Both models can be used to make predictions on (unseen) new data.
+The data do not need to come from the same :class:`~instancelib.Environment`, but should be instances.
+Like the :class:`instancelib.LabelProvider` objects, the predictions are returned as :class:`frozenset` objects.
+As arguments to the predicitions you can either provide :class:`~instancelib.InstanceProvider` objects or a :class:`list` / 
+:class:`Sequence` of :class:`~instancelib.Instance` objects.
+
+>>> vec_model.predict([ins])
+[(20, frozenset({"Games"}))]
+
+You can also access the 
+>>> vec_model.predict_proba(test)

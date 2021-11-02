@@ -185,7 +185,7 @@ class SkLearnClassifier(SaveableInnerModel,
                          storage_location: "Optional[PathLike[str]]"=None, 
                          filename: "Optional[PathLike[str]]"=None
                          ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
-        """Construct a Sklearn Data model from a fitted Sklearn model.
+        """Construct a Sklearn model from a fitted Sklearn model.
         The estimator is a classifier for a binary or multiclass classification problem.
 
         Parameters
@@ -219,7 +219,7 @@ class SkLearnClassifier(SaveableInnerModel,
                          storage_location: "Optional[PathLike[str]]"=None, 
                          filename: "Optional[PathLike[str]]"=None
                          ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
-        """Construct a Sklearn Data model from a fitted Sklearn model.
+        """Construct a Sklearn model from a fitted Sklearn model.
         The estimator is a classifier for a multilabel classification problem.
 
         Parameters
@@ -254,7 +254,7 @@ class SkLearnClassifier(SaveableInnerModel,
                  storage_location: "Optional[PathLike[str]]"=None, 
                  filename: "Optional[PathLike[str]]"=None
                  ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
-        """Construct a Sklearn Data model from an :class:`~instancelib.Environment`.
+        """Construct a Sklearn model from an :class:`~instancelib.Environment`.
         The estimator is a classifier for a binary or multiclass classification problem.
 
         Parameters
@@ -284,7 +284,7 @@ class SkLearnClassifier(SaveableInnerModel,
                  storage_location: "Optional[PathLike[str]]"=None, 
                  filename: "Optional[PathLike[str]]"=None
                  ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
-        """Construct a Sklearn Data model from an :class:`~instancelib.Environment`.
+        """Construct a Sklearn model from an :class:`~instancelib.Environment`.
         The estimator is a classifier for a binary or multiclass classification problem.
 
         Parameters

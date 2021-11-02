@@ -141,14 +141,43 @@ Similar as in the end-to-end example, we can construct a new model by using the 
 Predictions
 ^^^^^^^^^^^
 
-Both models can be used to make predictions on (unseen) new data.
+Both models can be used to make predictions on (unseen) new data by using the 
+:func:`~instancelib.machinelearning.base.AbstractClassifier.predict` method.
 The data do not need to come from the same :class:`~instancelib.Environment`, but should be instances.
 Like the :class:`instancelib.LabelProvider` objects, the predictions are returned as :class:`frozenset` objects.
 As arguments to the predicitions you can either provide :class:`~instancelib.InstanceProvider` objects or a :class:`list` / 
-:class:`Sequence` of :class:`~instancelib.Instance` objects.
+:class:`~typing.Sequence` of :class:`~instancelib.Instance` objects.
 
 >>> vec_model.predict([ins])
 [(20, frozenset({"Games"}))]
 
-You can also access the 
+The return type is a list of tuples. The first element of the tuple is the instance's identifier, the second are the predicted labels.
+The order of elements in an InstanceProvider is not always predictable, therefore, the identifiers are returned to ensure that the labels
+correspond to the instances. 
+
+Like in Scikit-Learn, the class probabilities can also be returned with 
+the :func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba` method. 
+The results are returned in a similar fashion as above, but now, the probabilities are also included.
+
 >>> vec_model.predict_proba(test)
+[(20, frozenset({("Games", 0.66), ("Bedrijfsnieuws", 0.22), ("Smartphones", 0.12)})), ... ]
+
+If you want to further analyse the prediction probabilities (for example, in Active Learning) you may want to access the raw :class:`numpy.ndarray`.
+Each input is processed in batches to mitigate memory issues when processing large datasets that do not fit in memory.
+You can specify the ``batch_size`` in the function (default 200).
+:func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba_raw` method.
+This can also be done for the :func:`~instancelib.machinelearning.base.AbstractClassifier.predict` and 
+:func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba` methods.
+
+>>> preds = vec_model.predict_proba_raw(test, batch_size=512)
+>>> next(preds)
+([3, 4, 5, ...], array([[0.14355036, 0.62280608, 0.23364356],
+                        [0.27800903, 0.54697841, 0.17501256],
+                        [0.72646283, 0.12661641, 0.14692076], 
+                        ...]))
+
+The function :func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba_raw` is a :term:`generator`.
+Each call to :func:`next` will return the raw matrix for a batch. 
+Again, the identifiers corresponding to the rows in the 2d array will be returned.
+
+

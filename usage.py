@@ -1,4 +1,6 @@
 #%%
+
+import instancelib as il
 from instancelib.typehints.typevars import KT, VT
 from instancelib.machinelearning.skdata import SkLearnDataClassifier
 from instancelib.machinelearning import SkLearnVectorClassifier
@@ -11,7 +13,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, Tf
 from instancelib.feature_extraction.textinstance import TextInstanceVectorizer
 from instancelib.feature_extraction.textsklearn import SklearnVectorizer
 from instancelib.functions.vectorize import vectorize
-from instancelib.ingest.spreadsheet import read_csv_dataset, read_excel_dataset
+from instancelib.ingest.spreadsheet import read_excel_dataset
 from instancelib.instances.text import TextInstance
 from instancelib.pertubations.base import TokenPertubator
 
@@ -122,9 +124,8 @@ pertubated_test_data = frozenset(test.map(pertubator))
 # But works with other data structures as well
 
 # %%
-vectorizer = TextInstanceVectorizer(tweakers_env
-    SklearnVectorizer(
-        TfidfVectorizer(max_features=1000)))
+vectorizer = TextInstanceVectorizer(
+    il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
 
 vectorize(vectorizer, text_env)
 #%%

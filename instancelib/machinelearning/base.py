@@ -35,16 +35,50 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
 
     @abstractmethod
     def get_label_column_index(self, label: LT) -> int:
+        """Return the column in which the labels are stored 
+        in the label and prediction matrices
+
+        Parameters
+        ----------
+        label : LT
+            The label
+
+        Returns
+        -------
+        int
+            The column index of the label
+        """        
         raise NotImplementedError
 
     @abstractmethod
     def set_target_labels(self, labels: Iterable[LT]) -> None:
+        """Set the target labels of the classifier
+
+        Parameters
+        ----------
+        labels : Iterable[LT]
+            The class labels that the classifier can predict
+        """        
         raise NotImplementedError
 
     @abstractmethod
     def predict_instances(self, 
                           instances: Iterable[Instance[KT, DT, VT, RT]], 
                           batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
+        """Predict the labels for a :term:`iterable` of instances
+
+        Parameters
+        ----------
+        instances : Iterable[Instance[KT, DT, VT, RT]]
+            The instances
+        batch_size : int, optional
+            The batch size, by default 200
+
+        Returns
+        -------
+        Sequence[Tuple[KT, FrozenSet[LT]]]
+            A sequence of (identifier, prediction) pairs
+        """        
         raise NotImplementedError
 
     @abstractmethod
@@ -52,6 +86,21 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
                          provider: InstanceProvider[IT, KT, DT, VT, RT],
                          batch_size: int = 200
                          ) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
+        """Predict the labels for all instances in 
+        an :class:`InstanceProvider`.
+
+        Parameters
+        ----------
+        instances : InstanceProvider[IT, KT, DT, VT, RT]
+            The instanceprovider
+        batch_size : int, optional
+            The batch size, by default 200
+
+        Returns
+        -------
+        Sequence[Tuple[KT, FrozenSet[LT]]]
+            A sequence of (identifier, prediction) pairs
+        """        
         raise NotImplementedError
 
     @abstractmethod
@@ -59,6 +108,24 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
                          provider: InstanceProvider[IT, KT, DT, VT, RT],
                          batch_size: int = 200
                          ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
+        """Predict the labels for each instance in the provider and
+        return the probability for each label.
+
+        Parameters
+        ----------
+        provider : InstanceProvider[IT, KT, DT, VT, RT]
+            The provider
+        batch_size : int, optional
+            The batch size, by default 200
+
+        Returns
+        -------
+        Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]
+            A sequence of tuples consisting of:
+
+            - The instance identifier
+            - The class labels and their probabilities
+        """        
         raise NotImplementedError
 
     @abstractmethod
@@ -66,6 +133,31 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
                          provider: InstanceProvider[IT, KT, DT, VT, RT],
                          batch_size: int = 200
                          ) -> Iterator[Tuple[Sequence[KT], PMT]]:
+        """Generator function that predicts the labels 
+        for each instance in the provider. 
+        The generator lazy evaluates the prediction function
+        on batches of instances and yields class probabilities 
+        in matrix form.
+
+        Parameters
+        ----------
+        provider
+            The input InstanceProvider
+        batch_size : int, optional
+            The batch size in which instances are processed, by default 200
+            This also influences the shape of the resulting 
+            probability matrix.
+
+        Yields
+        -------
+        Iterator[Tuple[Sequence[KT], PMT]]
+            An iterator yielding tuples consisting of:
+                
+                - A sequence of keys that match the rows of
+                the probability matrix
+                - The Probability matrix with shape 
+                ``(len(keys), batch_size)``
+        """        
         raise NotImplementedError
 
     @abstractmethod
@@ -73,6 +165,24 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
                                 instances: Iterable[Instance[KT, DT, VT, RT]],
                                 batch_size: int = 200
                                 ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
+        """Predict the labels for each instance in the provider and
+        return the probability for each label.
+
+        Parameters
+        ----------
+        instances  
+            Input instances
+        batch_size : int, optional
+            The batch size, by default 200
+
+        Returns
+        -------
+        Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]
+            A sequence of tuples consisting of:
+
+            - The instance identifier
+            - The class labels and their probabilities
+        """        
         raise NotImplementedError
 
     @abstractmethod
@@ -80,6 +190,29 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
                                     instances: Iterable[Instance[KT, DT, VT, RT]],
                                     batch_size: int = 200
                                     ) -> Iterator[Tuple[Sequence[KT], PMT]]:
+        """Generator function that predicts the labels 
+        for each instance.
+        The generator lazy evaluates the prediction function
+        on batches of instances and yields class probabilities 
+        in matrix form.
+
+        Parameters
+        ----------
+        instances
+            Input instances
+        batch_size : int, optional
+            The batch size in which instances are processed, by default 200
+            This also influences the shape of the resulting 
+            probability matrix.
+
+        Yields
+        -------
+        Tuple[Sequence[KT], PMT]
+            An iterator yielding tuples consisting of:
+                
+                - A sequence of keys that match the rows of the probability matrix
+                - The Probability matrix with shape ``(batch_size, n_labels)``
+        """  
         raise NotImplementedError
 
 
@@ -87,20 +220,57 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
     def fit_provider(self, 
                      provider: InstanceProvider[IT, KT, DT, VT, RT],
                      labels: LabelProvider[KT, LT], batch_size: int = 200) -> None:
+        """Fit the classifier with the instances found in the 
+        :class:`InstanceProvider` based on the labels in the 
+        :class:`LabelProvider`
+
+        Parameters
+        ----------
+        provider : InstanceProvider[IT, KT, DT, VT, RT]
+            The provider that contains the training data
+        labels : LabelProvider[KT, LT]
+            The provider that contains the labels of the training data
+        batch_size : int, optional
+            A batch size for the training process, by default 200
+        """                
         raise NotImplementedError
 
     @abstractmethod
     def fit_instances(self, instances: Iterable[Instance[KT, DT, VT, RT]], labels: Iterable[Iterable[LT]]) -> None:
+        """Fit the classifier with the instances and accompanied
+        labels found in the arguments.
+
+        Parameters
+        ----------
+        instances : Iterable[Instance[KT, DT, VT, RT]]
+            The train data
+        labels : Iterable[Iterable[LT]]
+            The labels of the train data
+        """        
         raise NotImplementedError
 
    
     @property
     def name(self) -> str:
+        """The name of the classifier
+
+        Returns
+        -------
+        str
+            A name that can be used to identify the classifier
+        """        
         return self._name
         
     @property
     @abstractmethod
     def fitted(self) -> bool:
+        """Return true if the classifier has been fitted
+
+        Returns
+        -------
+        bool
+            True if the classifier has been fitted
+        """        
         pass
 
     def predict(self, instances: InstanceInput[IT, KT, DT, VT, RT], batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
@@ -160,6 +330,29 @@ class AbstractClassifier(ABC, Generic[IT, KT, DT, VT, RT, LT, LMT, PMT]):
         
 
     def predict_proba_raw(self, instances: InstanceInput[IT, KT, DT, VT, RT], batch_size: int = 200) -> Iterator[Tuple[Sequence[KT], PMT]]:
+        """Generator function that predicts the labels 
+        for each instance.
+        The generator lazy evaluates the prediction function
+        on batches of instances and yields class probabilities 
+        in matrix form.
+
+        Parameters
+        ----------
+        instances
+            Input instances
+        batch_size : int, optional
+            The batch size in which instances are processed, by default 200
+            This also influences the shape of the resulting 
+            probability matrix.
+
+        Yields
+        -------
+        Tuple[Sequence[KT], PMT]
+            An iterator yielding tuples consisting of:
+                
+                - A sequence of keys that match the rows of the probability matrix
+                - The Probability matrix with shape ``(batch_size, n_labels)``
+        """
         if isinstance(instances, InstanceProvider):
             typed_provider: InstanceProvider[IT, KT, DT, VT, RT] = instances # type: ignore
             result = self.predict_proba_provider_raw(typed_provider, batch_size)

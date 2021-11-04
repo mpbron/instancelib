@@ -54,7 +54,9 @@ class SkLearnDataClassifier(SkLearnClassifier[IT, KT, DT, Any, LT],
         def yield_xy():
             for ins, lbl in zip(instances, labelings):
                 if ins.data is not None:
-                    yield ins.vector, self.encoder.encode(lbl)
+                    encoded_label = self.encoder.encode_safe(lbl)
+                    if encoded_label is not None:
+                        yield ins.data, encoded_label
         x_data, y_data = list_unzip(yield_xy())
         x_fm = np.array(x_data) # type: ignore
         y_lm = np.vstack(y_data)
@@ -129,9 +131,9 @@ class SkLearnDataClassifier(SkLearnClassifier[IT, KT, DT, Any, LT],
         
 
     def _fit_data(self, x_data: Sequence[DT], labels: Sequence[FrozenSet[LT]]):
-        x_mat = np.array(x_data) # type: ignore
-        y_vec = self.encode_y(labels)
-        self._fit(x_mat, y_vec)
+        x_dat, y_mat = self._filter_x_only_encoded_y(x_data, labels)
+        x_mat = np.array(x_dat) # type: ignore
+        self._fit(x_mat, y_mat)
 
     def fit_instances(self, instances: Iterable[Instance[KT, DT, Any, Any]], labels: Iterable[Iterable[LT]]) -> None:
         datas = [ins.data for ins in instances]

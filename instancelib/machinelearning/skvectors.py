@@ -47,7 +47,9 @@ class SkLearnVectorClassifier(SkLearnClassifier[IT, KT, Any, np.ndarray, LT],
         def yield_xy():
             for ins, lbl in zip(instances, labelings):
                 if ins.vector is not None:
-                    yield ins.vector, self.encoder.encode(lbl)
+                    encoded_label = self.encoder.encode_safe(lbl)
+                    if encoded_label is not None:
+                        yield ins.vector, encoded_label
         x_data, y_data = list_unzip(yield_xy())
         x_fm = np.vstack(x_data)
         y_lm = np.vstack(y_data)
@@ -141,8 +143,8 @@ class SkLearnVectorClassifier(SkLearnClassifier[IT, KT, Any, np.ndarray, LT],
         
 
     def _fit_vectors(self, x_data: Sequence[np.ndarray], labels: Sequence[FrozenSet[LT]]):
-        x_mat = np.vstack(x_data)
-        y_mat = self.encode_y(labels)
+        x_filtered, y_mat = self._filter_x_only_encoded_y(x_data, labels)
+        x_mat = np.vstack(x_filtered)
         self._fit(x_mat, y_mat)
     
 

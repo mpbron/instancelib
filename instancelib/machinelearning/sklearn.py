@@ -29,7 +29,11 @@ from sklearn.pipeline import Pipeline  # type: ignore
 
 from sklearn.preprocessing import LabelEncoder as SKLabelEncoder # type: ignore
 from sklearn.preprocessing import MultiLabelBinarizer # type: ignore
-from sklearn.base import ClassifierMixin, TransformerMixin  # type: ignore
+from sklearn.base import ClassifierMixin, TransformerMixin
+
+from instancelib.utils.func import filter_snd_none
+
+from ..exceptions.base import LabelEncodingException 
 
 from ..environment import Environment
 from ..environment.base import Environment
@@ -45,6 +49,7 @@ from .base import AbstractClassifier
 LOGGER = logging.getLogger(__name__)
 
 IT = TypeVar("IT", bound="Instance[Any, Any, np.ndarray, Any]", covariant=True)
+_T = TypeVar("_T")
 
 class SkLearnClassifier(SaveableInnerModel,
                         AbstractClassifier[IT, KT, DT, VT, Any, LT, np.ndarray, np.ndarray], 
@@ -86,6 +91,31 @@ class SkLearnClassifier(SaveableInnerModel,
     def encode_x(self, 
                  instances: Iterable[Instance[KT, DT, VT, Any]]) -> np.ndarray:
         raise NotImplementedError
+
+    def _filter_x_only_encoded_y(self, instances: Iterable[_T], labelings: Sequence[Iterable[LT]]) -> Tuple[Iterable[_T], np.ndarray]:
+        """Filter out the training data for which no label exists
+
+        Parameters
+        ----------
+        instances : Iterable[_T]
+            Training instances
+        labelings : Sequence[Iterable[LT]]
+            The labels
+
+        Returns
+        -------
+        Tuple[Iterable[_T], np.ndarray]
+            A tuple containing the training instances and a label matrix that contains all succesfully encoded labels
+        """        
+        try:
+            y_mat = self.encoder.encode_batch(labelings)
+        except LabelEncodingException:
+            y_vecs = map(self.encoder.encode_safe, labelings)
+            lbl_instances, lbls = filter_snd_none(instances, y_vecs)
+            y_mat = np.vstack(lbls)
+        else:
+            lbl_instances = instances
+        return lbl_instances, y_mat
 
     def encode_y(self, labelings: Sequence[Iterable[LT]]) -> np.ndarray:
         y_data = self.encoder.encode_batch(labelings)

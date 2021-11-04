@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import (FrozenSet, Generic, Iterable, Iterator, List, Mapping,
+from typing import (FrozenSet, Generic, Iterable, Iterator, List, Mapping, Optional,
                     Sequence, Tuple)
 
 import numpy as np
-import sklearn  # type: ignore
+import sklearn
+
+from ..exceptions.base import LabelEncodingException  
 
 from ..typehints import LMT, LT, LVT, PMT
 from ..utils.func import invert_mapping
@@ -21,6 +23,13 @@ class LabelEncoder(ABC, Generic[LT, LVT, LMT, PMT]):
     def encode(self, labels: Iterable[LT]) -> LVT:
         raise NotImplementedError
 
+    def encode_safe(self, labels: Iterable[LT]) -> Optional[LVT]:
+        try:
+            encoding = self.encode(labels)
+        except LabelEncodingException:
+            return None
+        return encoding
+        
     @abstractmethod
     def encode_batch(self, labelings: Iterable[Iterable[LT]]) -> LMT:
         raise NotImplementedError
@@ -153,10 +162,17 @@ class SklearnLabelEncoder(LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray], 
         self.encoder.fit(list(self.labelset)) # type: ignore
 
     def encode(self, labels: Iterable[LT]) -> np.ndarray:
-        return self.encoder.transform(list(set(labels))) # type: ignore
+        try:
+            first_label = next(iter(labels))
+        except StopIteration():
+            raise LabelEncodingException("This instance has no label, but one is required (binary / multiclass classification)")
+        return self.encoder.transform([first_label]) # type: ignore
 
     def encode_batch(self, labelings: Iterable[Iterable[LT]]) -> np.ndarray:
-        formatted = [next(iter(labeling)) for labeling in labelings]
+        try:
+            formatted = [next(iter(labeling)) for labeling in labelings]
+        except StopIteration:
+            raise LabelEncodingException("One of the instances has no label, but one is required (binary / multiclass classfication)")
         encoded: np.ndarray = self.encoder.transform(formatted) # type: ignore
         return encoded
 

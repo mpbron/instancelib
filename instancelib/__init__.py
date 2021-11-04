@@ -12,19 +12,7 @@ from .instances.text import TextInstance, TextInstanceProvider
 from .labels import LabelProvider
 from .labels.memory import MemoryLabelProvider
 from .machinelearning import SkLearnDataClassifier, SkLearnVectorClassifier, AbstractClassifier
-
-from .typehints import typevars
-
-import analysis
-import utils
-import exceptions
-import functions
-import ingest
-import instances
-import labels
-import machinelearning
-import pertubations
-
+from .analysis import classifier_performance_mc, classifier_performance
 
 __author__ = "Michiel Bron"
 __email__ = "m.p.bron@uu.nl"
@@ -40,13 +28,6 @@ __all__= [
     "MemoryLabelProvider",
     "SkLearnDataClassifier", "SkLearnVectorClassifier", "AbstractClassifier",
     "read_csv_dataset", "read_excel_dataset", "pandas_to_env", "pandas_to_env_with_id", 
-    "vectorize", "BaseVectorizer", "SklearnVectorizer", "TextInstanceVectorizer", 
-    "analysis",
-    "utils",
-    "exceptions",
-    "functions",
-    "ingest",
-    "instances",
-    "pertubations",
-    "typevars"
+    "vectorize", "BaseVectorizer", "SklearnVectorizer", "TextInstanceVectorizer",
+    "classifier_performance", "classfier_performance_mc"
 ]

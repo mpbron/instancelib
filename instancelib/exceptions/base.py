@@ -19,3 +19,8 @@ class NoVectorsException(Exception):
     """    
     pass
 
+class LabelEncodingException(Exception):
+    """This exception is thrown when there is a problem with the label encoding
+    """    
+    pass
+

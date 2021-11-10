@@ -49,14 +49,13 @@ class SkLearnDataClassifier(SkLearnClassifier[IT, KT, DT, Any, LT],
         x_vec = np.array(x_data) # type: ignore
         return x_vec
 
-    def encode_xy(self, instances: Iterable[Instance[KT, Any, np.ndarray, Any]], 
+    def encode_xy(self, instances: Iterable[Instance[KT, DT, Any, Any]], 
                         labelings: Iterable[Iterable[LT]]):
         def yield_xy():
             for ins, lbl in zip(instances, labelings):
-                if ins.data is not None:
-                    encoded_label = self.encoder.encode_safe(lbl)
-                    if encoded_label is not None:
-                        yield ins.data, encoded_label
+                encoded_label = self.encoder.encode_safe(lbl)
+                if encoded_label is not None:
+                    yield ins.data, encoded_label
         x_data, y_data = list_unzip(yield_xy())
         x_fm = np.array(x_data) # type: ignore
         y_lm = np.vstack(y_data)

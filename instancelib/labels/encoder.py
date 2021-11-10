@@ -117,8 +117,25 @@ class DictionaryEncoder(LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray], Ge
         return cls(mapping)
 
 
+class IdentityEncoder(DictionaryEncoder[LT], Generic[LT]):
+    def encode(self, labels: Iterable[LT]) -> np.ndarray:
+        result = np.array([labels]) # type: ignore
+        return result
 
+    def encode_batch(self, labelings: Iterable[Iterable[LT]]) -> np.ndarray:
+        encoded = tuple(map(self.encode, labelings))
+        result = np.vstack(encoded)
+        return result
 
+    def decode_vector(self, vector: np.ndarray) -> FrozenSet[LT]:
+        listed: List[LT] = vector.tolist() # type: ignore
+        result = frozenset(listed)
+        return result
+
+    def decode_matrix(self, matrix: np.ndarray) -> Sequence[FrozenSet[LT]]:
+        listed: List[LT] = matrix.tolist()
+        result = [frozenset([enc]) for enc in listed]
+        return result
 
 class MultilabelDictionaryEncoder(DictionaryEncoder[LT], Generic[LT]):
     def encode(self, labels: Iterable[LT]) -> np.ndarray:

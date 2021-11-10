@@ -28,3 +28,23 @@ def test_classification():
     assert performance["Games"].f1 >= 0.75
     assert performance["Smartphones"].f1 >= 0.75
     assert performance["Bedrijfsnieuws"].f1 >= 0.75
+
+def test_build_from_model():
+    env = il.read_excel_dataset("datasets/testdataset.xlsx", ["fulltext"], ["label"])
+    vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
+    il.vectorize(vect, env)
+    train, test = env.train_test_split(env.dataset, 0.70)
+    model = il.SkLearnVectorClassifier.build(MultinomialNB(), env)
+    model.fit_provider(train, env.labels)
+    build_model = il.SkLearnVectorClassifier.build_from_model(model.innermodel, ints_as_str=True)
+    model_preds = model.predict(test)
+    b_model_preds = build_model.predict(test)
+    for (a, pred_lt), (b, pred_idx) in zip(model_preds, b_model_preds):
+        assert a == b
+        first_label_lt = next(iter(pred_lt))
+        first_label_idx = next(iter(pred_idx))
+        assert str(model.get_label_column_index(first_label_lt)) == first_label_idx
+    
+
+
+    

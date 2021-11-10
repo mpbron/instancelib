@@ -38,7 +38,7 @@ from ..exceptions.base import LabelEncodingException
 from ..environment import Environment
 from ..environment.base import Environment
 from ..instances import Instance, InstanceProvider
-from ..labels.encoder import (DictionaryEncoder, LabelEncoder, MultilabelDictionaryEncoder, SklearnLabelEncoder,
+from ..labels.encoder import (DictionaryEncoder, IdentityEncoder, LabelEncoder, MultilabelDictionaryEncoder, SklearnLabelEncoder,
                               SklearnMultiLabelEncoder)
 from ..typehints.typevars import DT, KT, LT, VT
 from ..utils import SaveableInnerModel
@@ -213,7 +213,8 @@ class SkLearnClassifier(SaveableInnerModel,
                          estimator: Union[ClassifierMixin, Pipeline],
                          classes: Optional[Sequence[LT]] = None,
                          storage_location: "Optional[PathLike[str]]"=None, 
-                         filename: "Optional[PathLike[str]]"=None
+                         filename: "Optional[PathLike[str]]"=None, 
+                         ints_as_str: bool = False,
                          ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
         """Construct a Sklearn model from a fitted Sklearn model.
         The estimator is a classifier for a binary or multiclass classification problem.
@@ -236,10 +237,23 @@ class SkLearnClassifier(SaveableInnerModel,
             The model
         """
         if classes is None:
-            labels: List[LT] = estimator.classes_.tolist() # type: ignore
-            il_encoder = DictionaryEncoder[LT].from_list(labels)
-        else:
-            il_encoder = DictionaryEncoder[LT].from_list(classes)
+            if hasattr(estimator, "classes_"):
+                labels: List[LT] = estimator.classes_.tolist() # type: ignore
+                dt: np.dtype = estimator.classes_.dtype
+                if dt in ["object", "str"] or dt.kind == "U":
+                    il_encoder = IdentityEncoder[LT].from_list(labels)
+                if dt in ["int64", "int32"] or dt.kind == "i":
+                    if ints_as_str:
+                        il_encoder = DictionaryEncoder[str].from_list(map(str, labels))
+                    else:
+                        il_encoder = DictionaryEncoder[LT].from_list(labels)
+                else:
+                    raise ValueError("Could not determine label outputs from model,"
+                                     " and no classes were supplied in function call.")
+                return cls(estimator, il_encoder, storage_location, filename)
+            raise ValueError("Could not determine label outputs from model,"
+                                     " and no classes were supplied in function call.")
+        il_encoder = DictionaryEncoder[LT].from_list(classes)
         return cls(estimator, il_encoder, storage_location, filename)
 
     @classmethod

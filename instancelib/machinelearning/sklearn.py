@@ -242,7 +242,7 @@ class SkLearnClassifier(SaveableInnerModel,
                 dt: np.dtype = estimator.classes_.dtype
                 if dt in ["object", "str"] or dt.kind == "U":
                     il_encoder = IdentityEncoder[LT].from_list(labels)
-                if dt in ["int64", "int32"] or dt.kind == "i":
+                elif dt in ["int64", "int32"] or dt.kind == "i":
                     if ints_as_str:
                         il_encoder = DictionaryEncoder[str].from_list(map(str, labels))
                     else:

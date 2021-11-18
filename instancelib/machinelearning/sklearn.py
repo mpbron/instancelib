@@ -171,7 +171,7 @@ class SkLearnClassifier(SaveableInnerModel,
         batches = divide_iterable_in_lists(instances, batch_size)
         processed = map(self._pred_proba_ins_batch, batches)
         combined: Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]] = functools.reduce(
-            operator.concat, processed) # type: ignore
+            operator.concat, processed, []) # type: ignore
         return combined
 
     def predict_instances(self, 
@@ -180,7 +180,7 @@ class SkLearnClassifier(SaveableInnerModel,
         batches = divide_iterable_in_lists(instances, batch_size)
         results = map(self._pred_ins_batch, batches)
         concatenated: Sequence[Tuple[KT, FrozenSet[LT]]] = functools.reduce(
-            lambda a,b: operator.concat(a,b), results) # type: ignore
+            lambda a,b: operator.concat(a,b), results, []) # type: ignore
         return concatenated
 
     def _decode_proba_matrix(self, 

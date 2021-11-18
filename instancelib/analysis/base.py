@@ -107,6 +107,11 @@ class BinaryModelMetrics(Generic[KT]):
     def f1(self) -> float:
         return self.f_beta(beta=1)
 
+    @property
+    def conf_mat(self) -> np.ndarray:
+        return np.array([[len(self.true_positives), len(self.false_negatives)],
+                         [len(self.false_positives), len(self.true_negatives)]])
+
     def f_beta(self, beta: int=1) -> float:
         b2 = beta*beta
         try:

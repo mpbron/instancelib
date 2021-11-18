@@ -42,7 +42,7 @@ print(20 in train) # May be true or false, because of random sampling
 ```python
 from sklearn.pipeline import Pipeline 
 from sklearn.naive_bayes import MultinomialNB 
-from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 
 pipeline = Pipeline([
      ('vect', CountVectorizer()),

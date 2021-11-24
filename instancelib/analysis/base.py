@@ -16,9 +16,10 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, FrozenSet, Generic, Iterable, Sequence, TypeVar, Any, Tuple, Union
+from typing import Callable, Dict, FrozenSet, Generic, Iterable, Iterator, Mapping, Optional, Sequence, TypeVar, Any, Tuple, Union
 
 import numpy as np  # type: ignore
+import pandas as pd
 from scipy import stats  # type: ignore
 
 from ..machinelearning.base import AbstractClassifier
@@ -26,7 +27,9 @@ from ..instances.base import Instance, InstanceProvider
 from ..labels.base import LabelProvider
 from ..labels.memory import MemoryLabelProvider
 
-from ..utils.func import union
+import abc
+
+from ..utils.func import list_unzip, union
 
 from ..typehints import KT, DT, VT, RT, LT
 
@@ -61,7 +64,10 @@ def get_keys(instances: InstanceInput[IT, KT, DT, VT, RT]):
 
 
 @dataclass
-class BinaryModelMetrics(Generic[KT]):
+class BinaryModelMetrics(Generic[KT, LT]):
+    pos_label: LT
+    neg_label: Optional[LT]
+
     true_positives: FrozenSet[KT]
     true_negatives: FrozenSet[KT]
     false_positives: FrozenSet[KT]
@@ -108,9 +114,13 @@ class BinaryModelMetrics(Generic[KT]):
         return self.f_beta(beta=1)
 
     @property
-    def conf_mat(self) -> np.ndarray:
-        return np.array([[len(self.true_positives), len(self.false_negatives)],
-                         [len(self.false_positives), len(self.true_negatives)]])
+    def confusion_matrix(self) -> pd.DataFrame:
+        neg_label = f"~{self.pos_label}" if self.neg_label is None else self.neg_label
+        labels = [f"{self.pos_label}", neg_label]
+        matrix = np.array([[len(self.true_positives),  len(self.false_negatives)],
+                           [len(self.false_positives), len(self.true_negatives)]])
+        df = pd.DataFrame(matrix, columns=labels, index=labels)
+        return df
 
     def f_beta(self, beta: int=1) -> float:
         b2 = beta*beta
@@ -122,10 +132,25 @@ class BinaryModelMetrics(Generic[KT]):
             fbeta = 0.0
         return fbeta
 
-class MulticlassModelMetrics(Generic[KT, LT]):
-    def __init__(self, *label_performances: Tuple[LT, BinaryModelMetrics[KT]]):
+class MulticlassModelMetrics(Mapping[LT, BinaryModelMetrics[KT, LT]], Generic[KT, LT]):
+    def __init__(self, contingency_table: Mapping[Tuple[LT, LT], FrozenSet[KT]],  
+                      *label_performances: Tuple[LT, BinaryModelMetrics[KT, LT]]):
+        self.contingency_table = contingency_table
         self.label_dict = {
             label: performance for (label, performance) in label_performances}
+
+    def __getitem__(self, k: LT) -> BinaryModelMetrics[KT, LT]:
+        return self.label_dict[k]
+
+    def __iter__(self) -> Iterator[LT]:
+        return iter(self.label_dict)
+
+    def __len__(self) -> int:
+        return len(self.label_dict)
+
+    @property
+    def confusion_matrix(self) -> pd.DataFrame:
+        return to_confmat(self.contingency_table)
     
     @property
     def true_positives(self) -> FrozenSet[KT]:
@@ -198,42 +223,62 @@ def label_metrics(truth: LabelProvider[KT, LT],
                   keys: Sequence[KT], label: LT):
     included_keys = frozenset(keys)
     ground_truth_pos = truth.get_instances_by_label(label).intersection(included_keys)
-    pred_pos = prediction.get_instances_by_label(label)
+    pred_pos = prediction.get_instances_by_label(label).intersection(included_keys)
     true_pos = pred_pos.intersection(ground_truth_pos)
     false_pos = pred_pos.difference(true_pos)
     false_neg = ground_truth_pos.difference(true_pos)
     true_neg = included_keys.difference(true_pos, false_pos, false_neg)
-    return BinaryModelMetrics[KT](true_pos, true_neg, false_pos, false_neg)
+    return BinaryModelMetrics(label, None, true_pos, true_neg, false_pos, false_neg)
+
+def contingency_table(truth: LabelProvider[KT, LT],
+                      predictions: LabelProvider[KT, LT],
+                      instances: InstanceInput[Any, KT, Any, Any, Any]
+                      ) -> Mapping[Tuple[LT, LT], FrozenSet[KT]]:
+    keys = get_keys(instances)
+    table: Dict[Tuple[LT, LT], FrozenSet[KT]] = dict()
+    for label_truth in truth.labelset:
+        for label_pred in predictions.labelset:
+            inss = truth.get_instances_by_label(label_truth).intersection(keys, 
+                    predictions.get_instances_by_label(label_pred))
+            table[(label_truth, label_pred)] = inss
+    return table
+
+def to_confmat(contingency_table: Mapping[Tuple[LT, LT], FrozenSet[KT]]) -> pd.DataFrame:
+    true_labels, pred_labels = list_unzip(contingency_table.keys())
+    tls, pls = list(frozenset(true_labels)), list(frozenset(pred_labels))
+    matrix = np.zeros((len(tls), len(pls)), dtype=np.int64)
+    for i, tl in enumerate(tls):
+        for j, pl in enumerate(pls):
+            matrix[i,j] = len(contingency_table[(tl, pl)])
+    df = pd.DataFrame(matrix, columns=pls, index=tls)
+    return df
+
+def confusion_matrix(truth: LabelProvider[KT, LT],
+                     predictions: LabelProvider[KT, LT],
+                     instances: InstanceInput[Any, KT, Any, Any, Any]
+                     ) -> pd.DataFrame:
+    table = contingency_table(truth, predictions, instances)
+    matrix = to_confmat(table)
+    return matrix
 
 def classifier_performance(model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any], 
                            instances: InstanceInput[IT, KT, DT, VT, RT],
                            ground_truth: LabelProvider[KT, LT]
-                           ) -> Dict[LT, BinaryModelMetrics[KT]]:
+                           ) -> MulticlassModelMetrics[KT, LT]:
     keys = get_keys(instances)
     labelset = ground_truth.labelset
     predictions = model.predict(instances)
     pred_provider = MemoryLabelProvider.from_tuples(predictions)
-    performance = {
-        label: label_metrics(
-            ground_truth, 
-            pred_provider, 
-            keys,
-            label
-        ) for label in labelset
-    }
-    return performance
-
-def classifier_performance_mc(model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any], 
-                              instances: InstanceInput[IT, KT, DT, VT, RT],  
-                              ground_truth: LabelProvider[KT, LT],) -> MulticlassModelMetrics[KT, LT]:
-    keys = get_keys(instances)
-    labelset = ground_truth.labelset
-    predictions = model.predict(instances)
-    pred_provider = MemoryLabelProvider.from_tuples(predictions)
+    table = contingency_table(ground_truth, pred_provider, instances)
     performances = [
         (label, label_metrics(ground_truth, 
                               pred_provider, 
                               keys, 
                               label)) for label in labelset]
-    performance = MulticlassModelMetrics[KT, LT](*performances)    
+    performance = MulticlassModelMetrics[KT, LT](table, *performances)    
     return performance
+
+def classifier_performance_mc(model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any], 
+                              instances: InstanceInput[IT, KT, DT, VT, RT],  
+                              ground_truth: LabelProvider[KT, LT],) -> MulticlassModelMetrics[KT, LT]:
+    return classifier_performance(model, instances, ground_truth)

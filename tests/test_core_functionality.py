@@ -44,7 +44,17 @@ def test_build_from_model():
         first_label_lt = next(iter(pred_lt))
         first_label_idx = next(iter(pred_idx))
         assert str(model.get_label_column_index(first_label_lt)) == first_label_idx
-    
 
+def test_confmat():
+    env = il.read_excel_dataset("datasets/testdataset.xlsx", ["fulltext"], ["label"])
+    vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
+    il.vectorize(vect, env)
+    train, test = env.train_test_split(env.dataset, 0.70)
+    model = il.SkLearnVectorClassifier.build(MultinomialNB(), env)
+    model.fit_provider(train, env.labels)
+    model_preds = model.predict(test)
+    preds = il.MemoryLabelProvider.from_tuples(model_preds)
+    conf_mat = il.analysis.confusion_matrix(env.labels, preds, test)
+    print(conf_mat)
 
     

@@ -2,8 +2,10 @@ import instancelib as il
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 
+DATASET_FILE = "datasets/testdataset.xlsx"
+
 def test_dataloading():
-    env = il.read_excel_dataset("datasets/testdataset.xlsx", ["fulltext"], ["label"])
+    env = il.read_excel_dataset(DATASET_FILE, ["fulltext"], ["label"])
     ins20 = env.dataset[20]
     train, test = env.train_test_split(env.dataset, 0.70)
     assert ins20.identifier == 20
@@ -11,14 +13,14 @@ def test_dataloading():
     assert all((ins not in test for ins in train ))
 
 def test_vectorizing():
-    env = il.read_excel_dataset("datasets/testdataset.xlsx", ["fulltext"], ["label"])
+    env = il.read_excel_dataset(DATASET_FILE, ["fulltext"], ["label"])
     vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
     il.vectorize(vect, env)
     assert env.dataset[20].vector is not None
     assert env.dataset[20].vector.shape == (1000,)
 
 def test_classification():
-    env = il.read_excel_dataset("datasets/testdataset.xlsx", ["fulltext"], ["label"])
+    env = il.read_excel_dataset(DATASET_FILE, ["fulltext"], ["label"])
     vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
     il.vectorize(vect, env)
     train, test = env.train_test_split(env.dataset, 0.70)
@@ -30,7 +32,7 @@ def test_classification():
     assert performance["Bedrijfsnieuws"].f1 >= 0.75
 
 def test_build_from_model():
-    env = il.read_excel_dataset("datasets/testdataset.xlsx", ["fulltext"], ["label"])
+    env = il.read_excel_dataset(DATASET_FILE, ["fulltext"], ["label"])
     vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
     il.vectorize(vect, env)
     train, test = env.train_test_split(env.dataset, 0.70)
@@ -46,7 +48,7 @@ def test_build_from_model():
         assert str(model.get_label_column_index(first_label_lt)) == first_label_idx
 
 def test_confmat():
-    env = il.read_excel_dataset("datasets/testdataset.xlsx", ["fulltext"], ["label"])
+    env = il.read_excel_dataset(DATASET_FILE, ["fulltext"], ["label"])
     vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
     il.vectorize(vect, env)
     train, test = env.train_test_split(env.dataset, 0.70)

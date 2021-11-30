@@ -29,5 +29,5 @@ __all__= [
     "SkLearnDataClassifier", "SkLearnVectorClassifier", "AbstractClassifier",
     "read_csv_dataset", "read_excel_dataset", "pandas_to_env", "pandas_to_env_with_id", 
     "vectorize", "BaseVectorizer", "SklearnVectorizer", "TextInstanceVectorizer",
-    "classifier_performance", "classfier_performance_mc"
+    "classifier_performance", "classifier_performance_mc"
 ]

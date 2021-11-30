@@ -22,7 +22,7 @@ copyright = '2021, Michiel Bron MSc, Utrecht University'
 author = 'Michiel Bron MSc, Utrecht University'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '0.3.6.2'
 
 github_username = "mpbron"
 github_repository = "mpbron"
@@ -59,9 +59,9 @@ exclude_patterns = []
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
-    'sklearn': ('http://scikit-learn.org/stable', (None, './_intersphinx/sklearn-objects.inv')),
+    'sklearn': ('https://scikit-learn.org/stable', (None, './_intersphinx/sklearn-objects.inv')),
 }
 
 # -- Options for HTML output -------------------------------------------------

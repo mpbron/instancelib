@@ -39,7 +39,7 @@ train, test = text_env.train_test_split(ins_provider, train_size=0.70)
 
 #%%
 # Test if we indeed got the right length
-len(train) == n_train
+print((len(train) == n_train))
 #%%
 # Test if the train and test set are mutually exclusive
 all([doc not in test for doc in train])

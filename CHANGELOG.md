@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.3.7.0]
+### Added
+- Confusion matrices for binary and multiclass performance analysis
+- Added to_dict() method for instances.
+
 ## [0.3.6.2]
 ### Changed
 - Bugfix in sklearn_model prediction function for when an empty list is provided as input.

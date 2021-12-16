@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from typing import (Any, Callable, Generic, Iterable, Iterator, List, MutableMapping,
+from typing import (Any, Callable, Generic, Iterable, Iterator, List, Mapping, MutableMapping,
                     Optional, Sequence, Tuple, TypeVar, Union)
 
 from ..utils.chunks import divide_iterable_in_lists
@@ -133,6 +133,14 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    def to_dict(self) -> Mapping[str, Any]:
+        mapping = {
+            "identifier": self.identifier, 
+            "data": self.data, 
+            "vector": self.vector, 
+            "representation": self.representation}
+        return mapping
 
     @staticmethod
     def map_data(func: Callable[[DT], _V]) -> Callable[[Instance[KT, DT, VT, RT]], _V]:

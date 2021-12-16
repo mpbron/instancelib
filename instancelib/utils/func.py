@@ -444,3 +444,6 @@ def multisort(seq: Sequence[Tuple[_T, Sequence[_U]]]) -> Sequence[Sequence[Tuple
 def fst(tup: Tuple[_T, Any]) -> _T:
     first_element = tup[0]
     return first_element
+
+def mapping_map(mapping: Mapping[_T, _V], items: Iterable[_T]) -> Iterable[_V]:
+    return (mapping[item] for item in items)

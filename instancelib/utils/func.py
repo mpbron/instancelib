@@ -16,8 +16,8 @@
 
 import functools
 import itertools
-
-from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, Mapping, TypeVar, Callable,  Tuple, Optional, Sequence, Union
+from typing import (Any, Callable, Dict, FrozenSet, Iterable, Iterator, List,
+                    Mapping, Optional, Sequence, Tuple, TypeVar, Union)
 
 _T = TypeVar("_T")
 _U = TypeVar("_U")
@@ -95,7 +95,7 @@ def not_in_supersets(
     return ret_dict
 
 
-def flatten_dicts(*dicts: Dict[_T, _U]) -> Dict[_T, _U]:
+def flatten_dicts(*dicts: Mapping[_T, _U]) -> Dict[_T, _U]:
     """Recursive function that combines a list of dictionaries
     into a single dictionary. When a key exists multiple times, 
     the last one is preserved.
@@ -444,3 +444,6 @@ def multisort(seq: Sequence[Tuple[_T, Sequence[_U]]]) -> Sequence[Sequence[Tuple
 def fst(tup: Tuple[_T, Any]) -> _T:
     first_element = tup[0]
     return first_element
+
+def mapping_map(mapping: Mapping[_T, _V], iterable: Iterable[_T]) -> Iterable[_V]:
+    return (mapping[val] for val in iterable)

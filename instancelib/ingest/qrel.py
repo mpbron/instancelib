@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Sequence, TypeVar
+from typing import Any, Dict, Iterable, List, Sequence, Set, Tuple, TypeVar
 
 from pandas.core.frame import DataFrame
 
@@ -12,32 +12,35 @@ import pandas as pd
 
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
-class TrecDataset():
+def read_doctexts(doctext_file: Path) -> Dict[str, Dict[str, str]]:
+    def process_line(line: str) -> Tuple[str, Dict[str, str]]:
+        obj = json.loads(line)
+        return obj["id"], obj
+    with doctext_file.open() as f:
+        tuples = [process_line(line) for line in f.readlines()]
+    dictionary = {key: obj for (key, obj) in tuples}
+    return dictionary
 
-    def __init__(self, 
-                 docids: Dict[str, Sequence[str]],
-                 texts: Dict[str, pd.DataFrame],
-                 qrels: Dict[str, pd.DataFrame],
-                 topics: Dict[str, Dict[str, ]]) -> None:
-        pass
-
-def read_doctexts(doctext_file: Path) -> Dict[str, pd.DataFrame]:
-    try:
-        with doctext_file.open() as f:
-            jsons = [json.loads(line) for line in f.readlines()]
-        df = pd.DataFrame(jsons)
-    except Exception as e:
-        print(e)
-        return pd.DataFrame()
-    return df
+def build_doc_map(topic_docs: Dict[str, Dict[str, Dict[str, str]]]) -> Dict[str, Set[str]]:
+    docmap : Dict[str, Set[str]] = dict()
+    for topic, docs_dict in topic_docs.items():
+        for doc_key in docs_dict:
+            docmap.setdefault(doc_key, set()).add(topic)
+    return docmap
 
 def read_docids(docid_file: Path) -> Sequence[str]:
     with docid_file.open() as f:
-        docids = [line.replace("\n", "") for line in f.readlines()]
+        docids = frozenset([line.replace("\n", "") for line in f.readlines()])
     return docids
 
 def read_qrel(qrel_file: Path) -> pd.DataFrame:
-    return pd.read_csv(qrel_file, sep="\t")
+    df = pd.read_csv(qrel_file, 
+                       sep="\t", 
+                       header=None,
+                       names=["Topic", "Iteration", "Document", "Relevancy"],
+                       dtype={"Topic": "str", "Document": "str"})
+    df = df.set_index("Document")
+    return df
 
 def read_topics(topic_dir: Path) -> pd.DataFrame:
     jsons = list()

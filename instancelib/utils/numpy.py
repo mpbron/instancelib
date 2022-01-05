@@ -24,6 +24,32 @@ import numpy as np
 
 from ..typehints import KT
 
+def to_bicolumn_proba(matrix: np.ndarray) -> np.ndarray:
+    """Converts a matrix to bi column probability 
+    matrix if it is a single column matrix. 
+    Otherwhise, no changes occurs.
+
+    Parameters
+    ----------
+    matrix : np.ndarray
+        An input matrix that is possibly a single column matrix
+
+    Returns
+    -------
+    np.ndarray
+        The converted matrix
+    """    
+    if len(matrix.shape) == 2:
+        if matrix.shape[1] == 1: 
+            neg_prob = 1.0 - matrix
+            prob_np = np.hstack((neg_prob, matrix))
+            return prob_np
+    if len(matrix.shape) == 1:
+        neg_prob = 1.0 - matrix
+        prob_np = np.hstack((neg_prob, matrix))
+        return prob_np
+    return matrix
+    
 
 def get_lists(slices: Iterable[Tuple[int, Optional[int]]]) -> Sequence[int]:
     def convert_back(slice: Tuple[int, Optional[int]]) -> Sequence[int]:

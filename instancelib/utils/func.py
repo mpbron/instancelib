@@ -447,3 +447,10 @@ def fst(tup: Tuple[_T, Any]) -> _T:
 
 def mapping_map(mapping: Mapping[_T, _V], items: Iterable[_T]) -> Iterable[_V]:
     return (mapping[item] for item in items)
+
+def seq_or_map_to_map(seq_or_map: Union[Sequence[_T], Mapping[int, _T]]) -> Mapping[int, _T]:
+    if isinstance(seq_or_map, Mapping):
+        return seq_or_map
+    assert(isinstance(seq_or_map, Sequence)) # seq_or_map is a sequence
+    result =  {idx: val for (idx, val) in enumerate(seq_or_map)}
+    return result

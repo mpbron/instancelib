@@ -160,9 +160,6 @@ class MultilabelDictionaryEncoder(DictionaryEncoder[LT], Generic[LT]):
         result = [frozenset(self._decode_binary(vec)) for vec in listed]
         return result
 
-    
-    
-
 class SklearnLabelEncoder(LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray], Generic[LT]):
 
     def __init__(self, encoder: sklearn.base.TransformerMixin, labels: Iterable[LT]) -> None:

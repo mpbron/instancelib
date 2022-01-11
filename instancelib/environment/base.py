@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import random
 
-from typing import Generic, Iterable, Sequence, Tuple, TypeVar, Any, Union
+from typing import Generic, Iterable, Optional, Sequence, Tuple, TypeVar, Any, Union
 from abc import ABC, abstractmethod
 
 from ..utils.func import union
@@ -287,6 +287,18 @@ class Environment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         """        
         self.all_instances.discard_children(parent)
 
+    def get_subset_by_labels(self, 
+                            provider: InstanceProvider[InstanceType, KT, DT, VT, RT], 
+                            *labels: LT,
+                            labelprovider: Optional[LabelProvider[KT, LT]] = None, 
+                            ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        if labelprovider is None:
+            l_provider = self.labels
+        else:
+            l_provider = labelprovider
+        keys = union(*(l_provider.get_instances_by_label(label) for label in labels)).intersection(provider)
+        provider = self.create_bucket(keys)
+        return provider
                                 
 
 class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT], 

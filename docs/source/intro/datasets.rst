@@ -20,5 +20,3 @@ formats:
     you can directly use the :func:`~instancelib.ingest.spreadsheet.build_environment` function to
     convert your DataFrame to an :class:`~instancelib.Environment` object that can be used further.
 
-For tabular data files, we can read any dataset
-

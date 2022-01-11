@@ -134,9 +134,12 @@ Similar as in the end-to-end example, we can construct a new model by using the 
    svm = SVC(kernel="linear", probability=True, class_weight="balanced")
    vec_model = il.SkLearnVectorClassifier.build(svm, text_env)
 
-   >>> vec_model.predict([ins])
+
+>>> vec_model.predict([ins])
+
 [(20, frozenset({"Games"}))]
-   predictions = vec_model.predict(test)
+
+>>> predictions = vec_model.predict(test)
 
 
 Predictions

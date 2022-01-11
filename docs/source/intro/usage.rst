@@ -136,7 +136,6 @@ Similar as in the end-to-end example, we can construct a new model by using the 
 
 
 >>> vec_model.predict([ins])
-
 [(20, frozenset({"Games"}))]
 
 >>> predictions = vec_model.predict(test)

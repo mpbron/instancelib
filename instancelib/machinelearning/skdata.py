@@ -20,16 +20,19 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import (Any, FrozenSet, Generic, Iterable, Iterator, Sequence,
-                    Tuple, TypeVar)
+from os import PathLike
+from typing import (Any, Callable, FrozenSet, Generic, Iterable, Iterator,
+                    Optional, Sequence, Tuple, TypeVar, Union)
 
 import numpy as np  # type: ignore
 
 import sklearn as sk  # type: ignore
-from sklearn.base import ClassifierMixin, TransformerMixin  # type: ignore
+from sklearn.base import ClassifierMixin, TransformerMixin
+from sklearn.pipeline import Pipeline
 
 from ..instances import Instance, InstanceProvider
 from ..labels.base import LabelProvider
+from ..labels.encoder import LabelEncoder  # type: ignore
 from ..typehints.typevars import DT, KT, LT
 from ..utils.func import list_unzip, zip_chain
 from .sklearn import SkLearnClassifier
@@ -139,6 +142,36 @@ class SkLearnDataClassifier(SkLearnClassifier[IT, KT, DT, Any, LT],
         labelsets = [frozenset(labeling) for labeling in labels]
         self._fit_data(datas, labelsets)
 
+
   
+class SeparateDataEncoderModel(SkLearnDataClassifier):
+    input_encoder: Callable[[Sequence[DT]], np.ndarray]
+    
+    def __init__(self, 
+                 estimator: Union[ClassifierMixin, Pipeline], 
+                 encoder: LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray], 
+                 storage_location: "Optional[PathLike[str]]" = None, 
+                 filename: "Optional[PathLike[str]]" = None, 
+                 input_encoder: Callable[[Sequence[DT]], np.ndarray] = np.array) -> None:
+        super().__init__(estimator, encoder, storage_location=storage_location, filename=filename)
+        self.input_encoder = input_encoder
 
+    def _get_preds(self, tuples: Sequence[Tuple[KT, DT]]) -> Tuple[Sequence[KT], Sequence[FrozenSet[LT]]]:
+        keys, data = list_unzip(tuples)
+        data_vec: np.ndarray = self.input_encoder(data)
+        pred_vec: np.ndarray = self._predict(data_vec)
+        labels = self.encoder.decode_matrix(pred_vec)
+        return keys, labels
 
+    def _get_probas(self, tuples: Sequence[Tuple[KT, DT]]) -> Tuple[Sequence[KT], np.ndarray]:
+        keys, data = list_unzip(tuples)
+        data_vec: np.ndarray = self.input_encoder(data)
+        prob_vec: np.ndarray = self._predict_proba(data_vec)  # type: ignore
+        return keys, prob_vec
+
+    def _fit_data(self, x_data: Sequence[DT], labels: Sequence[FrozenSet[LT]]):
+        x_dat, y_mat = self._filter_x_only_encoded_y(x_data, labels)
+        x_mat = self.input_encoder(x_dat)
+        self._fit(x_mat, y_mat)
+
+    

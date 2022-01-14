@@ -15,6 +15,6 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 from .base import AbstractClassifier
 from .skvectors import SkLearnVectorClassifier
-from .skdata import SkLearnDataClassifier, SeparateDataEncoderModel
+from .skdata import SkLearnDataClassifier, SeparateDataEncoderClassifier
 
-__all__ = ["AbstractClassifier", "SkLearnVectorClassifier", "SkLearnDataClassifier", "SeparateDataEncoderModel"]
+__all__ = ["AbstractClassifier", "SkLearnVectorClassifier", "SkLearnDataClassifier", "SeparateDataEncoderClassifier"]

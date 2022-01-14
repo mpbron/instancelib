@@ -144,7 +144,7 @@ class SkLearnDataClassifier(SkLearnClassifier[IT, KT, DT, Any, LT],
 
 
   
-class SeparateDataEncoderModel(SkLearnDataClassifier):
+class SeparateDataEncoderClassifier(SkLearnDataClassifier):
     input_encoder: Callable[[Sequence[DT]], np.ndarray]
     
     def __init__(self, 

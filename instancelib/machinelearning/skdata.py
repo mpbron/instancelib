@@ -144,7 +144,7 @@ class SkLearnDataClassifier(SkLearnClassifier[IT, KT, DT, Any, LT],
 
 
   
-class SeparateDataEncoderClassifier(SkLearnDataClassifier):
+class SeparateDataEncoderClassifier(SkLearnDataClassifier[IT, KT, DT, LT], Generic[IT, KT, DT, LT]):
     input_encoder: Callable[[Sequence[DT]], np.ndarray]
     
     def __init__(self, 
@@ -155,6 +155,25 @@ class SeparateDataEncoderClassifier(SkLearnDataClassifier):
                  input_encoder: Callable[[Sequence[DT]], np.ndarray] = np.array) -> None:
         super().__init__(estimator, encoder, storage_location=storage_location, filename=filename)
         self.input_encoder = input_encoder
+
+    def encode_x(self, instances: Iterable[Instance[KT, DT, Any, Any]]) -> np.ndarray:
+        dats = [instance.data for instance in instances]
+        encoded = self.input_encoder(dats)
+        return encoded
+
+    def encode_xy(self, instances: Iterable[Instance[KT, DT, Any, Any]], 
+                        labelings: Iterable[Iterable[LT]]):
+        def yield_xy():
+            for ins, lbl in zip(instances, labelings):
+                encoded_label = self.encoder.encode_safe(lbl)
+                if encoded_label is not None:
+                    yield ins.data, encoded_label
+        x_data, y_data = list_unzip(yield_xy())
+        x_fm = self.input_encoder(x_data)
+        y_lm = np.vstack(y_data)
+        if y_lm.shape[1] == 1:
+            y_lm = np.reshape(y_lm, (y_lm.shape[0],))
+        return x_fm, y_lm
 
     def _get_preds(self, tuples: Sequence[Tuple[KT, DT]]) -> Tuple[Sequence[KT], Sequence[FrozenSet[LT]]]:
         keys, data = list_unzip(tuples)

@@ -30,8 +30,6 @@ class ExternalProvider(InstanceProvider[IT, KT, DT, VT, RT], Generic[IT, KT, DT,
             return instance
         raise KeyError(f"Instance with key {k} is not present in this provider")
 
-   
 
-        
 
         

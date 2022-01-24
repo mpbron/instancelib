@@ -3,6 +3,8 @@ from threading import local
 
 from build import Iterator
 import pandas as pd
+
+from instancelib.utils.chunks import divide_iterable_in_lists
 from .external import ExternalProvider
 from ..typehints import KT, DT, VT, RT
 from typing import Any, Callable, FrozenSet, Iterable, Sequence, TypeVar, Generic, Mapping, Tuple
@@ -99,10 +101,16 @@ class ReadOnlyProvider(ExternalProvider[IT, KT, DT, VT, RT],
     def _get_external_keys(self, keys: Iterable[KT]) -> FrozenSet[KT]:
         return frozenset(self.dataset).intersection(keys)
 
-    def
+    def _cached_data(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        chunks = divide_iterable_in_lists(keys, batch_size)
+        for chunk in chunks:
+            ins = self.env
+            yield [(ins.identifier, ins.data) for ]
     
     def data_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
         keyset = frozenset(keys)
         local_keys = self._get_local_keys(keyset)
-        yield from super().data_chunker_selector(local_keys)
-        _
+        yield from super().data_chunker_selector(local_keys, batch_size)
+        remaining_keys = frozenset(keyset).difference(local_keys)
+        cached_keys = self._get_cached_keys(remaining_keys)
+        yield from 

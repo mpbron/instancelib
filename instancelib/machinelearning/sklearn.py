@@ -239,7 +239,7 @@ class SkLearnClassifier(SaveableInnerModel,
         if classes is None:
             if hasattr(estimator, "classes_"):
                 labels: List[LT] = estimator.classes_.tolist() # type: ignore
-                dt: np.dtype = estimator.classes_.dtype
+                dt: np.dtype = estimator.classes_.dtype # type: ignore
                 if dt in ["object", "str"] or dt.kind == "U":
                     il_encoder = IdentityEncoder[LT].from_list(labels)
                 elif dt in ["int64", "int32"] or dt.kind == "i":

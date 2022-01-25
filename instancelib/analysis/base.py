@@ -27,8 +27,6 @@ from ..instances.base import Instance, InstanceProvider
 from ..labels.base import LabelProvider
 from ..labels.memory import MemoryLabelProvider
 
-import abc
-
 from ..utils.func import list_unzip, union
 
 from ..typehints import KT, DT, VT, RT, LT

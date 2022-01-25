@@ -1,14 +1,16 @@
 from abc import ABC, abstractmethod
 from threading import local
+from typing import (Any, Callable, FrozenSet, Generic, Iterable, Iterator,
+                    Mapping, Sequence, Tuple, TypeVar)
 
-from build import Iterator
+import numpy as np
 import pandas as pd
 
-from instancelib.utils.chunks import divide_iterable_in_lists
-from .external import ExternalProvider
-from ..typehints import KT, DT, VT, RT
-from typing import Any, Callable, FrozenSet, Iterable, Sequence, TypeVar, Generic, Mapping, Tuple
+from ..typehints import DT, KT, RT, VT
+from ..utils.chunks import divide_iterable_in_lists
 from .base import Instance
+from .external import ExternalProvider
+from .hdf5 import HDF5VectorInstanceProvider
 from .memory import AbstractMemoryProvider
 
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]")
@@ -42,6 +44,9 @@ class PandasDataset(ReadOnlyDataset[int, Any]):
     def __getitem__(self, __k: int) -> Any:
         data: Any = self.df.iloc[__k][self.data_col]
         return data
+    
+    def __len__(self) -> int:
+        return len(self.df)
 
     @property
     def identifiers(self) -> FrozenSet[int]:
@@ -54,7 +59,8 @@ class PandasDataset(ReadOnlyDataset[int, Any]):
         data: Sequence[Any] = self.df.iloc[keys][self.data_col] # type: ignore
         return data
 
-class ReadOnlyProvider(ExternalProvider[IT, KT, DT, VT, RT], 
+class ReadOnlyProvider(ExternalProvider[IT, KT, DT, VT, RT],
+                       HDF5VectorInstanceProvider[IT, KT, DT, np.ndarray, RT],
                        AbstractMemoryProvider[IT, KT, DT, VT, RT], 
                        Generic[IT, KT, DT, VT, RT]):
 
@@ -75,6 +81,9 @@ class ReadOnlyProvider(ExternalProvider[IT, KT, DT, VT, RT],
         data = self.dataset[k]
         ins = self.from_data_builder(k, data)
         return ins
+        
+    def update_external(self, ins: Instance[KT, DT, VT, RT]) -> None:
+        return super().update_external(ins)
 
     def __getitem__(self, k: KT) -> IT:
         if k in self.dictionary:
@@ -103,14 +112,36 @@ class ReadOnlyProvider(ExternalProvider[IT, KT, DT, VT, RT],
 
     def _cached_data(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
         chunks = divide_iterable_in_lists(keys, batch_size)
+        c = self.instance_cache
         for chunk in chunks:
-            ins = self.env
-            yield [(ins.identifier, ins.data) for ]
-    
+            yield [(k, c[k].data) for k in chunk]
+
+    def _external_data(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        chunks = divide_iterable_in_lists(keys, batch_size)
+        for chunk in chunks:
+            datas = self.dataset.get_bulk(chunk)
+            result = list(zip(chunk, datas))
+            yield result
+
+    def __iter__(self) -> Iterator[KT]:
+        return iter(frozenset(self.dataset).union(self.dictionary))            
+
+    def data_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        yield from self.data_chunker_selector(self.key_list)
+
     def data_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
         keyset = frozenset(keys)
         local_keys = self._get_local_keys(keyset)
         yield from super().data_chunker_selector(local_keys, batch_size)
         remaining_keys = frozenset(keyset).difference(local_keys)
         cached_keys = self._get_cached_keys(remaining_keys)
-        yield from 
+        yield from self._cached_data(cached_keys)
+        remaining_keys = remaining_keys.difference(cached_keys)
+        external_keys = self._get_external_keys(remaining_keys)
+        yield from self._external_data(external_keys)
+
+    def construct(*args: Any, **kwargs: Any) -> IT:
+        raise NotImplementedError
+
+    def create(*args: Any, **kwargs: Any) -> IT:
+        raise NotImplementedError

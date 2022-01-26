@@ -529,6 +529,11 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         yield from chunks
     
 
+    def instance_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
+        chunks = divide_iterable_in_lists(keys, batch_size)
+        for chunk in chunks:
+            yield [self[key] for key in chunk]
+
     def instance_chunker(self, batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
         """Iterate over all instances (with or without vectors) in 
         this provider

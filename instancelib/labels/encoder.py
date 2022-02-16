@@ -69,6 +69,8 @@ class DictionaryEncoder(LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray], Ge
             label: idx for (idx, label) in enumerate(labels)
         }
         self.inv_mapping = invert_mapping(self.mapping)
+        self.labelset = frozenset(self.mapping.keys())
+        self._labels = [lab for _, lab in sorted(self.inv_mapping.items())]
 
     def encode(self, labels: Iterable[LT]) -> np.ndarray:
         result = np.array([self.mapping[lab] for lab in labels]) # type: ignore

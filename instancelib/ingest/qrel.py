@@ -34,17 +34,22 @@ def build_doc_map(topic_docs: Dict[str, Dict[str, Dict[str, str]]]) -> Dict[str,
             docmap.setdefault(doc_key, set()).add(topic)
     return docmap
 
-def read_docids(docid_file: Path) -> Sequence[str]:
+def read_docids(docid_file: Path) -> FrozenSet[str]:
     with docid_file.open() as f:
         docids = frozenset([line.replace("\n", "") for line in f.readlines()])
     return docids
 
 def read_qrel(qrel_file: Path) -> pd.DataFrame:
-    df = pd.read_csv(qrel_file, 
+    col_names = ["Topic", "Iteration", "Document", "Relevancy"]
+    dtypes = {"Topic": "str", "Document": "str"}
+    try:
+        df = pd.read_fwf(qrel_file, header=None, names=col_names, dtype=dtypes)
+    except:
+        df = pd.read_csv(qrel_file, 
                        sep="\t", 
                        header=None,
-                       names=["Topic", "Iteration", "Document", "Relevancy"],
-                       dtype={"Topic": "str", "Document": "str"})
+                       names=col_names,
+                       dtype=dtypes)
     df = df.set_index("Document")
     return df
 
@@ -70,7 +75,7 @@ def read_qrel_dataset(base_dir: Path):
 class TrecDataset():
 
     def __init__(self, 
-                 docids: Dict[str, Sequence[str]],
+                 docids: Dict[str, FrozenSet[str]],
                  texts: Dict[str, Dict[str, Dict[str, str]]],
                  qrels: Dict[str, pd.DataFrame],
                  topics: pd.DataFrame,
@@ -88,7 +93,7 @@ class TrecDataset():
 
         self.docmap = build_doc_map(self.texts)
 
-    def get_topicqrels(self, topic_key: str) -> str:
+    def get_topicqrels(self, topic_key: str) -> pd.DataFrame:
         return self.qrels[topic_key]
 
     def get_labels(self, topic_key: str, document: str) -> FrozenSet[str]:
@@ -103,6 +108,7 @@ class TrecDataset():
             return frozenset(self.docids[topic_key])
         if topic_key in self.qrels:
             return frozenset(self.qrels[topic_key].index)
+        return frozenset()
 
     
 
@@ -132,8 +138,9 @@ class TrecDataset():
                 else:
                     yield data_tuple
         indices, data, labels = list_unzip3(yielder())
-        env = TextEnvironment.from_data([self.neg_label, self.pos_label],
-                                        indices, data, labels, None)
+        env = TextEnvironment[str, np.ndarray, str].from_data(
+            [self.neg_label, self.pos_label],
+            indices, data, labels, None)
         return env
 
     def get_envs(self) -> Dict[str, TextEnvironment[str, np.ndarray, str]]:

@@ -17,7 +17,7 @@
 from __future__ import annotations
 from abc import ABC
 
-from typing import Generic, Iterable, Dict, TypeVar, Any
+from typing import Generic, Iterable, Dict, Iterator, TypeVar, Any
 
 from ..instances.base import Instance, InstanceProvider
 from ..instances.memory import MemoryBucketProvider
@@ -84,6 +84,24 @@ class AbstractMemoryEnvironment(
     """This object contains all labels"""
     _named_providers: Dict[str, InstanceProvider[InstanceType, KT, DT, VT, RT]] = dict()
     """All user generated providers that were given a name"""
+    
+    def __contains__(self, __o: object) -> bool:
+        return __o in self._named_providers
+
+    def __getitem__(self, __k: str) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        return self._named_providers[__k]
+
+    def __setitem__(self, __k: str, __v: InstanceProvider[InstanceType, KT, DT, VT, RT]) -> None:
+        self.set_named_provider(__k, __v)
+
+    def __len__(self) -> int:
+        return len(self._named_providers)
+
+    def __delitem__(self, __v: str) -> None:
+        del self._named_providers[__v]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._named_providers)
 
     @property
     def dataset(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:

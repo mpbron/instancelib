@@ -38,9 +38,9 @@ def test_build_from_model():
     train, test = env.train_test_split(env.dataset, 0.70)
     model = il.SkLearnVectorClassifier.build(MultinomialNB(), env)
     model.fit_provider(train, env.labels)
-    build_model = il.SkLearnVectorClassifier.build_from_model(model.innermodel, ints_as_str=True)
+    build_model = il.SkLearnVectorClassifier.build_from_model(model.innermodel, ints_as_str=True) # type: ignore
     model_preds = model.predict(test)
-    b_model_preds = build_model.predict(test)
+    b_model_preds = build_model.predict(test) # type: ignore
     for (a, pred_lt), (b, pred_idx) in zip(model_preds, b_model_preds):
         assert a == b
         first_label_lt = next(iter(pred_lt))

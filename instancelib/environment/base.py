@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import random
 
-from typing import Generic, Iterable, Optional, Sequence, Tuple, TypeVar, Any, Union
+from typing import Generic, Iterable, MutableMapping, Optional, Sequence, Tuple, TypeVar, Any, Union
 from abc import ABC, abstractmethod
 
 from ..utils.func import union
@@ -31,7 +31,8 @@ import warnings
 
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
-class Environment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
+class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT, RT]], 
+                  ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
     """Environments provide an interface that enable you to access all data stored in the datasets.
     If there are labels stored in the environment, you can access these as well from here.
 
@@ -60,7 +61,7 @@ class Environment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
     Create a train-test split on the dataset (70 % train, 30 % test):
 
     >>> train, test = env.train_test_split(dataset, 0.70)
-    """    
+    """
     @abstractmethod
     def create_empty_provider(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """Use this method to create an empty `InstanceProvider`
@@ -299,6 +300,14 @@ class Environment(ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
         keys = union(*(l_provider.get_instances_by_label(label) for label in labels)).intersection(provider)
         provider = self.create_bucket(keys)
         return provider
+
+    @abstractmethod
+    def set_named_provider(self, name: str, value: InstanceProvider[InstanceType, KT, DT, VT, RT]):
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_named_provider(self, name: str, keys: Iterable[KT] = list()) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        raise NotImplementedError
                                 
 
 class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT], 

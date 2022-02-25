@@ -42,7 +42,8 @@ class ExternalVectorInstanceProvider(InstanceProvider[IT, KT, DT, VT, RT],
         results = self.vector_chunker_selector(self.key_list, batch_size)
         return results
 
-class HDF5VectorInstanceProvider(ExternalVectorInstanceProvider[IT, KT, DT, np.ndarray, RT, np.ndarray]):
+class HDF5VectorInstanceProvider(ExternalVectorInstanceProvider[IT, KT, DT, np.ndarray, RT, np.ndarray], 
+                                 Generic[IT, KT, DT, RT]):
 
     vector_storage_location: "PathLike[str]"
 

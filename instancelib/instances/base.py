@@ -378,7 +378,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         instance : Instance[KT, DT, VT, RT]
             The instance that should be added to the provider
         """
-        self.__setitem__(instance.identifier, instance)
+        self.__setitem__(instance.identifier, instance) # type: ignore
 
     def add_range(self, *instances: Instance[KT, DT, VT, RT]) -> None:
         """Add multiple instances to this provider. 
@@ -630,7 +630,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         for key in keys:
             instance = self[key]
             upd_instance = func(instance)
-            self[key] = upd_instance
+            self[key] = upd_instance # type: ignore
 
     def map(self, func: Callable[[InstanceType], _V]) -> Iterator[_V]:
         """A higher order function that maps any function that works on
@@ -857,7 +857,7 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         return self._len_bucket()
 
     def __contains__(self, key: object) -> bool:
-        return self._in_bucket(key)
+        return self._in_bucket(key) # type: ignore
 
     def get_all(self) -> Iterator[InstanceType]:
         yield from list(self.values())

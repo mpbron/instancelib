@@ -4,8 +4,6 @@ from abc import ABC
 from typing import Any, Callable, Dict, FrozenSet, Generic, Iterable, Mapping, Optional, Sequence, Tuple, TypeVar, Union
 from datasets.dataset_dict import DatasetDict
 
-from instancelib.environment.huggingface import HuggingFaceTextEnvironment
-
 from ..typehints.typevars import KT
 from .dataset import ReadOnlyDataset
 from ..utils.func import invert_mapping, union
@@ -135,5 +133,3 @@ class HuggingFaceDataset(ReadOnlyDataset[KT,_T], Generic[KT,_T]):
                                          other.split_map, 
                                          other.inv_identifier_map)
         return new_wrapper
-
-class HuggingFaceInstanceMap()

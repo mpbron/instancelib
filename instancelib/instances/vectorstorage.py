@@ -49,7 +49,11 @@ class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT, MT]):
         raise NotImplementedError
 
     @abstractmethod
-    def add_bulk(self, input_keys: Sequence[KT], input_values: Union[Sequence[VT]]) -> None:
+    def add_bulk(self, input_keys: Sequence[KT], input_values: Sequence[VT]) -> None:
+        raise NotImplementedError
+    
+    @abstractmethod
+    def add_bulk_matrix(self, input_keys: Sequence[KT], matrix: MT) -> None
         raise NotImplementedError
 
     @abstractmethod
@@ -77,7 +81,7 @@ class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT, MT]):
 
 
     @abstractmethod
-    def matrices_chunker(self) -> Iterator[Tuple[Sequence[KT], MT]]:
+    def matrices_chunker(self, chunk_size: int = 200) -> Iterator[Tuple[Sequence[KT], MT]]:
         raise NotImplementedError
 
     @abstractmethod
@@ -117,6 +121,7 @@ class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT, MT]):
         """Reload the index from disk
         """
         raise NotImplementedError    
+
 
 
 def ensure_writeable(func: F) -> F:

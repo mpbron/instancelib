@@ -15,24 +15,20 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from typing import (Any, Callable, Generic, Iterator, List, Mapping,
+                    MutableMapping, Optional, Sequence, Set, Tuple, TypeVar,
+                    Union)
 
-from uuid import UUID, uuid4
-
-from instancelib.instances.vectorstorage import VectorStorage
-
-from ..utils.func import filter_snd_none
+from ..typehints import DT, KT, MT, RT, VT
 from ..utils.to_key import to_key
-
-import itertools
-from typing import (Any, Callable, Dict, Generic, Iterable, Iterator, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, TypeVar, Union)
-
-from .base import AbstractBucketProvider, Instance, InstanceProvider
-
-
-from ..typehints import KT, DT, VT, RT, MT
+from .base import Instance, InstanceProvider
+from .vectorstorage import VectorStorage
 
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]")
+
+
 
 class AbstractMemoryProvider(InstanceProvider[IT, KT, DT, VT, RT], 
                              ABC, Generic[IT, KT, DT, VT, RT, MT]):
@@ -41,7 +37,7 @@ class AbstractMemoryProvider(InstanceProvider[IT, KT, DT, VT, RT],
     storage: MutableMapping[KT, MutableMapping[str, Any]]
     children: MutableMapping[KT, Set[KT]]
     parents: MutableMapping[KT, KT]
-    builder: Callable[[KT, Mapping[str, Any], Optional[VT]], IT]
+    builder: Callable[[InstanceProvider[IT, KT, DT, VT, RT], KT, Mapping[str, Any], Optional[VT]], IT]
     vectors: VectorStorage[KT, VT, MT]
 
     def __init__(self, 
@@ -70,7 +66,7 @@ class AbstractMemoryProvider(InstanceProvider[IT, KT, DT, VT, RT],
     def __getitem__(self, key: KT) -> IT:
         data = self.storage[key]
         vector = self.vectors[key]
-        return self.builder(key, data, vector)
+        return self.builder(self, key, data, vector)
 
     def __setitem__(self, key: KT, value: IT) -> None:
         idx, data, vector = self._decompose(value)
@@ -151,23 +147,3 @@ class AbstractMemoryProvider(InstanceProvider[IT, KT, DT, VT, RT],
     @abstractmethod
     def construct(*args: Any, **kwargs: Any) -> IT:
         raise NotImplementedError
-
-    @classmethod
-    def from_data_and_indices(cls,
-                              indices: Sequence[KT],
-                              raw_data: Sequence[DT],
-                              vectors: Optional[Sequence[Optional[VT]]] = None
-                              ) -> AbstractMemoryProvider[IT, KT, DT, VT, RT, MT]:
-        if vectors is None or len(vectors) != len(indices):
-            vectors = [None] * len(indices)
-        datapoints = itertools.starmap(cls.construct, zip(indices, raw_data, vectors, raw_data))
-        return cls(datapoints)
-
-    @classmethod
-    def from_data(cls, 
-                  raw_data: Sequence[DT]
-                 ) -> AbstractMemoryProvider[IT, KT, DT, VT, RT, MT]:
-        indices = range(len(raw_data))
-        vectors = [None] * len(raw_data)
-        datapoints = itertools.starmap(cls.construct, zip(indices, raw_data, vectors, raw_data))
-        return cls(datapoints)

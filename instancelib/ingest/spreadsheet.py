@@ -17,7 +17,7 @@
 import functools
 import itertools
 from os import PathLike
-from typing import (Any, Callable, FrozenSet, Iterable, Iterator, List,
+from typing import (Any, Callable, Dict, FrozenSet, Iterable, Iterator, List,
                     Optional, Sequence, Tuple, Union)
 from uuid import UUID
 
@@ -269,26 +269,130 @@ def read_csv_dataset(path: "Union[str, PathLike[str]]",
     env = build_environment(df, label_mapper, labels, data_cols, label_cols)
     return env
 
-def pandas_to_env(df: pd.DataFrame, 
+def pandas_to_env(df: Union[pd.DataFrame, Dict[str, pd.DataFrame]], 
                   data_cols: Union[str, Sequence[str]],
                   label_cols: Union[str, Sequence[str]],
                   labels: Optional[Iterable[str]] = None
                   ) -> AbstractEnvironment[
-                    MemoryTextInstance[int, np.ndarray], 
-                    Union[int, UUID], str, np.ndarray, str, str]:
+                    MemoryTextInstance[Any, np.ndarray], 
+                    Union[Any, UUID], str, np.ndarray, str, str]:
     l_data_cols = single_or_collection(data_cols)
     l_label_cols = single_or_collection(label_cols)
-    env = build_environment(df, identity_mapper, labels, l_data_cols, l_label_cols)
+    if isinstance(df, dict):
+        env = build_from_multiple_dfs(df, identity_mapper, labels, l_data_cols, l_label_cols)
+    else:
+        env = build_environment(df, identity_mapper, labels, l_data_cols, l_label_cols)
     return env
 
-def pandas_to_env_with_id(df: pd.DataFrame, 
+def pandas_to_env_with_id(df: Union[pd.DataFrame, Dict[str, pd.DataFrame]], 
                   id_col: str,
                   data_cols: Union[str, Sequence[str]],
                   label_cols: Union[str, Sequence[str]],
                   labels: Optional[Iterable[str]] = None
-                  ) -> AbstractEnvironment[MemoryTextInstance[Any, np.ndarray], 
-                            Union[Any, UUID], str, np.ndarray, str, str]:
+                  ) -> AbstractEnvironment[
+                    MemoryTextInstance[Any, np.ndarray], 
+                    Union[Any, UUID], str, np.ndarray, str, str]:
     l_data_cols = single_or_collection(data_cols)
     l_label_cols = single_or_collection(label_cols)
-    env = build_environment_with_id(df, identity_mapper, labels, id_col,l_data_cols, l_label_cols)
+    if isinstance(df, dict):
+        env = build_from_multiple_dfs_with_ids(df, identity_mapper, labels, id_col, l_data_cols, l_label_cols)
+    else:
+        env = build_environment_with_id(df, identity_mapper, labels, id_col,l_data_cols, l_label_cols)
     return env
+
+
+def build_from_multiple_dfs(df_dict: Dict[str, pd.DataFrame], 
+                            label_mapper: Callable[[Any], Optional[str]],
+                            labels: Optional[Iterable[str]],
+                            data_cols: Sequence[str],
+                            label_cols: Sequence[str],
+                            ) -> AbstractEnvironment[
+                        MemoryTextInstance[str, np.ndarray], 
+                        Union[str, UUID], str, np.ndarray, str, str]:
+    """Build an environment from a data frame
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A data frame that contains all texts and labels
+    label_mapping : Mapping[int, str]
+        A mapping from indices to label strings
+    data_cols : Sequence[str]
+        A sequence of columns that contain the texts
+    label_col : str
+        The name of the column that contains the label data
+
+    Returns
+    -------
+    MemoryEnvironment[int, str, np.ndarray, str]
+        A MemoryEnvironment that contains the  
+    """    
+    labelfunc = functools.partial(inv_transform_mapping, label_cols, label_mapper=label_mapper)
+    indices_table: Dict[str, List[str]] = dict()
+    indices: List[str] = list()
+    texts: List[str] = list()
+    true_labels: List[FrozenSet[str]] = list()
+
+    for df_key, df in df_dict.items():
+        idxs, df_texts, df_true_labels = extract_data(df, data_cols, labelfunc)
+        indices_table[df_key] = [f"{df_key}_{idx}" for idx in idxs]
+        indices = indices + indices_table[df_key]
+        texts = texts + df_texts
+        true_labels = true_labels + df_true_labels
+    if labels is None:
+        labels = frozenset(itertools.chain.from_iterable(true_labels))
+    environment = TextEnvironment[str, np.ndarray, str].from_data(
+        labels, 
+        indices, texts, true_labels,
+        [])
+    for key, split_indices in indices_table.items():
+        environment[key] = environment.create_bucket(split_indices)
+    return environment
+
+def build_from_multiple_dfs_with_ids(df_dict: Dict[str, pd.DataFrame], 
+                            label_mapper: Callable[[Any], Optional[str]],
+                            labels: Optional[Iterable[str]],
+                            id_col: str,
+                            data_cols: Sequence[str],
+                            label_cols: Sequence[str],
+                            ) -> AbstractEnvironment[
+                        MemoryTextInstance[str, np.ndarray], 
+                        Union[str, UUID], str, np.ndarray, str, str]:
+    """Build an environment from a data frame
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A data frame that contains all texts and labels
+    label_mapping : Mapping[int, str]
+        A mapping from indices to label strings
+    data_cols : Sequence[str]
+        A sequence of columns that contain the texts
+    label_col : str
+        The name of the column that contains the label data
+
+    Returns
+    -------
+    MemoryEnvironment[int, str, np.ndarray, str]
+        A MemoryEnvironment that contains the  
+    """    
+    labelfunc = functools.partial(inv_transform_mapping, label_cols, label_mapper=label_mapper)
+    indices_table: Dict[str, List[str]] = dict()
+    indices: List[str] = list()
+    texts: List[str] = list()
+    true_labels: List[FrozenSet[str]] = list()
+
+    for df_key, df in df_dict.items():
+        indices_table[df_key], df_texts, df_true_labels = extract_data_with_id(df, id_col, data_cols, labelfunc)
+        indices = indices + indices_table[df_key]
+        texts = texts + df_texts
+        true_labels = true_labels + df_true_labels
+    if labels is None:
+        labels = frozenset(itertools.chain.from_iterable(true_labels))
+    environment = TextEnvironment[str, np.ndarray, str].from_data(
+        labels, 
+        indices, texts, true_labels,
+        [])
+    for key, split_indices in indices_table.items():
+        environment[key] = environment.create_bucket(split_indices)
+    return environment

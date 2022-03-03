@@ -1,4 +1,5 @@
 import instancelib as il
+import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 
@@ -49,6 +50,38 @@ def test_build_from_model():
 
 def test_confmat():
     env = il.read_excel_dataset(DATASET_FILE, ["fulltext"], ["label"])
+    vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
+    il.vectorize(vect, env)
+    train, test = env.train_test_split(env.dataset, 0.70)
+    model = il.SkLearnVectorClassifier.build(MultinomialNB(), env)
+    model.fit_provider(train, env.labels)
+    model_preds = model.predict(test)
+    preds = il.MemoryLabelProvider.from_tuples(model_preds)
+    conf_mat = il.analysis.confusion_matrix(env.labels, preds, test)
+    print(conf_mat)
+
+def test_pandas_multiple():
+    df = pd.read_excel(DATASET_FILE)
+    env = il.pandas_to_env({"train": df, "test": df}, ["fulltext"], ["label"])
+    vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
+    il.vectorize(vect, env)
+    assert env["train"]
+    assert env["test"]
+    assert env["train"]["train_20"].data == env["test"]["test_20"].data
+    assert env.labels.get_labels(env["train"]["train_20"])
+    assert env.labels.get_labels(env["train"]["train_20"]) == env.labels.get_labels(env["test"]["test_20"])
+    assert len(env["train"]) == len(env["test"])
+    train, test = env.train_test_split(env.dataset, 0.70)
+    model = il.SkLearnVectorClassifier.build(MultinomialNB(), env)
+    model.fit_provider(train, env.labels)
+    model_preds = model.predict(test)
+    preds = il.MemoryLabelProvider.from_tuples(model_preds)
+    conf_mat = il.analysis.confusion_matrix(env.labels, preds, test)
+    print(conf_mat)
+
+def test_pandas_single():
+    df = pd.read_excel(DATASET_FILE)
+    env = il.pandas_to_env(df, ["fulltext"], ["label"])
     vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
     il.vectorize(vect, env)
     train, test = env.train_test_split(env.dataset, 0.70)

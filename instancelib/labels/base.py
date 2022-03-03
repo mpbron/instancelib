@@ -15,7 +15,8 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from abc import ABC, abstractmethod
-from typing import Any, FrozenSet, Generic, Set, Union
+import itertools
+from typing import Any, FrozenSet, Generic, Sequence, Set, Tuple, Union
 
 from ..instances import Instance
 

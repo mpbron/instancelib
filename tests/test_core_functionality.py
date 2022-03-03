@@ -70,6 +70,7 @@ def test_pandas_multiple():
     assert env["train"]["train_20"].data == env["test"]["test_20"].data
     assert env.labels.get_labels(env["train"]["train_20"])
     assert env.labels.get_labels(env["train"]["train_20"]) == env.labels.get_labels(env["test"]["test_20"])
+    assert env.labels.get_labels(env["train"]["train_20"]) == frozenset({"Games"})
     assert len(env["train"]) == len(env["test"])
     train, test = env.train_test_split(env.dataset, 0.70)
     model = il.SkLearnVectorClassifier.build(MultinomialNB(), env)

@@ -29,6 +29,8 @@ def binary_mapper(value: Any) -> str:
 text_env = read_excel_dataset("./datasets/testdataset.xlsx",
                                   data_cols=["fulltext"],
                                   label_cols=["label"])
+
+text_env
 #%%
 ins_provider = text_env.dataset
 labelprovider = text_env.labels
@@ -38,6 +40,8 @@ n_docs = len(ins_provider)
 n_train = round(0.70 * n_docs)
 train, test = text_env.train_test_split(ins_provider, train_size=0.70)
 
+#%% 
+text_env["train"], text_env["test"] = train, test
 #%%
 # Test if we indeed got the right length
 print((len(train) == n_train))

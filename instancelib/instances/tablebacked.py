@@ -22,32 +22,75 @@ from typing import (Any, Callable, Generic, Iterator, List, Mapping,
                     Union)
 
 from ..typehints import DT, KT, MT, RT, VT
-from ..utils.to_key import to_key
 from .base import Instance, InstanceProvider
 from .vectorstorage import VectorStorage
-
+from .children import MemoryChildrenMixin
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]")
 
 
+class RowInstance(Mapping[str, Any], Instance[KT, Mapping[str,Any], VT, Mapping[str, Any]], Generic[IT, KT, DT, VT, RT, MT]):
+    
+    def __init__(self,
+                 provider: "TableProvider[IT, KT, DT, VT, RT, MT]", 
+                 data: Mapping[str, Any],
+                 vector: Optional[VT] = None,
+                 ) -> None:
+        self._provider = provider
+        self._data = data
+        self._vector = vector
 
-class AbstractMemoryProvider(InstanceProvider[IT, KT, DT, VT, RT], 
-                             ABC, Generic[IT, KT, DT, VT, RT, MT]):
+    def __getitem__(self, __k: str) -> Any:
+        return self.data[__k]
+
+    def __contains__(self, __o: object) -> bool:
+        return __o in self.data
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.data)
+
+    @property
+    def columns(self) -> Sequence[str]:
+        return list(self.data.keys())    
+
+    @property
+    def data(self) -> Mapping[str, Any]:
+        return self._data # type: ignore
+    
+    @property
+    def representation(self) -> Mapping[str, Any]:
+        return self._data
+        
+    @property
+    def vector(self) -> Optional[VT]:
+        return self._vector # type: ignore
+
+    @vector.setter
+    def vector(self, value: Optional[VT]) -> None:
+        if value is not None:
+            self._vector = value
+            self._provider.vectors[self.identifier] = value
+
+
+
+class TableProvider(MemoryChildrenMixin[IT, KT, DT, VT, RT],
+                    InstanceProvider[IT, KT, DT, VT, RT],
+                    ABC, Generic[IT, KT, DT, VT, RT, MT]):
     
     columns: Sequence[str]
     storage: MutableMapping[KT, MutableMapping[str, Any]]
-    children: MutableMapping[KT, Set[KT]]
-    parents: MutableMapping[KT, KT]
     builder: Callable[[InstanceProvider[IT, KT, DT, VT, RT], KT, Mapping[str, Any], Optional[VT]], IT]
     vectors: VectorStorage[KT, VT, MT]
 
     def __init__(self, 
                  storage: MutableMapping[KT, MutableMapping[str, Any]],
+                 columns: Sequence[str],
                  vectors: VectorStorage[KT, VT, MT],
-                 builder: Callable[[KT, Mapping[str, Any], Optional[VT]], IT],
+                 builder: Callable[[InstanceProvider[IT, KT, DT, VT, RT], KT, Mapping[str, Any], Optional[VT]], IT],
                  children: MutableMapping[KT, Set[KT]],
                  parents: MutableMapping[KT, KT]):
         
         self.storage = storage
+        self.columns = columns
         self.vectors = vectors
         self.children = children
         self.parents = parents
@@ -100,50 +143,5 @@ class AbstractMemoryProvider(InstanceProvider[IT, KT, DT, VT, RT],
     def bulk_get_all(self) -> List[IT]:
         return list(self.get_all())
    
-    def add_child(self, 
-                  parent: Union[KT, Instance[KT, DT, VT, RT]], 
-                  child:  Union[KT, Instance[KT, DT, VT, RT]]) -> None:
-        parent_key: KT = to_key(parent)
-        child_key: KT = to_key(child)
-        assert parent_key != child_key
-        if parent_key in self and child_key in self:
-            self.children.setdefault(parent_key, set()).add(child_key)
-            self.parents[child_key] = parent_key
-        else:
-            raise KeyError("Either the parent or child does not exist in this Provider")
-
-    def get_children(self, 
-                     parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[IT]:
-        parent_key: KT = to_key(parent)
-        if parent_key in self.children:
-            children = [self[child_key] for child_key in self.children[parent_key]]
-            return children # type: ignore
-        return []
-
-    def get_children_keys(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[KT]:
-        parent_key: KT = to_key(parent)
-        if parent_key in self.children:
-            return list(self.children[parent_key])
-        return []
-
-    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> IT:
-        child_key: KT = to_key(child)
-        if child_key in self.parents:
-            parent_key = self.parents[child_key]
-            parent = self[parent_key]
-            return parent # type: ignore
-        raise KeyError(f"The instance with key {child_key} has no parent")
-
-    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
-        parent_key: KT = to_key(parent)
-        if parent_key in self.children:
-            children = self.children[parent_key]
-            self.children[parent_key] = set()
-            for child in children:
-                del self[child]
-                
-
-    @staticmethod
-    @abstractmethod
     def construct(*args: Any, **kwargs: Any) -> IT:
         raise NotImplementedError

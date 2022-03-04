@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import random
 
-from typing import Generic, Iterable, MutableMapping, Optional, Sequence, Tuple, TypeVar, Any, Union
+from typing import Generic, Iterable, Mapping, MutableMapping, Optional, Sequence, Tuple, TypeVar, Any, Union
 from abc import ABC, abstractmethod
 
 from ..utils.func import union
@@ -301,6 +301,10 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         provider = self.create_bucket(keys)
         return provider
 
+    @property
+    def named_providers(self) -> Mapping[str, InstanceProvider[InstanceType, KT, DT, VT, RT]]:
+        return dict(self)        
+
     @abstractmethod
     def set_named_provider(self, name: str, value: InstanceProvider[InstanceType, KT, DT, VT, RT]):
         raise NotImplementedError
@@ -308,6 +312,17 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
     @abstractmethod
     def create_named_provider(self, name: str, keys: Iterable[KT] = list()) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         raise NotImplementedError
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __str__(self) -> str:
+        result = (f"Environment(dataset={self.dataset}, \n"
+                  f"   labels={self.labels}, \n"
+                  f"   named_providers={self.named_providers}, \n"
+                  f"   length={len(self.all_instances)}, \n"
+                  f"   typeinfo={self.all_instances.type_info}) \n")
+        return result
                                 
 
 class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT], 

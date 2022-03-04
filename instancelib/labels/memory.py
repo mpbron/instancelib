@@ -15,9 +15,10 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import annotations
+import collections
 
-from typing import (Any, Dict, FrozenSet, Generic, Iterable, Optional,
-                    Sequence, Set, Tuple, Union)
+from typing import (Any, Callable, Dict, FrozenSet, Generic, Iterable, Iterator, Mapping, Optional,
+                    Sequence, Set, Tuple, TypeVar, Union)
 
 from ..instances import Instance
 from ..typehints import KT, LT
@@ -25,6 +26,7 @@ from ..utils.func import list_unzip, union
 from ..utils.to_key import to_key
 from .base import LabelProvider
 
+_T = TypeVar("_T")
 
 class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
     """A Memory based implementation to test and benchmark AL algorithms
@@ -46,6 +48,15 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
                     self._labeldict_inv[label].add(key)
         else:
             self._labeldict_inv = labeldict_inv
+
+    def __iter__(self) -> Iterator[KT]:
+        return iter(self._labeldict)
+
+    def __contains__(self, __o: object) -> bool:
+        return to_key(__o) in self._labeldict
+
+    def __len__(self) -> int:
+        return len(self._labeldict)
 
     @classmethod
     def from_data(
@@ -103,7 +114,9 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
 
     def get_labels(self, instance: Union[KT, Instance[KT, Any, Any, Any]]) -> FrozenSet[LT]:
         key = to_key(instance)
-        return frozenset(self._labeldict.setdefault(key, set()))
+        if key in self:
+            return frozenset(self._labeldict[key])
+        return frozenset()
 
     def get_instances_by_label(self, label: LT) -> FrozenSet[KT]:
         return frozenset(self._labeldict_inv.setdefault(label, set()))
@@ -111,3 +124,21 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
     def document_count(self, label: LT) -> int:
         return len(self.get_instances_by_label(label))
             
+    @classmethod
+    def rename_labels(cls, 
+                      provider: LabelProvider[KT, _T], 
+                      mapping: Union[Mapping[_T, LT], Callable[[_T], LT]]
+                      ) -> MemoryLabelProvider[KT, LT]:
+        def translate_from_map(labelmap: Mapping[_T, LT]) -> Callable[[_T], LT]:
+            def inside(value: _T) -> LT:
+                if value in labelmap:
+                    return labelmap[value]
+                return value # type: ignore
+            return inside
+        mapper = translate_from_map(mapping) if isinstance(mapping, collections.Mapping) else mapping
+        labeldict = {key: {mapper(old_label) for old_label in old_labels} for key, old_labels in provider.items()}
+        labelset = frozenset([mapper(lbl) for lbl in provider.labelset])
+        provider = cls(labelset, labeldict, None) # type: ignore
+        return provider # type: ignore
+
+

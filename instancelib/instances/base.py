@@ -17,9 +17,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 from typing import (Any, Callable, Generic, Iterable, Iterator, List, Mapping, MutableMapping,
-                    Optional, Sequence, Tuple, TypeVar, Union)
+                    Optional, Sequence, Tuple, Type, TypeVar, Union)
 
 from ..utils.chunks import divide_iterable_in_lists
 from ..utils.func import filter_snd_none_zipped
@@ -27,6 +28,25 @@ from ..utils.func import filter_snd_none_zipped
 from ..typehints import KT, DT, VT, RT
 
 _V = TypeVar("_V")
+
+@dataclass
+class TypeInfo:
+    identifier: Type
+    data: Type
+    vector: Type
+    representation: Type
+
+    def __repr__(self) -> str:
+        result = ("TypeInfo("
+                 f"identifier={self.identifier.__name__}, "
+                 f"data={self.data.__name__}, "
+                 f"vector={self.vector.__name__}, "
+                 f"representation={self.representation.__name__})")
+        return result
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
 
 class Instance(ABC, Generic[KT, DT, VT, RT]):
     """A base Instance Class. 
@@ -127,12 +147,15 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
         """        
         raise NotImplementedError
 
-    def __str__(self) -> str:
-        str_rep = f"Instance:\n Identifier => {self.identifier} \n Data => {self.data} \n Vector present => {self.vector is not None}"
+    def __repr__(self) -> str:
+        data_short = self.data if len(repr(self.data)) <= 20 else f"{repr(self.data)[0:20]} ...'"
+        str_rep = (f"Instance(identifier={self.identifier}, "
+                   f"data={data_short}, "
+                   f"has_vector={self.vector is not None})")
         return str_rep
 
-    def __repr__(self) -> str:
-        return self.__str__()
+    def __str__(self) -> str:
+        return self.__repr__()
 
     def to_dict(self) -> Mapping[str, Any]:
         mapping = {
@@ -204,6 +227,11 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
             results = func(data)
             return results
         return wrapped
+
+    @property
+    def type_info(self) -> TypeInfo:
+        result = TypeInfo(type(self.identifier), type(self.data), type(self.vector), type(self.representation))
+        return result
 
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
 
@@ -751,6 +779,21 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
             The new instance Type
         """        
         raise NotImplementedError
+
+    @property
+    def type_info(self) -> Optional[TypeInfo]:
+        try:
+            first_item = next(iter(self.values()))
+        except StopIteration:
+            return None
+        return first_item.type_info
+
+    def __repr__(self) -> str:
+        result = f"InstanceProvider(length={len(self)})"
+        return result
+
+    def __self__(self) -> str:
+        return self.__str__()
 
 class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC, 
                                    Generic[InstanceType, KT, DT, VT, RT]):

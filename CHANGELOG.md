@@ -4,6 +4,20 @@ All notable changes to `instancelib` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2.0]
+### Added
+- Added a rename_labels method to generate a new LabelProvider with renamed labels
+- Added better `__repr__` and `__str__` methods for Environments, LabelProviders and Instance(Provider)s
+- LabelProviders have a dictionary like interface (readonly for now)
+
+```python
+env.labels[20]
+# frozenset("Games")
+
+new_label_provider = il.MemoryLabelProvider.rename_labels(env.labels, {"Bedrijfsnieuws": "New label"})
+```
+
+
 ## [0.4.1.0]
 ### Added
 -  Added support for combining different Pandas DataFrames into a single Environment.

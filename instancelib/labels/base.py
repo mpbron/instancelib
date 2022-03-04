@@ -16,7 +16,8 @@
 
 from abc import ABC, abstractmethod
 import itertools
-from typing import Any, FrozenSet, Generic, Sequence, Set, Tuple, Union
+import re
+from typing import Any, FrozenSet, Generic, Iterator, Mapping, Sequence, Set, Tuple, Union
 
 from ..instances import Instance
 
@@ -24,7 +25,11 @@ from ..typehints import KT, LT
 
 
 
-class LabelProvider(ABC, Generic[KT, LT]):
+class LabelProvider(Mapping[KT, FrozenSet[LT]], ABC, Generic[KT, LT]):
+    
+    def __getitem__(self, __k: Union[Instance[KT, Any, Any, Any], KT]) -> FrozenSet[LT]:
+        return self.get_labels(__k)
+
     @property
     @abstractmethod
     def labelset(self) -> FrozenSet[LT]:
@@ -105,3 +110,14 @@ class LabelProvider(ABC, Generic[KT, LT]):
 
     def document_count(self, label: LT) -> int:
         return len(self.get_instances_by_label(label))
+
+    def __repr__(self) -> str:
+        stats = {label: self.document_count(label) for label in self.labelset}
+        result = ("LabelProvider("
+                 f"labelset={self.labelset}, \n"
+                 f"   length={len(self)}, \n"
+                 f"   statistics={stats})")
+        return result
+
+    def __str__(self) -> str:
+        return self.__repr__()

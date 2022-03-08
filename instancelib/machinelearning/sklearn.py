@@ -21,29 +21,28 @@ import logging
 import operator
 from abc import ABC, abstractmethod
 from os import PathLike
-from typing import (Any, FrozenSet, Generic, Iterable, Iterator, Optional,
-                    Sequence, Tuple, TypeVar, Union, List)
+from typing import (Any, FrozenSet, Generic, Iterable, Iterator, List,
+                    Optional, Sequence, Tuple, TypeVar, Union)
 
 import numpy as np
-from sklearn.pipeline import Pipeline  # type: ignore
 
-from sklearn.preprocessing import LabelEncoder as SKLabelEncoder # type: ignore
-from sklearn.preprocessing import MultiLabelBinarizer # type: ignore
 from sklearn.base import ClassifierMixin, TransformerMixin
-
-from instancelib.utils.func import filter_snd_none
-
-from ..exceptions.base import LabelEncodingException 
+from sklearn.pipeline import Pipeline  # type: ignore
+from sklearn.preprocessing import \
+    LabelEncoder as SKLabelEncoder  # type: ignore
+from sklearn.preprocessing import MultiLabelBinarizer  # type: ignore
 
 from ..environment import Environment
 from ..environment.base import Environment
+from ..exceptions.base import LabelEncodingException
 from ..instances import Instance, InstanceProvider
-from ..labels.encoder import (DictionaryEncoder, IdentityEncoder, LabelEncoder, MultilabelDictionaryEncoder, SklearnLabelEncoder,
+from ..labels.encoder import (DictionaryEncoder, IdentityEncoder, LabelEncoder,
+                              MultilabelDictionaryEncoder, SklearnLabelEncoder,
                               SklearnMultiLabelEncoder)
 from ..typehints.typevars import DT, KT, LT, VT
 from ..utils import SaveableInnerModel
 from ..utils.chunks import divide_iterable_in_lists
-
+from ..utils.func import filter_snd_none
 from .base import AbstractClassifier
 
 LOGGER = logging.getLogger(__name__)
@@ -350,3 +349,12 @@ class SkLearnClassifier(SaveableInnerModel,
         sklearn_encoder: TransformerMixin = MultiLabelBinarizer()
         il_encoder = SklearnMultiLabelEncoder(sklearn_encoder, env.labels.labelset)    
         return cls(estimator, il_encoder, storage_location, filename)
+
+    def __repr__(self) -> str:
+        result = ("SklearnClassifier("
+                 f"innermodel={self.innermodel}, "
+                 f"classes={self.encoder.labels})")
+        return result
+
+    def __str__(self) -> str:
+        return self.__repr__()

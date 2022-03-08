@@ -47,7 +47,6 @@ class TypeInfo:
     def __str__(self) -> str:
         return self.__repr__()
 
-
 class Instance(ABC, Generic[KT, DT, VT, RT]):
     """A base Instance Class. 
 
@@ -235,7 +234,318 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
 
+class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, KT, DT, VT, RT]):
+    """The Base InstanceProvider class (ReadOnly).
+
+    This class provides an abstract implementation for a dataset.
+    The InstanceProvider has five Generic types:
+
+        - :data:`InstanceType` : A subclass of :class:`Instance`
+        - :data:`~instancelib.typehints.KT`: The type of the key
+        - :data:`~instancelib.typehints.DT`: The type of the data
+        - :data:`~instancelib.typehints.VT`: The type of the vector
+        - :data:`~instancelib.typehints.RT`: The type of the representation
+
+    Specifying these allows Python to ensure the correctness of your implementation 
+    and eases further integration in your application.
+
+    Examples
+    --------
+    
+    Instance access:
+
+    >>> provider = InstanceProvider() # Replace with your implementation's constructor
+    >>> first_key = next(iter(textprovider))
+    >>> first_doc = textprovider[first_key]
+
+    Set operations:
+
+    >>> new_instance = Instance()
+    >>> provider.add(new_instance)
+    >>> provider.discard(new_instance)
+
+    Example implementation:
+    
+    >>> class TextProvider(InstanceProvider[Instance[int, str, np.ndarray, str],
+    ...                                     int, str, np.ndarray, str]):
+    ...     # Further implementation is needed
+    >>> textprovider = TextProvider()
+
+    There are a number of :func:`~abc.abstractmethod` that need to be implemented
+    in your own implementation. See the source of this file to see what you need to
+    implement.
+    """
+    
+    @abstractmethod
+    def __contains__(self, item: object) -> bool:
+        """Special method that checks if something is contained in this 
+        provider.
+
+        Parameters
+        ----------
+        item : object
+            The item of which we want to know if it is contained in this
+            provider
+
+        Returns
+        -------
+        bool
+            True if the provider contains `item`. 
+
+        Examples
+        --------
+        Example usage; check if the item exists and then remove it
+
+        >>> doc_id = 20
+        >>> provider = InstanceProvider()
+        >>> if doc_id in provider:
+        ...     del provider[doc_id]
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def __iter__(self) -> Iterator[KT]:
+        """Enables you to iterate over Instances
+
+        Yields
+        ------
+        :class:`KT`
+            Keys included in the provider 
+        """
+        raise NotImplementedError
+
+    @property
+    def key_list(self) -> List[KT]:
+        """Return a list of all instance keys in this provider
+
+        Returns
+        -------
+        List[KT]
+            A list of instance keys
+        """
+        return list(self.keys())
+
+    @property
+    @abstractmethod
+    def empty(self) -> bool:
+        """Determines if the provider does not contain instances
+
+        Returns
+        -------
+        bool
+            True if the provider is empty
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_all(self) -> Iterator[InstanceType]:
+        """Get an iterator that iterates over all instances
+
+        Yields
+        ------
+        InstanceType
+            An iterator that iterates over all instances
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear(self) -> None:
+        """Removes all instances from the provider
+
+        Warning
+        -------
+        Use this operation with caution! This operation is intended for
+        use with providers that function as temporary user queues, not
+        for large proportions of the dataset like `unlabeled` and `labeled`
+        sets.
+        """
+        raise NotImplementedError
+
+    def bulk_add_vectors(self, keys: Sequence[KT], values: Sequence[VT]) -> None:
+        """This methods adds vectors in `values` to the instances specified
+        in `keys`. 
+
+        In some use cases, vectors are not known beforehand. This library
+        provides several :term:`vectorizer` s that convert raw data points
+        in feature vector form. Once these vectors are available, they can be 
+        added to the provider by using this method
+
+        Parameters
+        ----------
+        keys
+            A sequence of keys
+        values
+            A sequence of vectors
+
+        Warning
+        -------
+        We assume that the indices and length of the parameters `keys` and `values`
+        match.
+        """
+        for key, vec in zip(keys, values):
+            self[key].vector = vec
+
+    def bulk_get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:
+        """Given a list of instance `keys`, return the vectors
+
+        Parameters
+        ----------
+        keys : Sequence[KT]
+            A list of vectors
+
+        Returns
+        -------
+        Tuple[Sequence[KT], Sequence[VT]]
+            A tuple of two sequences, one with `keys` and one with `vectors`.
+            The indices match, so the instance with ``keys[2]`` has as
+            vector ``vectors[2]``
+
+        Warning
+        -------
+        Some underlying implementations do not preserve the ordering of the parameter
+        `keys`. Therefore, always use the keys variable from the returned tuple for 
+        the correct matching.
+        """
+        vector_pairs = ((key, self[key].vector) for key in keys)
+        ret_keys, ret_vectors = filter_snd_none_zipped(vector_pairs)
+        return ret_keys, ret_vectors  # type: ignore
+    
+    def data_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        """Iterate over all instances data parts in 
+        this provider
+
+        Parameters
+        ----------
+        batch_size : int
+            The batch size, the generator will return lists with size `batch_size`
+
+        Yields
+        -------
+        Sequence[Tuple[KT,DT]]
+            A sequence of instances with length `batch_size`. The last list may have
+            a shorter length.
+        """
+        datapoints = ((ins.identifier, ins.data) for ins in self.values())
+        chunks = divide_iterable_in_lists(datapoints, batch_size)
+        yield from chunks
+
+    def data_chunker_selector(self, 
+                              keys: Iterable[KT], 
+                              batch_size: int = 200
+                              ) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        keyset = frozenset(keys)
+        datapoints = ((ins.identifier, ins.data) for ins in self.values() if ins.identifier in keyset)
+        chunks = divide_iterable_in_lists(datapoints, batch_size)
+        yield from chunks
+    
+
+    def instance_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
+        chunks = divide_iterable_in_lists(keys, batch_size)
+        for chunk in chunks:
+            yield [self[key] for key in chunk]
+
+    def instance_chunker(self, batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
+        """Iterate over all instances (with or without vectors) in 
+        this provider
+
+        Parameters
+        ----------
+        batch_size : int
+            The batch size, the generator will return lists with size `batch_size`
+
+        Yields
+        -------
+        Sequence[Instance[KT, DT, VT, RT]]]
+            A sequence of instances with length `batch_size`. The last list may have
+            a shorter length.
+        """
+        chunks = divide_iterable_in_lists(self.values(), batch_size)
+        yield from chunks
+
+    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        """Iterate over all instances (with or without vectors) in belonging the identifier 
+        :class:`Iterable` in the `keys` parameter.
+
+        Parameters
+        ----------
+        keys : Iterable[KT]
+            The keys that should should be chunked
+
+        batch_size : int
+            The batch size, the generator will return lists with size `batch_size`
+
+        Yields
+        -------
+        Sequence[Instance[KT, DT, VT, RT]]]
+            A sequence of instances with length `batch_size`. The last list may have
+            a shorter length.
+
+        Returns
+        -------
+        Iterator[Sequence[Tuple[KT, VT]]]
+            An iterator over sequences of key vector tuples
+        """
+        included_ids = frozenset(self.key_list).intersection(keys)
+        id_vecs = ((elem.identifier, elem.vector)
+                   for elem in self.values() if elem.vector is not None and elem.identifier in included_ids)
+        chunks = divide_iterable_in_lists(id_vecs, batch_size)
+        return chunks
+
+    def vector_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        """Iterate over all pairs of keys and vectors in 
+        this provider
+
+        Parameters
+        ----------
+        batch_size : int
+            The batch size, the generator will return lists with size `batch_size`
+
+        Returns
+        -------
+        Iterator[Sequence[Tuple[KT, VT]]]
+            An iterator over sequences of key vector tuples
+
+        Yields
+        -------
+        Sequence[Tuple[KT, VT]]
+            Sequences of key vector tuples
+        """
+        yield from self.vector_chunker_selector(self.key_list, batch_size)
+
+    def bulk_get_all(self) -> List[InstanceType]:
+        """Returns a list of all instances in this provider.
+
+        Returns
+        -------
+        List[Instance[KT, DT, VT, RT]]
+            A list of all instances in this provider
+
+        Warning
+        -------
+        When using this method on very large providers with lazily loaded instances, this
+        may yield Out of Memory errors, as all the data will be loaded into RAM.
+        Use with caution!
+        """
+        return list(self.get_all())
+
+    @property
+    def type_info(self) -> Optional[TypeInfo]:
+        try:
+            first_item = next(iter(self.values()))
+        except StopIteration:
+            return None
+        return first_item.type_info
+
+    def __repr__(self) -> str:
+        result = f"InstanceProvider(length={len(self)})"
+        return result
+
+    def __str__(self) -> str:
+        return self.__repr__()
+    
+
 class InstanceProvider(MutableMapping[KT, InstanceType], 
+                       ROInstanceProvider[InstanceType, KT, DT, VT, RT],
                        ABC, Generic[InstanceType, KT, DT, VT, RT]):
     """The Base InstanceProvider class.
 
@@ -358,43 +668,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """        
         raise NotImplementedError
 
-    @abstractmethod
-    def __contains__(self, item: object) -> bool:
-        """Special method that checks if something is contained in this 
-        provider.
-
-        Parameters
-        ----------
-        item : object
-            The item of which we want to know if it is contained in this
-            provider
-
-        Returns
-        -------
-        bool
-            True if the provider contains `item`. 
-
-        Examples
-        --------
-        Example usage; check if the item exists and then remove it
-
-        >>> doc_id = 20
-        >>> provider = InstanceProvider()
-        >>> if doc_id in provider:
-        ...     del provider[doc_id]
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def __iter__(self) -> Iterator[KT]:
-        """Enables you to iterate over Instances
-
-        Yields
-        ------
-        :class:`KT`
-            Keys included in the provider 
-        """
-        raise NotImplementedError
+    
 
     def add(self, instance: Instance[KT, DT, VT, RT]) -> None:
         """Add an instance to this provider. 
@@ -435,217 +709,6 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         except KeyError:
             pass  # To adhere to Set.discard(...) behavior
 
-    @property
-    def key_list(self) -> List[KT]:
-        """Return a list of all instance keys in this provider
-
-        Returns
-        -------
-        List[KT]
-            A list of instance keys
-        """
-        return list(self.keys())
-
-    @property
-    @abstractmethod
-    def empty(self) -> bool:
-        """Determines if the provider does not contain instances
-
-        Returns
-        -------
-        bool
-            True if the provider is empty
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_all(self) -> Iterator[InstanceType]:
-        """Get an iterator that iterates over all instances
-
-        Yields
-        ------
-        InstanceType
-            An iterator that iterates over all instances
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def clear(self) -> None:
-        """Removes all instances from the provider
-
-        Warning
-        -------
-        Use this operation with caution! This operation is intended for
-        use with providers that function as temporary user queues, not
-        for large proportions of the dataset like `unlabeled` and `labeled`
-        sets.
-        """
-        raise NotImplementedError
-
-    def bulk_add_vectors(self, keys: Sequence[KT], values: Sequence[VT]) -> None:
-        """This methods adds vectors in `values` to the instances specified
-        in `keys`. 
-
-        In some use cases, vectors are not known beforehand. This library
-        provides several :term:`vectorizer` s that convert raw data points
-        in feature vector form. Once these vectors are available, they can be 
-        added to the provider by using this method
-
-        Parameters
-        ----------
-        keys
-            A sequence of keys
-        values
-            A sequence of vectors
-
-        Warning
-        -------
-        We assume that the indices and length of the parameters `keys` and `values`
-        match.
-        """
-        for key, vec in zip(keys, values):
-            self[key].vector = vec
-
-    def bulk_get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:
-        """Given a list of instance `keys`, return the vectors
-
-        Parameters
-        ----------
-        keys : Sequence[KT]
-            A list of vectors
-
-        Returns
-        -------
-        Tuple[Sequence[KT], Sequence[VT]]
-            A tuple of two sequences, one with `keys` and one with `vectors`.
-            The indices match, so the instance with ``keys[2]`` has as
-            vector ``vectors[2]``
-
-        Warning
-        -------
-        Some underlying implementations do not preserve the ordering of the parameter
-        `keys`. Therefore, always use the keys variable from the returned tuple for 
-        the correct matching.
-        """
-        vector_pairs = ((key, self[key].vector) for key in keys)
-        ret_keys, ret_vectors = filter_snd_none_zipped(vector_pairs)
-        return ret_keys, ret_vectors  # type: ignore
-    
-    def data_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
-        """Iterate over all instances data parts in 
-        this provider
-
-        Parameters
-        ----------
-        batch_size : int
-            The batch size, the generator will return lists with size `batch_size`
-
-        Yields
-        -------
-        Sequence[Tuple[KT,DT]]
-            A sequence of instances with length `batch_size`. The last list may have
-            a shorter length.
-        """
-        datapoints = ((ins.identifier, ins.data) for ins in self.values())
-        chunks = divide_iterable_in_lists(datapoints, batch_size)
-        yield from chunks
-
-    def data_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
-        keyset = frozenset(keys)
-        datapoints = ((ins.identifier, ins.data) for ins in self.values() if ins.identifier in keyset)
-        chunks = divide_iterable_in_lists(datapoints, batch_size)
-        yield from chunks
-    
-
-    def instance_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
-        chunks = divide_iterable_in_lists(keys, batch_size)
-        for chunk in chunks:
-            yield [self[key] for key in chunk]
-
-    def instance_chunker(self, batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
-        """Iterate over all instances (with or without vectors) in 
-        this provider
-
-        Parameters
-        ----------
-        batch_size : int
-            The batch size, the generator will return lists with size `batch_size`
-
-        Yields
-        -------
-        Sequence[Instance[KT, DT, VT, RT]]]
-            A sequence of instances with length `batch_size`. The last list may have
-            a shorter length.
-        """
-        chunks = divide_iterable_in_lists(self.values(), batch_size)
-        yield from chunks
-
-    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
-        """Iterate over all instances (with or without vectors) in belonging the identifier 
-        :class:`Iterable` in the `keys` parameter.
-
-        Parameters
-        ----------
-        keys : Iterable[KT]
-            The keys that should should be chunked
-
-        batch_size : int
-            The batch size, the generator will return lists with size `batch_size`
-
-        Yields
-        -------
-        Sequence[Instance[KT, DT, VT, RT]]]
-            A sequence of instances with length `batch_size`. The last list may have
-            a shorter length.
-
-        Returns
-        -------
-        Iterator[Sequence[Tuple[KT, VT]]]
-            An iterator over sequences of key vector tuples
-        """
-        included_ids = frozenset(self.key_list).intersection(keys)
-        id_vecs = ((elem.identifier, elem.vector)
-                   for elem in self.values() if elem.vector is not None and elem.identifier in included_ids)
-        chunks = divide_iterable_in_lists(id_vecs, batch_size)
-        return chunks
-
-    def vector_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
-        """Iterate over all pairs of keys and vectors in 
-        this provider
-
-        Parameters
-        ----------
-        batch_size : int
-            The batch size, the generator will return lists with size `batch_size`
-
-        Returns
-        -------
-        Iterator[Sequence[Tuple[KT, VT]]]
-            An iterator over sequences of key vector tuples
-
-        Yields
-        -------
-        Sequence[Tuple[KT, VT]]
-            Sequences of key vector tuples
-        """
-        yield from self.vector_chunker_selector(self.key_list, batch_size)
-
-    def bulk_get_all(self) -> List[InstanceType]:
-        """Returns a list of all instances in this provider.
-
-        Returns
-        -------
-        List[Instance[KT, DT, VT, RT]]
-            A list of all instances in this provider
-
-        Warning
-        -------
-        When using this method on very large providers with lazily loaded instances, this
-        may yield Out of Memory errors, as all the data will be loaded into RAM.
-        Use with caution!
-        """
-        return list(self.get_all())
-
     def map_mutate(self, func: Callable[[InstanceType], Instance[KT, DT, VT, RT]]) -> None:
         """Run a function on this provider that modifies all Instances in place
 
@@ -659,111 +722,6 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
             instance = self[key]
             upd_instance = func(instance)
             self[key] = upd_instance # type: ignore
-
-    def map(self, func: Callable[[InstanceType], _V]) -> Iterator[_V]:
-        """A higher order function that maps any function that works on
-        individual :class:`Instance` objects on every contained object in
-        this provider. 
-
-        Parameters
-        ----------
-        func : Callable[[InstanceType], _V]
-            A function that works on :class:`Instance` objects of type `InstanceType`
-
-        Yields
-        -------
-        Iterator[_V]
-            The values produced by the function `func`
-        """        
-        keys = self.key_list
-        for key in keys:
-            instance = self[key]
-            result = func(instance)
-            yield result
-
-    def data_map(self, func: Callable[[DT], _V]) -> Iterator[_V]:
-        """A higher order function that maps any function that works on
-        individual :class:`~instancelib.typehints.KT` object 
-        on every  :class:`Instance` object in this provider. 
-
-        Parameters
-        ----------
-        func
-            The function that should be applied
-
-        Yields
-        -------
-        _V
-            The values produced by the function `func`
-        """
-        instances = self.values()
-        mapped_f = Instance[KT, DT, VT, RT].map_data(func)
-        results = map(mapped_f, instances)
-        yield from results
-
-    def all_data(self) -> Iterator[DT]:
-        """Return all the raw data from the instances in this provider
-
-        Yields
-        ------
-        DT
-            Raw data
-        """        
-        yield from (instance.data for instance in self.values())
-
-    def vectorized_map(self, 
-                       func: Callable[[Iterable[InstanceType]], _V], 
-                       batch_size: int = 200) -> Iterator[_V]:
-        """Maps a function that works on multiple instances
-        onto all the instances in batches of size `batch_size`.
-
-        Note: If you run a function that combines multiple instances into
-        a single result, this may possibly lead to undiserable results if 
-        batches are not taken into account.
-
-        Parameters
-        ----------
-        func : Callable[[Iterable[InstanceType]], _V]
-            The function that should be applied
-        batch_size : int, optional
-            The size of the batch, by default 200
-
-        Yields
-        -------
-        _V
-            The result type of the function in parameter `func`
-        """        
-        chunks = divide_iterable_in_lists(self.values(), batch_size)
-        results = map(func, chunks)
-        yield from results
-
-    def vectorized_data_map(self, 
-                            func: Callable[[Iterable[DT]], _V],
-                            batch_size: int = 200
-                            ) -> Iterator[_V]:
-        """Maps a function that works on multiple raw data points
-        onto all the instances in batches of size `batch_size`.
-
-        Note: If you run a function that combines multiple instances into
-        a single result, this may possibly lead to undiserable results if 
-        batches are not taken into account.
-
-        Parameters
-        ----------
-        func
-            The function that should be applied
-        batch_size : int, optional
-            The size of the batch, by default 200
-
-        Yields
-        -------
-        _V
-            The result type of the function in parameter `func`
-        """        
-        chunks = divide_iterable_in_lists(self.values(), batch_size)
-        mapped_f = Instance[KT, DT, VT, RT].vectorized_data_map(func)
-        results = map(mapped_f, chunks)
-        yield from results
 
     @abstractmethod
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
@@ -780,20 +738,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         """        
         raise NotImplementedError
 
-    @property
-    def type_info(self) -> Optional[TypeInfo]:
-        try:
-            first_item = next(iter(self.values()))
-        except StopIteration:
-            return None
-        return first_item.type_info
 
-    def __repr__(self) -> str:
-        result = f"InstanceProvider(length={len(self)})"
-        return result
-
-    def __self__(self) -> str:
-        return self.__str__()
 
 class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC, 
                                    Generic[InstanceType, KT, DT, VT, RT]):

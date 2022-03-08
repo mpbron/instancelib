@@ -63,56 +63,7 @@ class PandasDataset(ReadOnlyDataset[int, Any]):
         data: Sequence[Any] = self.df.iloc[keys][self.data_col] # type: ignore
         return data
 
-class RowInstance(Mapping[str, Any], Instance[KT, Mapping[str,Any], VT, Mapping[str, Any]], Generic[KT, VT]):
-    def __init__(self, 
-                 data: Mapping[str, Any],
-                 vector: Optional[VT] = None,
-                 ) -> None:
-        self._data = data
-        self._vector = vector
-
-    def __getitem__(self, __k: str) -> Any:
-        return self.data[__k]
-
-    def __contains__(self, __o: object) -> bool:
-        return __o in self.data
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.data)
-
-    @property
-    def columns(self) -> Sequence[str]:
-        return list(self.data.keys())    
-
-    @property
-    def data(self) -> Mapping[str, Any]:
-        return self._data # type: ignore
-    
-    @property
-    def representation(self) -> Mapping[str, Any]:
-        return self._data
-        
-    @property
-    def vector(self) -> Optional[VT]:
-        return self._vector # type: ignore
-
-    @vector.setter
-    def vector(self, value) -> None:
-        self._vector = value
-
-class ExternalStorage(Generic[KT,DT,RT]):
-    data_storage:  Mapping[KT, DT]
-    repr_storage:  Mapping[KT, RT]
-    other_storage: Mapping[str, Mapping[KT,Any]]
-    def __init__(self,
-                 data: Mapping[KT, DT],
-                 repr: Mapping[KT, RT],
-                 other: Mapping[str, Mapping[KT, Any]]):
-        pass
-
-
-class ReadOnlyProvider(ExternalProvider[IT, KT, DT, np.ndarray, RT],
-                       HDF5VectorInstanceProvider[IT, KT, DT, RT],
+class ReadOnlyProvider(InstanceProvider[],
                        Generic[IT, KT, DT, RT]):
 
     local_data: InstanceProvider[IT, KT, DT, np.ndarray, RT]

@@ -37,6 +37,12 @@ class MemoryVectorStorage(VectorStorage[KT,VT,MT], Generic[KT, VT, MT]):
     def __iter__(self) -> Iterator[KT]:
         return iter(self.storage)
 
+    def __len__(self) -> int:
+        return len(self.storage)
+
+    def __delitem__(self, __v: KT) -> None:
+        del self.storage[__v]
+
     def add_bulk(self, input_keys: Sequence[KT], input_values: Sequence[VT]) -> None:
         for key, value in zip(input_keys, input_values):
             self.storage[key] = value

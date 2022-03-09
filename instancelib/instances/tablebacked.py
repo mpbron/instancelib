@@ -21,6 +21,8 @@ from typing import (Any, Callable, Generic, Iterable, Iterator, List, Mapping,
                     MutableMapping, Optional, Sequence, Set, Tuple, TypeVar,
                     Union)
 
+from .combination import UpdateHookInstance
+
 from .extractors import ColumnExtractor, DataExtractor
 from .memoryvectorstorage import MemoryVectorStorage
 
@@ -29,7 +31,7 @@ from .base import Instance, InstanceProvider, ROInstanceProvider
 from .vectorstorage import VectorStorage
 from .children import MemoryChildrenMixin
 
-IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]")
+IT = TypeVar("IT", bound="UpdateHookInstance[Any, Any, Any, Any]")
 
 
 class RowInstance(Mapping[str, Any], Instance[KT, Mapping[str,Any], VT, Mapping[str, Any]], Generic[IT, KT, DT, VT, RT, MT]):
@@ -75,13 +77,12 @@ class RowInstance(Mapping[str, Any], Instance[KT, Mapping[str,Any], VT, Mapping[
             self._provider.vectors[self.identifier] = value
 
 class TableInstance(MutableMapping[str, Any], 
-                    Instance[KT, DT, VT, RT], 
+                    UpdateHookInstance[KT, DT, VT, RT], 
                     Generic[IT, KT, DT, VT, RT, MT]):
     _data_extractor: DataExtractor[DT]
     _repr_extractor: DataExtractor[RT]
-
+    
     def __init__(self,
-                 provider: "TableProvider[IT, KT, DT, VT, RT, MT]", 
                  identifier: KT,
                  data: MutableMapping[str, Any],
                  vector: Optional[VT] = None,
@@ -90,11 +91,12 @@ class TableInstance(MutableMapping[str, Any],
                  ) -> None:
 
         self._identifier = identifier
-        self._provider = provider
         self._data = data
         self._vector = vector
         self._data_extractor = data_extractor
         self._repr_extractor = repr_extractor
+        self._delete_hook = None
+        self._update_hook = None
 
     def __getitem__(self, __k: str) -> Any:
         return self._data[__k]
@@ -110,11 +112,11 @@ class TableInstance(MutableMapping[str, Any],
 
     def __setitem__(self, __k: str, __v: Any) -> None:
         self._data[__k] = __v
-        self._provider.storage[self.identifier] = self._data 
+        self.update_hook()
 
     def __delitem__(self, __v: str) -> None:
         del self._data[__v]
-        self._provider.storage[self.identifier] = self._data
+        self.update_hook()
 
     def _safe_get(self, key: str) -> Optional[Any]:
         if key in self:
@@ -140,12 +142,12 @@ class TableInstance(MutableMapping[str, Any],
     @property
     def vector(self) -> Optional[VT]:
         return self._vector # type: ignore
-
+    
     @vector.setter
     def vector(self, value: Optional[VT]) -> None:
         if value is not None:
             self._vector = value
-            self._provider.vectors[self.identifier] = value
+            self.update_hook()
 
 class TableProviderRO(ROInstanceProvider[IT, KT, DT, VT, RT], Generic[IT,KT, DT, VT, RT, MT]):
     columns: Sequence[str]
@@ -179,7 +181,8 @@ class TableProviderRO(ROInstanceProvider[IT, KT, DT, VT, RT], Generic[IT,KT, DT,
     def __getitem__(self, key: KT) -> IT:
         data = self.storage[key]
         vector = self._get_vector(key)
-        return self.builder(self, key, data, vector)
+        ins = self.builder(self, key, data, vector)
+        return ins
 
     def __len__(self) -> int:
         return len(self.storage)
@@ -230,8 +233,16 @@ class TableProvider(MemoryChildrenMixin[IT, KT, DT, VT, RT],
         self.parents = parents
         self.builder = builder
 
+    def __getitem__(self, __k: KT) -> IT:
+        ins = super().__getitem__(__k)
+        ins.register_hook(self._update)
+        return ins
+
     def _decompose(self, ins: TableInstance[IT, KT, DT, VT, RT, MT]) -> Tuple[KT, Mapping[str, Any], Optional[VT]]:
         return ins.identifier, ins._data, ins.vector
+
+    def _update(self, ins: IT) -> None:
+        raise NotImplementedError
 
     def __setitem__(self, key: KT, value: IT) -> None:
         assert isinstance(value, TableInstance)

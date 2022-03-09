@@ -20,7 +20,21 @@ from .external import ExternalProvider
 from .hdf5 import HDF5VectorInstanceProvider
 from .memory import AbstractMemoryProvider
 
-IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]")
+
+
+class UpdateHookInstance(Instance[KT, DT, VT, RT], ABC, Generic[KT, DT, VT, RT]):
+    _update_hook: "Optional[Callable[[UpdateHookInstance[KT, DT, VT, RT]], Any]]"
+
+    def register_hook(self, 
+                       update_hook: "Callable[[UpdateHookInstance[KT, DT, VT, RT]], Any]",
+                       ) -> None:
+        self._update_hook = update_hook
+
+    def update_hook(self) -> None:
+        if self._update_hook is not None:
+            self._update_hook(self)
+
+IT = TypeVar("IT", bound="UpdateHookInstance[Any, Any, Any, Any]")
 
 class CombinationProvider(InstanceProvider[IT, KT, DT, VT, RT],
                           Generic[IT, KT, DT, VT, RT]):

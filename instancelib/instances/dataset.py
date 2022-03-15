@@ -63,7 +63,7 @@ class PandasDataset(ReadOnlyDataset[int, Any]):
         data: Sequence[Any] = self.df.iloc[keys][self.data_col] # type: ignore
         return data
 
-class ReadOnlyProvider(InstanceProvider[],
+class ReadOnlyProvider(InstanceProvider[IT, KT, DT, np.ndarray, RT],
                        Generic[IT, KT, DT, RT]):
 
     local_data: InstanceProvider[IT, KT, DT, np.ndarray, RT]

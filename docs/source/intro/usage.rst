@@ -1,6 +1,6 @@
 Basic usage
 ===========
-On this page, we briefly introduce some of the main concepts of the architecture of the library.
+On this page, we briefly introduce some of the main concepts of the library's architecture.
 The use case on this page is document classification, but InstanceLib is also suitable for other Machine Learning tasks and
 not limited to text data.
 
@@ -8,7 +8,7 @@ Data Structure
 --------------
 
 You can easily read tabular data such as Excel files.
-In the following example, we load a sample dataset of Dutch Tech news articles.
+We load a sample dataset of Dutch Tech news articles in the following example.
 
 .. code:: python
 
@@ -21,16 +21,15 @@ In the following example, we load a sample dataset of Dutch Tech news articles.
 We can access the data through an :class:`~instancelib.Environment` object.
 An Environment contains two main components: :class:`~instancelib.InstanceProvider` and :class:`~instancelib.LabelProvider`. 
 InstanceProviders contain :class:`~instancelib.Instance` objects (one for each raw data point). 
-Each instance contains at least four properties:
+Each Instance contains at least four properties:
 
-1. ``identifier``. Each instance has a unique identifier that can be used to 
-   retrieve the instance from the InstanceProvider.
+1. ``identifier``. Each Instance has a unique identifier that can be used to 
+   retrieve the Instance from the InstanceProvider.
 2. ``data``. This contains the raw data. For this example problem, this
    property contains the text of the article.
 3. ``vector``. Many classifiers cannot process the raw data directly if they
-   are not numerical. In this property, we can store a numerical vector that
-   represents the raw data. In this example, we can store a TF-IDF vector
-   representation or any otherdocument embedding. This property can be ``None``.
+   are not numerical. We can store a numerical vector representing the raw data in this property, such as a TF-IDF vector
+   representation or any other document embedding. This property can be ``None``.
 4. ``representation``. In some cases, the human-readable format differs from
    the raw data. If this is the case, the human-readable representation can be
    retrieved by this property.
@@ -54,7 +53,7 @@ For this example dataset, we already have labeled data points (they are stored i
 The :class:`~instancelib.LabelProvider` records the labels or classes of each instance. 
 You can request the labels for this instance as follows:
 
->>> text_env.labels.get_labels(ins)
+>>> text_env.labels[ins]
 frozenset({"Games"})
 
 The labels are returned as :class:`frozenset` objects to be able to deal with Multilabel Classification problems.
@@ -68,7 +67,7 @@ Often, you do want to divide your dataset further into subsets.
 In classification, we test the performance of a model by using a held out test set. 
 We can create a random `train test split` of 70 % train and 30 % test as follows.
 
->>> train, test = text_env.train_test_split(ins_provider)
+>>> train, test = text_env.train_test_split(ins_provider, size=0.70)
 
 Machine Learning
 ----------------
@@ -79,7 +78,7 @@ End-to-end models
 You can also train models with instancelib.
 These models can be based on either the data parts or the vectors of the instances.
 Scikit-learn offers end-to-end models in the form of :class:`~sklearn.pipeline.Pipeline` objects.
-The :class:`~instancelib.SkLearnDataClassifier` object allows you to use the end-to-end models tbat 
+The :class:`~instancelib.SkLearnDataClassifier` object allows you to use the end-to-end models that 
 adhere to the Scikit-learn API. 
 The model uses the :meth:`~instancelib.Instance.data` property directly and ignores the vectors.
 
@@ -107,8 +106,8 @@ If your problem is multilabel classification, then you can use the :func:`~insta
 Vector-based models
 ^^^^^^^^^^^^^^^^^^^
 
-Instead of using the raw data directly, you can use your own feature extraction or embeddings.
-For document classification, it would make sense to use a document embedding like Doc2Vec.
+Instead of using the raw data directly, you can use your own custom feature extraction or embeddings and precompute them.
+For example, for document classification, it would make sense to use a document embedding like Doc2Vec.
 In this library, you can easily integrate them in your pipeline.
 First, we define the feature extraction method:
 
@@ -117,16 +116,14 @@ First, we define the feature extraction method:
    from instancelib.feature_extraction.doc2vec import Doc2VecVectorizer
    d2v = il.TextInstanceVectorizer(Doc2VecVectorizer())
 
-Vectorizer objects first need to be fitted on some data to produce vectors. 
+Then, the following line will fit a Doc2Vec model on all instances that are stored in the dataset and compute an embedding for each individual instance.
 
-Then, you can give all documents the corresponding vectors by issuing the following line:
+>>> il.vectorize(d2v, text_env)
 
->>> vectorize(d2v, text_env)
+Now every Instance in the ``text_env`` has a vector. 
+Next, we can define a new model that can be used to classify the documents. 
 
-Now every instance in the ``text_env`` has a vector. Next, we can define a new model that can be used to 
-classify the documents. 
-
-Similar as in the end-to-end example, we can construct a new model by using the :func:`~instancelib.machinelearning.sklearn.SkLearnClassifier.build` method.
+Like in the end-to-end example, we can construct a new model by using the :func:`~instancelib.machinelearning.sklearn.SkLearnClassifier.build` method.
 
 .. code:: python
 
@@ -160,7 +157,7 @@ The results are returned in a similar fashion as above, but now, the probabiliti
 >>> vec_model.predict_proba(test)
 [(20, frozenset({("Games", 0.66), ("Bedrijfsnieuws", 0.22), ("Smartphones", 0.12)})), ... ]
 
-If you want to further analyse the prediction probabilities (for example, in Active Learning) you may want to access the raw :class:`numpy.ndarray`.
+If you want to analyze the prediction probabilities further (for example, in Active Learning), you may want to access the raw :class:`numpy.ndarray`.
 Each input is processed in batches to mitigate memory issues when processing large datasets that do not fit in memory.
 You can specify the ``batch_size`` in the function (default 200).
 :func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba_raw` method.
@@ -175,7 +172,6 @@ This can also be done for the :func:`~instancelib.machinelearning.base.AbstractC
                         ...]))
 
 The function :func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba_raw` is a :term:`generator`.
-Each call to :func:`next` will return the raw matrix for a batch. 
-Again, the identifiers corresponding to the rows in the 2d array will be returned.
-
+Each call to :func:`next` will calculate the raw matrix for the next batch. 
+Again,  the method will return the identifiers corresponding to the rows in the 2d array.
 

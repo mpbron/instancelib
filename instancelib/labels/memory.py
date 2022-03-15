@@ -77,9 +77,10 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
         return cls(labelset, labeldict, labeldict_inv)
 
     @classmethod
-    def from_provider(cls, provider: LabelProvider[KT, LT]) -> MemoryLabelProvider[KT, LT]:
+    def from_provider(cls, provider: LabelProvider[KT, LT], subset: Iterable[KT] = list()) -> MemoryLabelProvider[KT, LT]:
+        instances = frozenset(subset) if subset else frozenset(provider.keys())
         labelset = provider.labelset
-        labeldict_inv = {label: set(provider.get_instances_by_label(label)) for label in labelset}
+        labeldict_inv = {label: set(provider.get_instances_by_label(label).intersection(instances)) for label in labelset}
         labeldict: Dict[KT, Set[LT]]= {}
         for label, key_list in labeldict_inv.items():
             for key in key_list:

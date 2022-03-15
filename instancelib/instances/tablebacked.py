@@ -152,7 +152,7 @@ class TableInstance(MutableMapping[str, Any],
 class TableProviderRO(ROInstanceProvider[IT, KT, DT, VT, RT], Generic[IT,KT, DT, VT, RT, MT]):
     columns: Sequence[str]
     storage: Mapping[KT, Mapping[str, Any]]
-    builder: Callable[[ROInstanceProvider[IT, KT, DT, VT, RT], KT, Mapping[str, Any], Optional[VT]], IT]
+    builder: Callable[[KT, Mapping[str, Any], Optional[VT]], IT]
     vectors: VectorStorage[KT, VT, MT]
 
 
@@ -160,7 +160,7 @@ class TableProviderRO(ROInstanceProvider[IT, KT, DT, VT, RT], Generic[IT,KT, DT,
                  storage: MutableMapping[KT, MutableMapping[str, Any]],
                  columns: Sequence[str],
                  vectors: VectorStorage[KT, VT, MT],
-                 builder: Callable[[ROInstanceProvider[IT, KT, DT, VT, RT], KT, Mapping[str, Any], Optional[VT]], IT],
+                 builder: Callable[[KT, Mapping[str, Any], Optional[VT]], IT],
                  ):
         self.storage = storage
         self.columns = columns
@@ -181,7 +181,7 @@ class TableProviderRO(ROInstanceProvider[IT, KT, DT, VT, RT], Generic[IT,KT, DT,
     def __getitem__(self, key: KT) -> IT:
         data = self.storage[key]
         vector = self._get_vector(key)
-        ins = self.builder(self, key, data, vector)
+        ins = self.builder(key, data, vector)
         return ins
 
     def __len__(self) -> int:

@@ -14,7 +14,7 @@ class ChildGenerator(ABC, Generic[IT]):
     env: AbstractEnvironment[IT, Any, Any, Any, Any, Any]
 
     def register_child(self, parent: IT, child: IT) -> None:
-        self.env.all_datapoints.add_child(parent, child)
+        self.env.all_instances.add_child(parent, child)
 class SinglePertubator(ABC, Generic[IT]):
     
     @abstractmethod

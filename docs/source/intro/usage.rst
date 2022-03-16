@@ -108,7 +108,7 @@ Vector-based models
 
 Instead of using the raw data directly, you can use your own custom feature extraction or embeddings and precompute them.
 For example, for document classification, it would make sense to use a document embedding like Doc2Vec.
-In this library, you can easily integrate them in your pipeline.
+In this library, you can easily use third-party vectorizers.
 First, we define the feature extraction method:
 
 .. code:: python
@@ -116,7 +116,7 @@ First, we define the feature extraction method:
    from instancelib.feature_extraction.doc2vec import Doc2VecVectorizer
    d2v = il.TextInstanceVectorizer(Doc2VecVectorizer())
 
-Then, the following line will fit a Doc2Vec model on all instances that are stored in the dataset and compute an embedding for each individual instance.
+Then, the following line will fit a Doc2Vec model on all instances stored in the dataset and compute an embedding for each Instance.
 
 >>> il.vectorize(d2v, text_env)
 
@@ -146,13 +146,12 @@ As arguments to the predicitions you can either provide :class:`~instancelib.Ins
 >>> vec_model.predict([ins])
 [(20, frozenset({"Games"}))]
 
-The return type is a list of tuples. The first element of the tuple is the instance's identifier, the second are the predicted labels.
-The order of elements in an InstanceProvider is not always predictable, therefore, the identifiers are returned to ensure that the labels
-correspond to the instances. 
+The return type is a list of tuples. The first element of each tuple is the Instance's identifier; the second element is a :class:`frozenset` of the predicted labels.
+The order of elements in an InstanceProvider is not always predictable. Therefore, the model returns the corresponding identifiers to ensure that the labels correspond to the instances. 
 
 Like in Scikit-Learn, the class probabilities can also be returned with 
 the :func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba` method. 
-The results are returned in a similar fashion as above, but now, the probabilities are also included.
+The model returns the results in a similar fashion as above but with the corresponding probabilities for each class.
 
 >>> vec_model.predict_proba(test)
 [(20, frozenset({("Games", 0.66), ("Bedrijfsnieuws", 0.22), ("Smartphones", 0.12)})), ... ]
@@ -160,7 +159,7 @@ The results are returned in a similar fashion as above, but now, the probabiliti
 If you want to analyze the prediction probabilities further (for example, in Active Learning), you may want to access the raw :class:`numpy.ndarray`.
 Each input is processed in batches to mitigate memory issues when processing large datasets that do not fit in memory.
 You can specify the ``batch_size`` in the function (default 200).
-:func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba_raw` method.
+:func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba_raw` method. 
 This can also be done for the :func:`~instancelib.machinelearning.base.AbstractClassifier.predict` and 
 :func:`~instancelib.machinelearning.base.AbstractClassifier.predict_proba` methods.
 

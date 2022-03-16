@@ -528,6 +528,111 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         """
         return list(self.get_all())
 
+    def map(self, func: Callable[[InstanceType], _V]) -> Iterator[_V]:
+        """A higher order function that maps any function that works on
+        individual :class:`Instance` objects on every contained object in
+        this provider. 
+
+        Parameters
+        ----------
+        func : Callable[[InstanceType], _V]
+            A function that works on :class:`Instance` objects of type `InstanceType`
+
+        Yields
+        -------
+        Iterator[_V]
+            The values produced by the function `func`
+        """        
+        keys = self.key_list
+        for key in keys:
+            instance = self[key]
+            result = func(instance)
+            yield result
+
+    def data_map(self, func: Callable[[DT], _V]) -> Iterator[_V]:
+        """A higher order function that maps any function that works on
+        individual :class:`~instancelib.typehints.KT` object 
+        on every  :class:`Instance` object in this provider. 
+
+        Parameters
+        ----------
+        func
+            The function that should be applied
+
+        Yields
+        -------
+        _V
+            The values produced by the function `func`
+        """
+        instances = self.values()
+        mapped_f = Instance[KT, DT, VT, RT].map_data(func)
+        results = map(mapped_f, instances)
+        yield from results
+
+    def all_data(self) -> Iterator[DT]:
+        """Return all the raw data from the instances in this provider
+
+        Yields
+        ------
+        DT
+            Raw data
+        """        
+        yield from (instance.data for instance in self.values())
+
+    def vectorized_map(self, 
+                       func: Callable[[Iterable[InstanceType]], _V], 
+                       batch_size: int = 200) -> Iterator[_V]:
+        """Maps a function that works on multiple instances
+        onto all the instances in batches of size `batch_size`.
+
+        Note: If you run a function that combines multiple instances into
+        a single result, this may possibly lead to undiserable results if 
+        batches are not taken into account.
+
+        Parameters
+        ----------
+        func : Callable[[Iterable[InstanceType]], _V]
+            The function that should be applied
+        batch_size : int, optional
+            The size of the batch, by default 200
+
+        Yields
+        -------
+        _V
+            The result type of the function in parameter `func`
+        """        
+        chunks = divide_iterable_in_lists(self.values(), batch_size)
+        results = map(func, chunks)
+        yield from results
+    
+    def vectorized_data_map(self, 
+                            func: Callable[[Iterable[DT]], _V],
+                            batch_size: int = 200
+                            ) -> Iterator[_V]:
+        """Maps a function that works on multiple raw data points
+        onto all the instances in batches of size `batch_size`.
+
+        Note: If you run a function that combines multiple instances into
+        a single result, this may possibly lead to undiserable results if 
+        batches are not taken into account.
+
+        Parameters
+        ----------
+        func
+            The function that should be applied
+        batch_size : int, optional
+            The size of the batch, by default 200
+
+        Yields
+        -------
+        _V
+            The result type of the function in parameter `func`
+        """        
+        chunks = divide_iterable_in_lists(self.values(), batch_size)
+        mapped_f = Instance[KT, DT, VT, RT].vectorized_data_map(func)
+        results = map(mapped_f, chunks)
+        yield from results
+
     @property
     def type_info(self) -> Optional[TypeInfo]:
         try:

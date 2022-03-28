@@ -48,6 +48,7 @@ setuptools.setup( # type: ignore
         "scikit-learn", 
         "openpyxl", 
         "xlrd",
+        "tqdm",
         "more-itertools"],
     extras_require={
         "doc2vec": ["gensim"],

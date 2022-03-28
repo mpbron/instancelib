@@ -21,9 +21,11 @@ from __future__ import annotations
 import itertools
 import logging
 from typing import (Any, FrozenSet, Generic, Iterable, Iterator, Sequence,
-                    Tuple, TypeVar)
+                    Tuple, TypeVar, Union)
 
 import numpy as np  # type: ignore
+from tqdm.auto import tqdm
+from math import ceil
 
 from ..exceptions import NoVectorsException
 from ..instances import Instance, InstanceProvider
@@ -110,14 +112,16 @@ class SkLearnVectorClassifier(SkLearnClassifier[IT, KT, Any, np.ndarray, LT],
                                    provider: InstanceProvider[IT, KT, Any, np.ndarray, Any],
                                    batch_size: int = 200) -> Iterator[Tuple[Sequence[KT], np.ndarray]]:
         matrices = FeatureMatrix[KT].generator_from_provider(provider, batch_size)
-        preds = map(self._get_probas, matrices)
+        total_it = ceil(len(provider) / batch_size)
+        preds = map(self._get_probas, tqdm(matrices, total=total_it))
         yield from preds
 
     def predict_provider(self, 
                          provider: InstanceProvider[IT, KT, Any, np.ndarray, Any], 
                          batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         matrices = FeatureMatrix[KT].generator_from_provider(provider, batch_size)
-        preds = map(self._get_preds, matrices)
+        total_it = ceil(len(provider) / batch_size)
+        preds = map(self._get_preds, tqdm(matrices, total=total_it))
         results = list(zip_chain(preds))
         return results
         

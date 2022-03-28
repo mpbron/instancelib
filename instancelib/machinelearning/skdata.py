@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import math
 import itertools
 import logging
 from os import PathLike
@@ -29,6 +30,7 @@ import numpy as np  # type: ignore
 import sklearn as sk  # type: ignore
 from sklearn.base import ClassifierMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
+from tqdm.auto import tqdm
 
 from ..instances import Instance, InstanceProvider
 from ..labels.base import LabelProvider
@@ -108,14 +110,16 @@ class SkLearnDataClassifier(SkLearnClassifier[IT, KT, DT, Any, LT],
                                    provider: InstanceProvider[IT, KT, DT, Any, Any],
                                    batch_size: int = 200) -> Iterator[Tuple[Sequence[KT], np.ndarray]]:
         tuples = provider.data_chunker(batch_size)
-        preds = map(self._get_probas, tuples)
+        total_it = math.ceil(len(provider)/ batch_size)
+        preds = map(self._get_probas, tqdm(tuples, total=total_it))
         yield from preds
 
     def predict_provider(self, 
                          provider: InstanceProvider[IT, KT, DT, Any, Any], 
                          batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         tuples = provider.data_chunker(batch_size)
-        preds = map(self._get_preds, tuples)
+        total_it = math.ceil(len(provider)/ batch_size)
+        preds = map(self._get_preds, tqdm(tuples, total=total_it))
         results = list(zip_chain(preds))
         return results
         

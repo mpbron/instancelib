@@ -25,6 +25,7 @@ from typing import (Any, FrozenSet, Generic, Iterable, Iterator, List,
                     Optional, Sequence, Tuple, TypeVar, Union)
 
 import numpy as np
+from tqdm.auto import tqdm
 
 from sklearn.base import ClassifierMixin, TransformerMixin
 from sklearn.pipeline import Pipeline  # type: ignore
@@ -159,7 +160,7 @@ class SkLearnClassifier(SaveableInnerModel,
                                     batch_size: int = 200
                                     ) -> Iterator[Tuple[Sequence[KT], np.ndarray]]:
         batches = divide_iterable_in_lists(instances, batch_size)
-        processed = map(self._pred_proba_raw_ins_batch, batches)
+        processed = map(self._pred_proba_raw_ins_batch, tqdm(batches))
         yield from processed
 
     def predict_proba_instances(self, 
@@ -168,7 +169,7 @@ class SkLearnClassifier(SaveableInnerModel,
                                 ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         
         batches = divide_iterable_in_lists(instances, batch_size)
-        processed = map(self._pred_proba_ins_batch, batches)
+        processed = map(self._pred_proba_ins_batch, tqdm(batches))
         combined: Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]] = functools.reduce(
             operator.concat, processed, []) # type: ignore
         return combined
@@ -177,7 +178,7 @@ class SkLearnClassifier(SaveableInnerModel,
                           instances: Iterable[Instance[KT, DT, VT, Any]],
                           batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:        
         batches = divide_iterable_in_lists(instances, batch_size)
-        results = map(self._pred_ins_batch, batches)
+        results = map(self._pred_ins_batch, tqdm(batches))
         concatenated: Sequence[Tuple[KT, FrozenSet[LT]]] = functools.reduce(
             lambda a,b: operator.concat(a,b), results, []) # type: ignore
         return concatenated

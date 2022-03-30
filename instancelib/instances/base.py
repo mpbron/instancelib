@@ -19,7 +19,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from typing import (Any, Callable, Generic, Iterable, Iterator, List, Mapping, MutableMapping,
+from typing import (Any, Callable, FrozenSet, Generic, Iterable, Iterator, List, Mapping, MutableMapping,
                     Optional, Sequence, Tuple, Type, TypeVar, Union)
 
 from ..utils.chunks import divide_iterable_in_lists
@@ -164,6 +164,7 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
             "representation": self.representation}
         return mapping
 
+   
     @staticmethod
     def map_data(func: Callable[[DT], _V]) -> Callable[[Instance[KT, DT, VT, RT]], _V]:
         """Transform function that works on raw data into a function that works on
@@ -438,6 +439,13 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         chunks = divide_iterable_in_lists(datapoints, batch_size)
         yield from chunks
     
+    @property
+    def with_vector(self) -> FrozenSet[KT]:
+        return frozenset((k for k,v in self.items() if v.vector is not None))
+
+    @property
+    def without_vector(self) -> FrozenSet[KT]:
+        return frozenset((k for k,v in self.items() if v.vector is None))
 
     def instance_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
         chunks = divide_iterable_in_lists(keys, batch_size)

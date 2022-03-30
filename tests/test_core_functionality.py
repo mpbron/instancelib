@@ -248,4 +248,29 @@ def test_usage():
     env = TextEnvironment.from_data(["A", "B", "C"], [1,2,3], ["Test", "Test2", "Test3"], [["A"], ["A", "B"], ["C"]], None)
 
 
-    
+def test_autovectorizer():
+    from instancelib.machinelearning.autovectorizer import AutoVectorizer
+    df = pd.read_excel(DATASET_FILE)
+    env_a = il.pandas_to_env(df, ["fulltext"], ["label"])
+    vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
+    il.vectorize(vect, env_a)
+    train_a, test_a = env_a.train_test_split(env_a.dataset, 0.70)
+    model_a = il.SkLearnVectorClassifier.build(MultinomialNB(), env_a)
+    model_a.fit_provider(train_a, env_a.labels)
+
+    env_b = il.pandas_to_env(df, ["fulltext"], ["label"])
+    train_b = env_b.create_bucket(train_a)
+    test_b = env_b.create_bucket(test_a)
+    half1_b, half2_b = env_b.train_test_split(env_b.dataset, 0.50)
+    half1_a, half2_a = env_a.create_bucket(half1_b), env_a.create_bucket(half2_b)
+    model_b = AutoVectorizer.from_skvector(model_a, vect)
+
+
+    results1_a = il.classifier_performance(model_a, test_a, env_a.labels)
+    results1_b = il.classifier_performance(model_b, test_b, env_b.labels)
+    results2_a = il.classifier_performance(model_a, half2_a, env_a.labels)
+    results2_b = il.classifier_performance(model_b, half2_b, env_b.labels)
+   
+    assert results1_a.accuracy == results1_b.accuracy
+    assert results1_b.precision == results1_a.precision
+    assert results2_a.accuracy == results2_a.accuracy

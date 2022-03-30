@@ -150,5 +150,4 @@ class SkLearnVectorClassifier(SkLearnClassifier[IT, KT, Any, np.ndarray, LT],
         x_filtered, y_mat = self._filter_x_only_encoded_y(x_data, labels)
         x_mat = np.vstack(x_filtered)
         self._fit(x_mat, y_mat)
-    
 

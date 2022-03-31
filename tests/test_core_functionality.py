@@ -249,7 +249,7 @@ def test_usage():
 
 
 def test_autovectorizer():
-    from instancelib.machinelearning.autovectorizer import AutoVectorizer
+    from instancelib.machinelearning.autovectorizer import AutoVectorizerClassifier
     df = pd.read_excel(DATASET_FILE)
     env_a = il.pandas_to_env(df, ["fulltext"], ["label"])
     vect = il.TextInstanceVectorizer(il.SklearnVectorizer(TfidfVectorizer(max_features=1000)))
@@ -263,7 +263,7 @@ def test_autovectorizer():
     test_b = env_b.create_bucket(test_a)
     half1_b, half2_b = env_b.train_test_split(env_b.dataset, 0.50)
     half1_a, half2_a = env_a.create_bucket(half1_b), env_a.create_bucket(half2_b)
-    model_b = AutoVectorizer.from_skvector(model_a, vect)
+    model_b = AutoVectorizerClassifier.from_skvector(model_a, vect)
 
 
     results1_a = il.classifier_performance(model_a, test_a, env_a.labels)

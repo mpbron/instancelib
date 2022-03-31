@@ -19,7 +19,7 @@ from .skvectors import SkLearnVectorClassifier
 
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
-class AutoVectorizer(SkLearnVectorClassifier[IT, KT, LT], Generic[IT, KT, LT]):
+class AutoVectorizerClassifier(SkLearnVectorClassifier[IT, KT, LT], Generic[IT, KT, LT]):
     def __init__(self, 
                  estimator: Union[ClassifierMixin, Pipeline], 
                  vectorizer: BaseVectorizer[IT],
@@ -80,6 +80,6 @@ class AutoVectorizer(SkLearnVectorClassifier[IT, KT, LT], Generic[IT, KT, LT]):
     @classmethod
     def from_skvector(cls, 
                        model: SkLearnVectorClassifier[IT, KT, LT], 
-                       vectorizer: BaseVectorizer[IT]) -> AutoVectorizer[IT, KT, LT]:
+                       vectorizer: BaseVectorizer[IT]) -> AutoVectorizerClassifier[IT, KT, LT]:
         result = cls(model.innermodel, vectorizer, model.encoder)
         return result

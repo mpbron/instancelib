@@ -1,5 +1,6 @@
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, Iterable, List, Sequence, Set, Tuple, TypeVar
+from typing import Any, Dict, FrozenSet, Iterable, List, Sequence, Set, Tuple, TypeVar, Iterator
 import numpy as np
 
 from pandas.core.frame import DataFrame
@@ -16,7 +17,11 @@ import pandas as pd
 
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
-
+@dataclass
+class Qrel:
+    topic: str
+    doc_id: str
+    relevancy: int
 
 def read_doctexts(doctext_file: Path) -> Dict[str, Dict[str, str]]:
     def process_line(line: str) -> Tuple[str, Dict[str, str]]:
@@ -36,21 +41,20 @@ def build_doc_map(topic_docs: Dict[str, Dict[str, Dict[str, str]]]) -> Dict[str,
 
 def read_docids(docid_file: Path) -> FrozenSet[str]:
     with docid_file.open() as f:
-        docids = frozenset([line.replace("\n", "") for line in f.readlines()])
+        docids = frozenset([line.strip() for line in f.readlines()])
     return docids
 
 def read_qrel(qrel_file: Path) -> pd.DataFrame:
-    col_names = ["Topic", "Iteration", "Document", "Relevancy"]
-    dtypes = {"Topic": "str", "Document": "str"}
-    try:
-        df = pd.read_fwf(qrel_file, header=None, names=col_names, dtype=dtypes)
-    except:
-        df = pd.read_csv(qrel_file, 
-                       sep="\t", 
-                       header=None,
-                       names=col_names,
-                       dtype=dtypes)
-    df = df.set_index("Document")
+    def qrel_iterator() -> Iterator[Qrel]:
+        with open(qrel_file, 'r', encoding='utf8') as f:
+            for line in f:
+                if len(line.split()) != 4:
+                    continue
+                topic_id, _, doc_id, rel = line.split()
+                yield Qrel(topic_id, doc_id, int(rel))
+    qrels = list(qrel_iterator())
+    df = pd.DataFrame(qrels)
+    df = df.set_index("doc_id")
     return df
 
 def read_topics(topic_dir: Path) -> pd.DataFrame:
@@ -58,7 +62,9 @@ def read_topics(topic_dir: Path) -> pd.DataFrame:
     for file in topic_dir.iterdir():
         with file.open() as f:
             jsons.append(*[json.loads(line) for line in f.readlines()])
-    return pd.DataFrame(jsons)
+    df = pd.DataFrame(jsons)
+    df = df.set_index("id")
+    return df
 
 def read_qrel_dataset(base_dir: Path): 
     qrel_dir = base_dir / "qrels"
@@ -71,7 +77,6 @@ def read_qrel_dataset(base_dir: Path):
     topics = read_topics(topics_dir)
     return doc_ids, texts, qrels, topics
 
-    
 class TrecDataset():
 
     def __init__(self, 
@@ -89,7 +94,7 @@ class TrecDataset():
         self.pos_label = pos_label
         self.neg_label = neg_label
 
-        self.topic_keys = list(self.topics.id)
+        self.topic_keys = list(self.topics.index)
 
         self.docmap = build_doc_map(self.texts)
 
@@ -98,7 +103,7 @@ class TrecDataset():
 
     def get_labels(self, topic_key: str, document: str) -> FrozenSet[str]:
         qrel_df = self.qrels[topic_key]
-        relevancy = qrel_df.xs(document).Relevancy
+        relevancy = qrel_df.xs(document).relevancy
         if relevancy == 1:
             return frozenset([self.pos_label])
         return frozenset([self.neg_label])
@@ -148,7 +153,7 @@ class TrecDataset():
 
     
     @classmethod
-    def from_path(cls, base_dir: Path): 
+    def from_path(cls, base_dir: Path):
         qrel_dir = base_dir / "qrels"
         doctexts_dir = base_dir / "doctexts"
         topics_dir = base_dir / "topics"

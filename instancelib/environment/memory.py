@@ -21,7 +21,7 @@ from typing import Generic, Iterable, Dict, Iterator, TypeVar, Any
 
 from ..instances.base import Instance, InstanceProvider
 from ..instances.memory import MemoryBucketProvider
-from ..labels.memory import MemoryLabelProvider
+from ..labels.base import LabelProvider
 
 from .base import AbstractEnvironment
 
@@ -80,7 +80,7 @@ class AbstractMemoryEnvironment(
     """An :class:`~instancelib.InstanceProvider` that contains all original Instances"""
     _dataset: InstanceProvider[InstanceType, KT, DT, VT, RT]
     """An :class:`InstanceProvider` that contains all instances"""
-    _labelprovider: MemoryLabelProvider[KT, LT]
+    _labelprovider: LabelProvider[KT, LT]
     """This object contains all labels"""
     _named_providers: Dict[str, InstanceProvider[InstanceType, KT, DT, VT, RT]] = dict()
     """All user generated providers that were given a name"""
@@ -112,7 +112,7 @@ class AbstractMemoryEnvironment(
         return self._dataset
     
     @property
-    def labels(self) -> MemoryLabelProvider[KT, LT]:
+    def labels(self) -> LabelProvider[KT, LT]:
         return self._labelprovider
 
     def create_bucket(self, keys: Iterable[KT]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
@@ -196,7 +196,7 @@ class MemoryEnvironment(
     def __init__(
             self,
             dataset: InstanceProvider[InstanceType, KT, DT, VT, RT],
-            labelprovider: MemoryLabelProvider[KT, LT]
+            labelprovider: LabelProvider[KT, LT]
         ):
         """[summary]
 

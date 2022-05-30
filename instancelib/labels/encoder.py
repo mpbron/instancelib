@@ -180,7 +180,7 @@ class SklearnLabelEncoder(LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray], 
     def encode(self, labels: Iterable[LT]) -> np.ndarray:
         try:
             first_label = next(iter(labels))
-        except StopIteration():
+        except StopIteration:
             raise LabelEncodingException("This instance has no label, but one is required (binary / multiclass classification)")
         return self.encoder.transform([first_label]) # type: ignore
 
@@ -239,4 +239,3 @@ class SklearnMultiLabelEncoder(SklearnLabelEncoder[LT], Generic[LT]):
         first_labeling: Iterable[LT] = self.encoder.inverse_transform(vector).tolist()[0] # type: ignore
         return frozenset(first_labeling)
 
-    

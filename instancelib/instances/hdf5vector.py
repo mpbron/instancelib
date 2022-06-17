@@ -34,13 +34,14 @@ from .vectorstorage import VectorStorage, ensure_writeable
 
 from ..typehints import KT, DType
 
-def key_wrapper(key: Any) -> Union[int, str]:
-    if isinstance(key, (int, str)):
-        return key
-    return str(key)
 
-def keys_wrapper(keys: Sequence[Any]) -> Sequence[Union[int,str]]:
-    return [key_wrapper(key) for key in keys]
+def keys_wrapper(keys: Sequence[Any]) -> Sequence[Union[int, str]]:
+    def key_wrapper(key: Any) -> Union[int, str]:
+        if isinstance(key, (int, str)):
+            return key
+        return str(key)
+    converted = [key_wrapper(key) for key in keys]
+    return converted
 
 
 
@@ -127,9 +128,9 @@ class HDF5VectorStorage(VectorStorage[KT, npt.NDArray[DType], npt.NDArray[DType]
                 hfile.create_dataset("dicts", (2,), dtype=dt) # type: ignore
             dicts = hfile["dicts"]
             assert isinstance(dicts, Dataset)
-            dicts[0] = np.fromstring( # type: ignore
+            dicts[0] = np.frombuffer( # type: ignore
                 pickle.dumps(self.key_dict), dtype="uint8") #type: ignore
-            dicts[1] = np.fromstring( # type: ignore
+            dicts[1] = np.frombuffer( # type: ignore
                 pickle.dumps(self.inv_key_dict), dtype="uint8") # type: ignore
     
     @ensure_writeable
@@ -194,9 +195,10 @@ class HDF5VectorStorage(VectorStorage[KT, npt.NDArray[DType], npt.NDArray[DType]
             The keys that should be written
         """        
         with h5py.File(self.h5path, self.__mode) as hfile:
+            converted_keys = keys_wrapper(keys)
             if "keys" not in hfile:
                 hfile.create_dataset("keys", # type: ignore
-                    data = np.array(keys_wrapper(keys)), maxshape=(None,)) # type: ignore
+                    data = converted_keys, maxshape=(None,)) # type: ignore
             for i, key in enumerate(keys):
                 self.key_dict[key] = i
                 self.inv_key_dict[i] = key
@@ -255,7 +257,7 @@ class HDF5VectorStorage(VectorStorage[KT, npt.NDArray[DType], npt.NDArray[DType]
         if not self.datasets_exist:
             raise NoVectorsException("Cannot append without existing vectors")
         assert all(map(lambda k: k not in self.key_dict, keys))
-        new_keys = np.array(keys_wrapper(keys)) # type: ignore
+        new_keys = keys_wrapper(keys) # type: ignore
         with h5py.File(self.h5path, self.__mode) as hfile:
             key_set = hfile["keys"]
             assert isinstance(key_set, Dataset)

@@ -1,7 +1,8 @@
 import instancelib as il
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.feature_extraction.text import TfidfVectorizer # type: ignore
+from sklearn.naive_bayes import MultinomialNB # type: ignore
+import uuid 
 
 DATASET_FILE = "datasets/testdataset.xlsx"
 
@@ -274,3 +275,30 @@ def test_autovectorizer():
     assert results1_a.accuracy == results1_b.accuracy
     assert results1_b.precision == results1_a.precision
     assert results2_a.accuracy == results2_a.accuracy
+
+def test_vector_storage():
+    from instancelib.instances.hdf5vector import HDF5VectorStorage
+    import numpy as np
+    import tempfile
+    import os
+    file = tempfile.NamedTemporaryFile(delete=False)
+    file.close()
+    keys = [uuid.uuid1() for _ in range(200)]
+    gen = np.random.default_rng()
+    mat = gen.random((200,200))
+    with HDF5VectorStorage[uuid.UUID, np.float64](file.name, "a") as h5a:# type: ignore
+        h5a.add_bulk_matrix(keys, mat)
+        for i in range(200):
+            assert np.allclose(h5a[keys[i]], mat[i,:]) # type: ignore
+        ret_keys, ret_mat = h5a.get_matrix(keys)
+        assert len(frozenset(ret_keys).intersection(keys)) == 200
+        assert ret_mat.shape == mat.shape
+    # The vector file is now closed.
+    # Testing reopening the file
+    with HDF5VectorStorage[uuid.UUID, np.float64](file.name) as h5r: # type: ignore
+        for i in range(200):
+            assert np.allclose(h5a[keys[i]], mat[i,:]) # type: ignore
+        ret_keys, ret_mat = h5a.get_matrix(keys)
+        assert len(frozenset(ret_keys).intersection(keys)) == 200
+        assert ret_mat.shape == mat.shape
+    os.unlink(file.name)

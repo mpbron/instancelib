@@ -262,7 +262,7 @@ class HDF5VectorStorage(VectorStorage[KT, npt.NDArray[DType], npt.NDArray[DType]
             key_set = hfile["keys"]
             assert isinstance(key_set, Dataset)
             old_shape = key_set.shape # type: ignore
-            arr_shape = new_keys.shape
+            arr_shape = (len(new_keys),)
             new_shape = (old_shape[0] + arr_shape[0],) # type: ignore
             key_set.resize(size=new_shape) # type: ignore
             key_set[-arr_shape[0]:] = new_keys

@@ -19,7 +19,7 @@ import functools
 from io import UnsupportedOperation
 from abc import abstractmethod
 from typing import (Any, Callable, Generic, Iterator, MutableMapping, Sequence,
-                    Tuple, TypeVar, Union)
+                    Tuple, TypeVar)
 
 
 from ..typehints import KT, VT, MT
@@ -53,7 +53,7 @@ class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT, MT]):
         raise NotImplementedError
     
     @abstractmethod
-    def add_bulk_matrix(self, input_keys: Sequence[KT], matrix: MT) -> None:
+    def add_bulk_matrix(self, keys: Sequence[KT], matrix: MT) -> None:
         raise NotImplementedError
 
     @abstractmethod

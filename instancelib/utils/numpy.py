@@ -21,10 +21,12 @@ from typing import Iterable, Optional, Sequence, Tuple, Union
 from h5py._hl.dataset import Dataset  # type: ignore
 
 import numpy as np
+import numpy.typing as npt
 
-from ..typehints import KT
+from ..typehints import KT, DType
 
-def to_bicolumn_proba(matrix: np.ndarray) -> np.ndarray:
+
+def to_bicolumn_proba(matrix: npt.NDArray[DType]) -> npt.NDArray[DType]:
     """Converts a matrix to bi column probability 
     matrix if it is a single column matrix. 
     Otherwhise, no changes occurs.
@@ -42,11 +44,11 @@ def to_bicolumn_proba(matrix: np.ndarray) -> np.ndarray:
     if len(matrix.shape) == 2:
         if matrix.shape[1] == 1: 
             neg_prob = 1.0 - matrix
-            prob_np = np.hstack((neg_prob, matrix))
+            prob_np: npt.NDArray[DType] = np.hstack((neg_prob, matrix)) # type: ignore
             return prob_np
     if len(matrix.shape) == 1:
         neg_prob = 1.0 - matrix
-        prob_np = np.hstack((neg_prob, matrix))
+        prob_np:  npt.NDArray[DType] = np.hstack((neg_prob, matrix)) # type: ignore
         return prob_np
     return matrix
     
@@ -62,7 +64,7 @@ def get_lists(slices: Iterable[Tuple[int, Optional[int]]]) -> Sequence[int]:
     result = list(itertools.chain.from_iterable(map(convert_back, slices)))
     return result
 
-def slicer(matrix: Union[Dataset, np.ndarray], slices: Iterable[Tuple[int, Optional[int]]]) -> np.ndarray:
+def slicer(matrix: Union[Dataset, npt.NDArray[DType]], slices: Iterable[Tuple[int, Optional[int]]]) -> npt.NDArray[DType]:
         def get_slices_1d(): # type: ignore
             for slice_min, slice_max in slices:
                 if slice_max is not None:
@@ -80,18 +82,18 @@ def slicer(matrix: Union[Dataset, np.ndarray], slices: Iterable[Tuple[int, Optio
             return np.hstack(list(get_slices_1d())) # type: ignore
         return np.vstack(list(get_slices_2d())) # type: ignore
 
-def memslicer(matrix: Union[Dataset, np.ndarray], slices: Iterable[Tuple[int, Optional[int]]]) -> np.ndarray:
+def memslicer(matrix: Union[Dataset, npt.NDArray[DType]], slices: Iterable[Tuple[int, Optional[int]]]) -> npt.NDArray[DType]:
     idxs = get_lists(slices)
     min_idx, max_idx= min(idxs), max(idxs)
     new_idxs = tuple([idx - min_idx for idx in idxs])
     dims = len(matrix.shape) # type: ignore
     
-    def get_slice_1d() -> np.ndarray:
-        big_slice_mat: np.ndarray = matrix[min_idx:(max_idx + 1)] # type: ignore 
+    def get_slice_1d() -> npt.NDArray[DType]:
+        big_slice_mat: npt.NDArray[DType] = matrix[min_idx:(max_idx + 1)] # type: ignore 
         small_slice_mat = big_slice_mat[new_idxs]
         return small_slice_mat
-    def get_slice_2d() -> np.ndarray:
-        big_slice_mat: np.ndarray = matrix[min_idx:(max_idx + 1),:] # type: ignore
+    def get_slice_2d() -> npt.NDArray[DType]:
+        big_slice_mat: npt.NDArray[DType] = matrix[min_idx:(max_idx + 1),:] # type: ignore
         small_slice_mat = big_slice_mat[new_idxs, :] # type: ignore
         return small_slice_mat
    
@@ -103,34 +105,34 @@ def memslicer(matrix: Union[Dataset, np.ndarray], slices: Iterable[Tuple[int, Op
         return mat
     raise NotImplementedError("No Slicing for 3d yet")
 
-def matrix_to_vector_list(matrix: np.ndarray) -> Sequence[np.ndarray]:
-    def get_vector(index: int) -> np.ndarray:
+def matrix_to_vector_list(matrix: npt.NDArray[DType]) -> Sequence[npt.NDArray[DType]]:
+    def get_vector(index: int) -> npt.NDArray[DType]:
         return matrix[index, :]
     n_rows = matrix.shape[0]
     rows = range(n_rows)
     return list(map(get_vector, rows))
 
 def matrix_tuple_to_vectors(keys: Sequence[KT], 
-                            matrix: np.ndarray
-                           ) -> Tuple[Sequence[KT], Sequence[np.ndarray]]:
+                            matrix: npt.NDArray[DType]
+                           ) -> Tuple[Sequence[KT], Sequence[npt.NDArray[DType]]]:
     return keys, matrix_to_vector_list(matrix)
 
 def matrix_tuple_to_zipped(keys: Sequence[KT], 
-                           matrix: np.ndarray) -> Sequence[Tuple[KT, np.ndarray]]:
+                           matrix: npt.NDArray[DType]) -> "Sequence[Tuple[KT, npt.NDArray[DType]]]":
     result = list(zip(keys, matrix_to_vector_list(matrix)))
     return result
 
 
 
-def combiner(chunk_a: Tuple[Sequence[KT], np.ndarray], 
-             chunk_b: Tuple[Sequence[KT], np.ndarray]
-            ) -> Tuple[Sequence[KT], np.ndarray]:
+def combiner(chunk_a: Tuple[Sequence[KT], npt.NDArray[DType]], 
+             chunk_b: Tuple[Sequence[KT], npt.NDArray[DType]]
+                 ) -> Tuple[Sequence[KT], npt.NDArray[DType]]:
     keys_a, mat_a = chunk_a
     keys_b, mat_b = chunk_b
     keys: Sequence[KT] = [*keys_a, *keys_b]
-    mat = np.vstack((mat_a, mat_b))
+    mat: npt.NDArray[DType] = np.vstack((mat_a, mat_b)) # type: ignore
     return keys, mat
 
-def chunk_combiner(chunks: Iterable[Tuple[Sequence[KT], np.ndarray]]) -> Tuple[Sequence[KT], np.ndarray]:
+def chunk_combiner(chunks: Iterable[Tuple[Sequence[KT], npt.NDArray[DType]]]) -> Tuple[Sequence[KT], npt.NDArray[DType]]:
     result = functools.reduce(lambda a,b: combiner(a,b), chunks) 
     return result # type: ignore

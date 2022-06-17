@@ -17,24 +17,34 @@
 import itertools
 import pickle
 from os import PathLike
-from typing import (Dict, Generic, Iterator, Optional, Sequence,
-                    Tuple)
+from typing import (Any, Callable, Dict, Generic, Iterator, Optional, Sequence,
+                    Tuple, Union)
 import h5py  # type: ignore
 import numpy as np  # type: ignore
+import numpy.typing as npt
 from h5py._hl.dataset import Dataset  # type: ignore
 
 from ..exceptions import NoVectorsException
 from ..utils.chunks import divide_iterable_in_lists, get_range
-from ..utils.func import filter_snd_none, list_unzip
+from ..utils.func import filter_snd_none, list_unzip, identity
 from ..utils.numpy import (matrix_to_vector_list, matrix_tuple_to_vectors,
                            matrix_tuple_to_zipped, slicer)
 from .vectorstorage import VectorStorage, ensure_writeable
 
 
-from ..typehints import KT
+from ..typehints import KT, DType
+
+def key_wrapper(key: Any) -> Union[int, str]:
+    if isinstance(key, (int, str)):
+        return key
+    return str(key)
+
+def keys_wrapper(keys: Sequence[Any]) -> Sequence[Union[int,str]]:
+    return [key_wrapper(key) for key in keys]
 
 
-class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
+
+class HDF5VectorStorage(VectorStorage[KT, npt.NDArray[DType], npt.NDArray[DType]], Generic[KT, DType]):
     """This class provides the handling of on disk vector storage in HDF5 format.
     In many cases, storing feature matrices or large sets of vectors
     in memory is not feasible.
@@ -117,13 +127,13 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
                 hfile.create_dataset("dicts", (2,), dtype=dt) # type: ignore
             dicts = hfile["dicts"]
             assert isinstance(dicts, Dataset)
-            dicts[0] = np.fromstring(
+            dicts[0] = np.fromstring( # type: ignore
                 pickle.dumps(self.key_dict), dtype="uint8") #type: ignore
-            dicts[1] = np.fromstring(
+            dicts[1] = np.fromstring( # type: ignore
                 pickle.dumps(self.inv_key_dict), dtype="uint8") # type: ignore
     
     @ensure_writeable
-    def rebuild_index(self) -> None:
+    def rebuild_index(self, type_restorer: Callable[[Any], KT] = identity) -> None:
         """Rebuild the index after manual manipulation of a HDF5 file.
 
         Raises
@@ -141,8 +151,9 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
             keys = hfile["keys"]
             assert isinstance(keys, Dataset)
             for i, key in enumerate(keys): # type: ignore
-                self.key_dict[key] = i # type: ignore
-                self.inv_key_dict[i] = key # type: ignore
+                r_key = type_restorer(key)
+                self.key_dict[r_key] = i # type: ignore
+                self.inv_key_dict[i] = r_key # type: ignore
         self.__store_dicts()
         
     
@@ -157,13 +168,13 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         self.__exit__(None, None, None) # type: ignore
 
     @ensure_writeable
-    def _create_matrix(self, first_slice: np.ndarray) -> None:
+    def _create_matrix(self, first_slice: npt.NDArray[DType]) -> None:
         """Create a vectors colum in the HDF5 file and add the
         the vectors in `first_slice`
 
         Parameters
         ----------
-        first_slice : np.ndarray
+        first_slice : npt.NDArray[DType]
             A matrix
         """        
         vector_dim = first_slice.shape[1]
@@ -185,18 +196,18 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         with h5py.File(self.h5path, self.__mode) as hfile:
             if "keys" not in hfile:
                 hfile.create_dataset("keys", # type: ignore
-                    data = np.array(keys), maxshape=(None,)) # type: ignore
+                    data = np.array(keys_wrapper(keys)), maxshape=(None,)) # type: ignore
             for i, key in enumerate(keys):
                 self.key_dict[key] = i
                 self.inv_key_dict[i] = key
   
     @ensure_writeable
-    def _append_matrix(self, matrix: np.ndarray) -> bool:
+    def _append_matrix(self, matrix: npt.NDArray[DType]) -> bool:
         """Append a matrix to storage (only for internal use)
 
         Parameters
         ----------
-        matrix : np.ndarray
+        matrix : npt.NDArray[DType]
             A matrix. The vector dimension should match with this object
 
         Returns
@@ -244,7 +255,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         if not self.datasets_exist:
             raise NoVectorsException("Cannot append without existing vectors")
         assert all(map(lambda k: k not in self.key_dict, keys))
-        new_keys = np.array(keys) # type: ignore
+        new_keys = np.array(keys_wrapper(keys)) # type: ignore
         with h5py.File(self.h5path, self.__mode) as hfile:
             key_set = hfile["keys"]
             assert isinstance(key_set, Dataset)
@@ -261,7 +272,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         self.__store_dicts()
         return True
         
-    def __getitem__(self, k: KT) -> np.ndarray:
+    def __getitem__(self, k: KT) -> npt.NDArray[DType]:
         if not self.datasets_exist:
             raise NoVectorsException("There are no vectors stored in this object")
         h5_idx = self.key_dict[k]
@@ -272,7 +283,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         return data # type: ignore
 
     @ensure_writeable
-    def __setitem__(self, k: KT, value: np.ndarray) -> None:
+    def __setitem__(self, k: KT, value: npt.NDArray[DType]) -> None:
         assert self.datasets_exist
         if k in self:
             h5_idx = self.key_dict[k]
@@ -293,14 +304,14 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         yield from self.key_dict
 
     @ensure_writeable
-    def add_bulk_matrix(self, keys: Sequence[KT], matrix: np.ndarray) -> None:
+    def add_bulk_matrix(self, keys: Sequence[KT], matrix: npt.NDArray[DType]) -> None:
         """Add matrices in bulk
 
         Parameters
         ----------
         keys : Sequence[KT]
             A list of identifiers. The following should hold: `len(keys) == matrix.shape[0]`
-        matrix : np.ndarray
+        matrix : npt.NDArray[DType]
             A matrix. The rows should correspond with the identifiers in keys
         """        
         assert len(keys) == matrix.shape[0]
@@ -314,13 +325,13 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
             return
 
     @ensure_writeable
-    def _update_vectors(self, keys: Sequence[KT], values: Sequence[np.ndarray]) -> None:
+    def _update_vectors(self, keys: Sequence[KT], values: Sequence[npt.NDArray[DType]]) -> None:
         """Update vectors in bulk
         Parameters
         ----------
         keys : Sequence[KT]
             A list of identifiers
-        values : Sequence[np.ndarray]
+        values : Sequence[npt.NDArray[DType]]
             A list of new vectors
         """        
         assert len(keys) == len(values)
@@ -333,14 +344,14 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
                     dataset[h5_idx] = value # type: ignore
             
     @ensure_writeable
-    def add_bulk(self, input_keys: Sequence[KT], input_values: Sequence[Optional[np.ndarray]]) -> None:
+    def add_bulk(self, input_keys: Sequence[KT], input_values: Sequence[Optional[npt.NDArray[DType]]]) -> None:
         """Add a bulk of keys and values (vectors) to the vector storage
 
         Parameters
         ----------
         input_keys : Sequence[KT]
             The keys of the Instances
-        input_values : Sequence[Optional[np.ndarray]]
+        input_values : Sequence[Optional[npt.NDArray[DType]]]
             The vectors that correspond with the indices
         """        
         assert len(input_keys) == len(input_values) and len(input_keys) > 0
@@ -353,7 +364,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         
         # Check if the vector storage exists
         if not self.datasets_exist:
-            matrix = np.vstack(values)
+            matrix: npt.NDArray[DType] = np.vstack(values) # type: ignore
             self._create_keys(keys)
             self._create_matrix(matrix)
             return
@@ -377,12 +388,12 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         # Append the new key vector pairs
         new_keys, new_vectors = list_unzip(not_in_storage)
         if new_vectors:
-            matrix = np.vstack(new_vectors)
+            matrix: npt.NDArray[DType] = np.vstack(new_vectors) # type: ignore
             self.add_bulk_matrix(new_keys, matrix)
 
     
 
-    def _get_matrix(self, h5_idxs: Sequence[int]) -> Tuple[Sequence[KT], np.ndarray]:
+    def _get_matrix(self, h5_idxs: Sequence[int]) -> Tuple[Sequence[KT], npt.NDArray[DType]]:
         """Return a matrix that correspond with the internal `h5_idxs`.
 
         Parameters
@@ -392,7 +403,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
         Returns
         -------
-        Tuple[Sequence[KT], np.ndarray]
+        Tuple[Sequence[KT], npt.NDArray[DType]]
             A tuple containing:
 
                 - The public indices (from the :class:`~allib.instances.InstanceProvider`)
@@ -408,11 +419,11 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
             dataset = dfile["vectors"]
             assert isinstance(dataset, Dataset)
             slices = get_range(h5_idxs)
-            result_matrix = slicer(dataset, slices)
+            result_matrix: npt.NDArray[DType] = slicer(dataset, slices) # type: ignore
             included_keys = list(map(lambda idx: self.inv_key_dict[idx], h5_idxs))
-        return included_keys, result_matrix
+        return included_keys, result_matrix # type: ignore
 
-    def get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[np.ndarray]]:
+    def get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[npt.NDArray[DType]]]:
         """Return the vectors that correspond with the `keys` 
 
         Parameters
@@ -422,7 +433,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
         Returns
         -------
-        Tuple[Sequence[KT], Sequence[np.ndarray]]
+        Tuple[Sequence[KT], Sequence[npt.NDArray[DType]]]
             A tuple containing two lists:
 
                 - A list with identifier (order may differ from `keys` argument)
@@ -432,7 +443,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         ret_vectors = matrix_to_vector_list(ret_matrix)
         return ret_keys, ret_vectors
 
-    def get_matrix(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], np.ndarray]:
+    def get_matrix(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], npt.NDArray[DType]]:
         """Return a matrix containing the vectors that correspond with the `keys`
 
         Parameters
@@ -442,7 +453,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
         Returns
         -------
-        Tuple[Sequence[KT], np.ndarray]
+        Tuple[Sequence[KT], npt.NDArray[DType]]
             A tuple containing:
 
                 - A list with identifier keys
@@ -464,7 +475,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
     def get_matrix_chunked(self, 
                            keys: Sequence[KT], 
-                           chunk_size: int = 200) -> Iterator[Tuple[Sequence[KT], np.ndarray]]:
+                           chunk_size: int = 200) -> Iterator[Tuple[Sequence[KT], npt.NDArray[DType]]]:
         """Return matrices in chunks of `chunk_size` containing the vectors requested in `keys`
 
         Parameters
@@ -476,7 +487,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
         Yields
         -------
-        Tuple[Sequence[KT], np.ndarray]
+        Tuple[Sequence[KT], npt.NDArray[DType]]
             A tuple containing:
 
                 - A list with identifier keys
@@ -500,7 +511,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
     def get_vectors_chunked(self, 
                             keys: Sequence[KT], 
                             chunk_size: int = 200
-                            ) -> Iterator[Tuple[Sequence[KT], Sequence[np.ndarray]]]:
+                            ) -> Iterator[Tuple[Sequence[KT], Sequence[npt.NDArray[DType]]]]:
         """Return vectors in chunks of `chunk_size` containing the vectors requested in `keys`
 
         Parameters
@@ -512,7 +523,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
         Yields
         -------
-        Tuple[Sequence[KT], Sequence[np.ndarray]]
+        Tuple[Sequence[KT], Sequence[npt.NDArray[DType]]]
             A tuple containing two lists:
 
                 - A list with identifiers (order may differ from `keys` argument)
@@ -521,7 +532,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         results = itertools.starmap(matrix_tuple_to_vectors, self.get_matrix_chunked(keys, chunk_size))
         yield from results # type: ignore
 
-    def get_vectors_zipped(self, keys: Sequence[KT], chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, np.ndarray]]]:
+    def get_vectors_zipped(self, keys: Sequence[KT], chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, npt.NDArray[DType]]]]:
         """Return vectors in chunks of `chunk_size` containing the vectors requested in `keys`
 
         Parameters
@@ -533,7 +544,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
         Yields
         -------
-        Sequence[Tuple[KT, np.ndarray]]
+        Sequence[Tuple[KT, npt.NDArray[DType]]]
             A list containing tuples of:
 
                 - An identifier (order may differ from `keys` argument)
@@ -543,7 +554,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
         yield from results # type: ignore
            
 
-    def vectors_chunker(self, chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, np.ndarray]]]:
+    def vectors_chunker(self, chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, npt.NDArray[DType]]]]:
         """Return vectors in chunks of `chunk_size`. This generator will yield all vectors contained
         in this object.
 
@@ -555,7 +566,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
         Yields
         -------
-        Sequence[Tuple[KT, np.ndarray]]
+        Sequence[Tuple[KT, npt.NDArray[DType]]]
             A list containing tuples of:
 
                 - An identifier
@@ -574,7 +585,7 @@ class HDF5VectorStorage(VectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
 
         Yields
         -------
-        Tuple[Sequence[KT], np.ndarray]
+        Tuple[Sequence[KT], npt.NDArray[DType]]
             A tuple containing:
 
                 - A list with identifier keys

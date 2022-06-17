@@ -58,8 +58,8 @@ def powerset(iterable: Iterable[_T]) -> FrozenSet[FrozenSet[_T]]:
         itertools.combinations(s, r) for r in range(len(s)+1))
     return frozenset(map(frozenset, result))  # type: ignore
 
-def identity(input: _T) -> _T:
-    return input
+def identity(x: _T) -> _T:
+    return x
 
 def not_in_supersets(
         contingency: Dict[FrozenSet[_T], FrozenSet[_U]]

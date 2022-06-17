@@ -47,10 +47,10 @@ class HDF5VectorInstanceProvider(ExternalVectorInstanceProvider[IT, KT, DT, np.n
 
     vector_storage_location: "PathLike[str]"
 
-    def load_vectors(self) -> HDF5VectorStorage[KT]:
-        return HDF5VectorStorage[KT](self.vector_storage_location)
+    def load_vectors(self) -> HDF5VectorStorage[KT, Any]:
+        return HDF5VectorStorage[KT, Any](self.vector_storage_location)
 
     def bulk_add_vectors(self, keys: Sequence[KT], values: Sequence[np.ndarray]) -> None:
-        with HDF5VectorStorage[KT](self.vector_storage_location, "a") as writeable_storage:
+        with HDF5VectorStorage[KT, Any](self.vector_storage_location, "a") as writeable_storage:
             writeable_storage.add_bulk(keys, values)
         self.vectorstorage = self.load_vectors()

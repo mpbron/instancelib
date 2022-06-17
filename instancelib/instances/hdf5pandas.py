@@ -93,7 +93,7 @@ class HDF5TextProvider(HDF5VectorInstanceProvider[HDF5TextInstance, Union[int, s
         self.data_cols: Sequence[str] = data_cols
         self.data_storage = data_storage
         self.vector_storage_location = vector_storage_location
-        self.vectorstorage = HDF5VectorStorage[Union[int, str]](vector_storage_location)
+        self.vectorstorage = HDF5VectorStorage[Union[int, str], Any](vector_storage_location)
 
     def build_from_external(self, k: Union[int, str]) -> HDF5TextInstance:
         if self.vectorstorage is None:

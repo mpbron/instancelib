@@ -51,4 +51,4 @@ LMT = TypeVar("LMT")
 PMT = TypeVar("PMT")
 """The Type of the encoded probability matrix"""
 
-DType = TypeVar("DType", np.float64, np.int32, np.int64, np.float32, np.float16, np.float128, np.bool8)
+DType = TypeVar("DType", np.float64, np.int32, np.int64, np.float32, np.float16, np.bool8)

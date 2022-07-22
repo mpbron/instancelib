@@ -44,11 +44,11 @@ def to_bicolumn_proba(matrix: npt.NDArray[DType]) -> npt.NDArray[DType]:
     if len(matrix.shape) == 2:
         if matrix.shape[1] == 1: 
             neg_prob = 1.0 - matrix
-            prob_np: npt.NDArray[DType] = np.hstack((neg_prob, matrix)) # type: ignore
+            prob_np: npt.NDArray[DType] = np.column_stack((neg_prob, matrix)) # type: ignore
             return prob_np
     if len(matrix.shape) == 1:
         neg_prob = 1.0 - matrix
-        prob_np:  npt.NDArray[DType] = np.hstack((neg_prob, matrix)) # type: ignore
+        prob_np:  npt.NDArray[DType] = np.column_stack((neg_prob, matrix)) # type: ignore
         return prob_np
     return matrix
     

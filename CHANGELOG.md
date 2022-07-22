@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bugfix
 - Bugfix for faulty 1D array concatenation in to_bicolumn_proba
 
+## [0.4.4.6]
+### Bugfix
+- On Windows some type annotations for certain numpy dtypes are not supported. These are removed from instancelib source
+
 ## [0.4.4.5]
 ### Bugfix
 - Array shape issue with consecutive matrix adding in HDF5

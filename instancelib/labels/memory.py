@@ -131,13 +131,7 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
                       provider: LabelProvider[KT, _T], 
                       mapping: Union[Mapping[_T, LT], Callable[[_T], LT]]
                       ) -> MemoryLabelProvider[KT, LT]:
-        def translate_from_map(labelmap: Mapping[_T, LT]) -> Callable[[_T], LT]:
-            def inside(value: _T) -> LT:
-                if value in labelmap:
-                    return labelmap[value]
-                return value # type: ignore
-            return inside
-        mapper = translate_from_map(mapping) if isinstance(mapping, collections.abc.Mapping) else mapping
+        mapper = mapping.__getitem__ if isinstance(mapping, collections.abc.Mapping) else mapping
         labeldict = {key: {mapper(old_label) for old_label in old_labels} for key, old_labels in provider.items()}
         labelset = frozenset([mapper(lbl) for lbl in provider.labelset])
         provider = cls(labelset, labeldict, None) # type: ignore

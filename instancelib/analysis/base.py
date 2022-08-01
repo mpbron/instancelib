@@ -369,9 +369,9 @@ def classifier_performance_mc(model: AbstractClassifier[IT, KT, DT, VT, RT, LT, 
 def default_instance_viewer(
     ins: Instance[Any, Any, Any, RT]
 ) -> Mapping[str, RT]:
-    return {"data": ins.representation}
+    return {"Data": ins.representation}
 
-def pred_viewer(
+def prediction_viewer(
     model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any],
     provider: InstanceProvider[IT, KT, DT, VT, RT],
     ground_truth: LabelProvider[KT, LT],
@@ -381,14 +381,16 @@ def pred_viewer(
 ) -> pd.DataFrame:
     id_col = "Identifier"
     gt_col = "Ground Truth"
-
+    pred_col = "Prediction"
     def row_yielder():
-        preds = dict(model.predict_proba(provider))
+        preds = dict(model.predict(provider))
+        pred_probas = dict(model.predict_proba(provider))
         for idx, ins in provider.items():
             row = {
                 id_col: idx,
                 **instance_viewer(ins),
-                **dict(preds[idx]),
+                **dict(pred_probas[idx]),
+                pred_col: ", ".join(map(str, preds[idx])),
                 gt_col: ", ".join(map(str, ground_truth[ins])),
             }
             yield row
@@ -427,7 +429,7 @@ def results_to_dataframe(
     df = pd.DataFrame.from_dict(summary, orient="index")
     return df
 
-def analysis_pipeline(train_set: InstanceProvider[IT, KT, DT, VT, RT],
+def binary_classification_analysis(train_set: InstanceProvider[IT, KT, DT, VT, RT],
                       test_set: InstanceProvider[IT, KT, DT, VT, RT],
                       ground_truth: LabelProvider[KT, LT],
                       label: LT, 

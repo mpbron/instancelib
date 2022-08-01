@@ -41,7 +41,7 @@ from ..instances.base import Instance, InstanceProvider
 from ..labels.base import LabelProvider
 from ..labels.memory import MemoryLabelProvider
 
-from ..utils.func import list_unzip, union
+from ..utils.func import list_unzip, union, value_map
 
 from ..typehints import KT, DT, VT, RT, LT
 
@@ -322,7 +322,7 @@ def contingency_table(
 
 
 def to_confmat(
-    contingency_table: Mapping[Tuple[LT, LT], FrozenSet[KT]]
+    contingency_table: Mapping[Tuple[LT, LT], FrozenSet[Any]]
 ) -> pd.DataFrame:
     true_labels, pred_labels = list_unzip(contingency_table.keys())
     tls, pls = list(frozenset(true_labels)), list(frozenset(pred_labels))
@@ -361,10 +361,80 @@ def classifier_performance(
     performance = MulticlassModelMetrics[KT, LT](table, *performances)
     return performance
 
-
-def classifier_performance_mc(
-    model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any],
-    instances: InstanceInput[IT, KT, DT, VT, RT],
-    ground_truth: LabelProvider[KT, LT],
-) -> MulticlassModelMetrics[KT, LT]:
+def classifier_performance_mc(model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any], 
+                              instances: InstanceInput[IT, KT, DT, VT, RT],  
+                              ground_truth: LabelProvider[KT, LT],) -> MulticlassModelMetrics[KT, LT]:
     return classifier_performance(model, instances, ground_truth)
+
+def default_instance_viewer(
+    ins: Instance[Any, Any, Any, RT]
+) -> Mapping[str, RT]:
+    return {"data": ins.representation}
+
+def pred_viewer(
+    model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any],
+    provider: InstanceProvider[IT, KT, DT, VT, RT],
+    ground_truth: LabelProvider[KT, LT],
+    instance_viewer: Callable[
+        [Instance[KT, DT, VT, RT]], Mapping[str, Any]
+    ] = default_instance_viewer,
+) -> pd.DataFrame:
+    id_col = "Identifier"
+    gt_col = "Ground Truth"
+
+    def row_yielder():
+        preds = dict(model.predict_proba(provider))
+        for idx, ins in provider.items():
+            row = {
+                id_col: idx,
+                **instance_viewer(ins),
+                **dict(preds[idx]),
+                gt_col: ", ".join(map(str, ground_truth[ins])),
+            }
+            yield row
+    results = row_yielder()
+    df = pd.DataFrame(results) # type: ignore
+    return df.set_index(id_col)
+
+def train_models(
+    train_set: InstanceProvider[IT, KT, DT, VT, RT],
+    labels: LabelProvider[KT, LT],
+    models: Mapping[
+        str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]
+    ],
+) -> None:
+    for model in models.values():
+        model.fit_provider(train_set, labels)
+
+
+def compare_models(
+    test_set: InstanceProvider[IT, KT, DT, VT, RT],
+    ground_truth: LabelProvider[KT, LT],
+    label: LT,
+    models: Mapping[
+        str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]
+    ],
+) -> Mapping[str, BinaryModelMetrics[KT, LT]]:
+    result = value_map(
+        lambda m: classifier_performance(m, test_set, ground_truth)[label], models
+    )
+    return result
+
+
+def results_to_dataframe(
+    summary: Mapping[str, BinaryModelMetrics[Any, Any]]
+) -> pd.DataFrame:
+    df = pd.DataFrame.from_dict(summary, orient="index")
+    return df
+
+def analysis_pipeline(train_set: InstanceProvider[IT, KT, DT, VT, RT],
+                      test_set: InstanceProvider[IT, KT, DT, VT, RT],
+                      ground_truth: LabelProvider[KT, LT],
+                      label: LT, 
+                      models: Mapping[
+                            str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]
+                        ]) -> pd.DataFrame:
+    train_models(train_set, ground_truth, models)
+    comparison = compare_models(test_set, ground_truth, label, models)
+    dataframe = results_to_dataframe(comparison)
+    return dataframe

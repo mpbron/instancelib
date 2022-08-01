@@ -22,6 +22,12 @@ from typing import (Any, Callable, Dict, FrozenSet, Iterable, Iterator, List,
 _T = TypeVar("_T")
 _U = TypeVar("_U")
 _V = TypeVar("_V")
+_K = TypeVar("_K")
+
+def value_map(
+    f: Callable[[_T], _U], mapping: Mapping[_K, _T]
+) -> Mapping[_K, _U]:
+    return {k: f(v) for k, v in mapping.items()}
 
 def single_or_collection(elem: Union[str, Iterable[str]]) -> Sequence[str]:
     if isinstance(elem, str):

@@ -37,12 +37,12 @@ import pandas as pd
 from scipy import stats  # type: ignore
 
 from ..machinelearning.base import AbstractClassifier
-from ..instances.base import Instance, InstanceProvider
-from ..labels.base import LabelProvider
+from ..instances.base import Instance, InstanceProvider, default_instance_viewer
+from ..labels.base import LabelProvider, default_label_viewer
 from ..labels.memory import MemoryLabelProvider
 
 from ..utils.func import list_unzip, union, value_map
-
+from ..export.pandas import to_pandas
 from ..typehints import KT, DT, VT, RT, LT
 
 _T = TypeVar("_T")
@@ -366,37 +366,86 @@ def classifier_performance_mc(model: AbstractClassifier[IT, KT, DT, VT, RT, LT, 
                               ground_truth: LabelProvider[KT, LT],) -> MulticlassModelMetrics[KT, LT]:
     return classifier_performance(model, instances, ground_truth)
 
-def default_instance_viewer(
-    ins: Instance[Any, Any, Any, RT]
-) -> Mapping[str, RT]:
-    return {"Data": ins.representation}
+def default_prediction_viewer(model: AbstractClassifier[IT, KT, DT, VT, RT, Any, Any, Any], colname="prediction") -> Callable[[InstanceProvider[IT, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]]]:
+    def get_preds(prov: InstanceProvider[IT, KT, DT, VT, RT]) -> Mapping[KT, Mapping[str, Any]]:
+        preds = dict(model.predict(prov))
+        formatted = value_map(lambda x : {colname: ", ".join(map(str, x))}, preds)
+        return formatted
+    return get_preds
+
+def default_proba_viewer(model: AbstractClassifier[IT, KT, DT, VT, RT, Any, Any, Any], prefix="") -> Callable[[InstanceProvider[IT, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]]]:
+    def get_preds(prov: InstanceProvider[IT, KT, DT, VT, RT]) -> Mapping[KT, Mapping[str, Any]]:
+        preds = dict(model.predict_proba(prov))
+        formatted = value_map(lambda x: {f"{prefix}{lbl}": proba for lbl, proba in x}, preds)
+        return formatted
+    return get_preds
+
+def multi_model_viewer(
+    models: Mapping[str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]],
+    provider: InstanceProvider[IT, KT, DT, VT, RT],
+    labels: LabelProvider[KT, LT],
+    instance_viewer: Callable[
+        [Instance[KT, DT, VT, RT]], Mapping[str, Any]
+    ] = default_instance_viewer,
+    label_viewer: Callable[
+        [KT, LabelProvider[KT, LT]], Mapping[str, Any]
+    ] = default_label_viewer,
+    provider_hooks: Sequence[
+        Callable[
+            [InstanceProvider[IT, KT, DT, VT, RT]],
+            Mapping[KT, Mapping[str, Any]],
+        ]
+    ] = list(),
+) -> pd.DataFrame:
+    """Compare the results of multiple models
+
+    Parameters
+    ----------
+    models : Mapping[str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]]
+        A dictionary with models, with as keys the names they should have
+    provider : InstanceProvider[IT, KT, DT, VT, RT]
+        The Provider with instances upon which the models will be compared
+    labels : LabelProvider[KT, LT]
+        The LabelProvider that contains the ground truth
+    instance_viewer : Callable[ [Instance[KT, DT, VT, RT]], Mapping[str, Any] ], optional
+        A function that maps an instance to a dictionary; with as keys the columns that
+        should be added to the DataFrame, by default default_instance_viewer
+    label_viewer : Callable[ [KT, LabelProvider[KT, LT]], Mapping[str, Any] ], optional
+        A function that maps the given labels to DataFrame columns, by default default_label_viewer
+    provider_hooks : Sequence[ Callable[ [InstanceProvider[IT, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]], ] ], optional
+        Custom methods that can be applied to an InstanceProvider, by default list()
+
+    Returns
+    -------
+    pd.DataFrame
+        A Pandas DataFrame that shows a comparison between the models
+    """    
+    pred_hooks = [default_prediction_viewer(model, f"prediction_{name}") for name, model in models.items()]
+    proba_hooks = [default_proba_viewer(model, f"p_{name}_") for name, model in models.items()]
+    hooks = [*provider_hooks, *pred_hooks, *proba_hooks]
+    df = to_pandas(provider, labels, instance_viewer, label_viewer, hooks)
+    return df
 
 def prediction_viewer(
     model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any],
     provider: InstanceProvider[IT, KT, DT, VT, RT],
-    ground_truth: LabelProvider[KT, LT],
+    labels: LabelProvider[KT, LT],
     instance_viewer: Callable[
         [Instance[KT, DT, VT, RT]], Mapping[str, Any]
     ] = default_instance_viewer,
+    label_viewer: Callable[
+        [KT, LabelProvider[KT, LT]], Mapping[str, Any]
+    ] = default_label_viewer,
+    provider_hooks: Sequence[
+        Callable[
+            [InstanceProvider[IT, KT, DT, VT, RT]],
+            Mapping[KT, Mapping[str, Any]],
+        ]
+    ] = list(),
 ) -> pd.DataFrame:
-    id_col = "Identifier"
-    gt_col = "Ground Truth"
-    pred_col = "Prediction"
-    def row_yielder():
-        preds = dict(model.predict(provider))
-        pred_probas = dict(model.predict_proba(provider))
-        for idx, ins in provider.items():
-            row = {
-                id_col: idx,
-                **instance_viewer(ins),
-                **dict(pred_probas[idx]),
-                pred_col: ", ".join(map(str, preds[idx])),
-                gt_col: ", ".join(map(str, ground_truth[ins])),
-            }
-            yield row
-    results = row_yielder()
-    df = pd.DataFrame(results) # type: ignore
-    return df.set_index(id_col)
+    hooks = [*provider_hooks, *[default_prediction_viewer(model), default_proba_viewer(model, "p_")]]
+    df = to_pandas(provider, labels, instance_viewer, label_viewer, hooks)
+    return df 
 
 def train_models(
     train_set: InstanceProvider[IT, KT, DT, VT, RT],

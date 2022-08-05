@@ -15,19 +15,32 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from abc import ABC, abstractmethod
-import itertools
-import re
-from typing import Any, FrozenSet, Generic, Iterator, Mapping, Sequence, Set, Tuple, Union
+
+from typing import (
+    Any,
+    Callable,
+    FrozenSet,
+    Generic,
+    Iterable,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 from ..instances import Instance
 
 from ..typehints import KT, LT
 
+from ..utils.func import identity
 
 
 class LabelProvider(Mapping[KT, FrozenSet[LT]], ABC, Generic[KT, LT]):
-    
-    def __getitem__(self, __k: Union[Instance[KT, Any, Any, Any], KT]) -> FrozenSet[LT]:
+    def __getitem__(
+        self, __k: Union[Instance[KT, Any, Any, Any], KT]
+    ) -> FrozenSet[LT]:
         return self.get_labels(__k)
 
     @property
@@ -43,7 +56,9 @@ class LabelProvider(Mapping[KT, FrozenSet[LT]], ABC, Generic[KT, LT]):
         raise NotImplementedError
 
     @abstractmethod
-    def remove_labels(self, instance: Union[KT, Instance[KT, Any, Any, Any]], *labels: LT) -> None:
+    def remove_labels(
+        self, instance: Union[KT, Instance[KT, Any, Any, Any]], *labels: LT
+    ) -> None:
         """Remove the labels from this instance
 
         Parameters
@@ -56,7 +71,9 @@ class LabelProvider(Mapping[KT, FrozenSet[LT]], ABC, Generic[KT, LT]):
         raise NotImplementedError
 
     @abstractmethod
-    def set_labels(self, instance: Union[KT, Instance[KT, Any, Any, Any]], *labels: LT) -> None:
+    def set_labels(
+        self, instance: Union[KT, Instance[KT, Any, Any, Any]], *labels: LT
+    ) -> None:
         """Annotate the instance with the labels listed in the parameters
 
         Parameters
@@ -69,7 +86,9 @@ class LabelProvider(Mapping[KT, FrozenSet[LT]], ABC, Generic[KT, LT]):
         raise NotImplementedError
 
     @abstractmethod
-    def get_labels(self, instance: Union[KT, Instance[KT, Any, Any, Any]]) -> FrozenSet[LT]:
+    def get_labels(
+        self, instance: Union[KT, Instance[KT, Any, Any, Any]]
+    ) -> FrozenSet[LT]:
         """Return the labels that are associated with the instance
 
         Parameters
@@ -96,7 +115,7 @@ class LabelProvider(Mapping[KT, FrozenSet[LT]], ABC, Generic[KT, LT]):
         Returns
         -------
         Set[Instance]
-            The identifiers of the instance 
+            The identifiers of the instance
         """
         raise NotImplementedError
 
@@ -113,11 +132,41 @@ class LabelProvider(Mapping[KT, FrozenSet[LT]], ABC, Generic[KT, LT]):
 
     def __repr__(self) -> str:
         stats = {label: self.document_count(label) for label in self.labelset}
-        result = ("LabelProvider("
-                 f"labelset={self.labelset}, \n"
-                 f"   length={len(self)}, \n"
-                 f"   statistics={stats})")
+        result = (
+            "LabelProvider("
+            f"labelset={self.labelset}, \n"
+            f"   length={len(self)}, \n"
+            f"   statistics={stats})"
+        )
         return result
 
     def __str__(self) -> str:
         return self.__repr__()
+
+
+def default_label_viewer(
+    key: KT, labelprovider: LabelProvider[KT, Any]
+) -> Mapping[str, Any]:
+    return {"label": ", ".join(map(str, labelprovider[key]))}
+
+
+def columnar_label_viewer(
+    labelset: Optional[Iterable[LT]] = None,
+    prefix: str = "",
+    boolmapper: Callable[[bool], Any] = identity,
+) -> Callable[[KT, LabelProvider[KT, LT]], Mapping[str, Any]]:
+    def viewer(
+        key: KT, labelprovider: LabelProvider[KT, LT]
+    ) -> Mapping[str, Any]:
+        chosen_labelset = (
+            frozenset(labelset)
+            if labelset is not None
+            else labelprovider.labelset
+        )
+        values = {
+            f"{prefix}{label}": boolmapper(label in labelprovider[key])
+            for label in chosen_labelset
+        }
+        return values
+
+    return viewer

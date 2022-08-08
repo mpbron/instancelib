@@ -163,40 +163,4 @@ env = TextEnvironment.from_data(["A", "B", "C"], [1,2,3], ["Test", "Test2", "Tes
 model_results = multi_model_viewer({"vector": vec_model, "data": data_model}, test, text_env.labels)
 model_results
 # %%
-class WordListModel:
-    
-    ngrams: FrozenSet[Sequence[str]]
-    
-    def __init__(self, ngrams: FrozenSet[Sequence[str]]) -> None:
-        self.ngrams = ngrams
-        self.max_ngram = max(map(len, self.ngrams))
-        
-    def __call__(self, data: Sequence[str]) -> npt.NDArray[np.float64]:
-        return np.vstack([self.process_text(dat) for dat in data])
-    
-    def process_text(self, data: str) -> npt.NDArray[np.float64]:
-        tokens = [token.lower() for token in data.split()]
-        for idx in range(len(tokens)):
-            min_ngram = min(0,(idx - self.max_ngram + 1))
-            for jdx in range(min_ngram,idx):
-                ngram = tuple(tokens[jdx:idx])
-                if ngram in self.ngrams:
-                    return np.array([0.0, 1.0])
-        return np.array([1.0, 0.0])
-    
-    @classmethod
-    def from_wordlist(cls, words: Iterable[str], ngrams: Iterable[Sequence[str]]= list()) -> "WordListModel":
-        wordlist = frozenset([tuple([word.lower()]) for word in words])
-        ngramslist = frozenset([tuple([word.lower() for word in ngram]) for ngram in ngrams])
-        return cls(wordlist.union(ngramslist))
-    
-#%%
-wordlist_classifier = WordListModel.from_wordlist(["Facebook", "Microsoft", "Samsung"], [["Google", "werkt"], ["FaceBook", "zou"]])
-
-from instancelib.machinelearning.wrapper import NumpyMultiClass
-
-wl = NumpyMultiClass.build(wordlist_classifier, ["Niet", "Bigtech"])
-
-# %%
-il.classifier_performance(wl, text_env.dataset, text_env.labels).confusion_matrix
 # %%

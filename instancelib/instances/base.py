@@ -47,6 +47,8 @@ class TypeInfo:
     def __str__(self) -> str:
         return self.__repr__()
 
+
+
 class Instance(ABC, Generic[KT, DT, VT, RT]):
     """A base Instance Class. 
 
@@ -655,6 +657,11 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
 
     def __str__(self) -> str:
         return self.__repr__()
+
+def default_instance_viewer(
+    ins: Instance[Any, Any, Any, RT]
+) -> Mapping[str, RT]:
+    return {"data": ins.representation}
     
 
 class InstanceProvider(MutableMapping[KT, InstanceType], 

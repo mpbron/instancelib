@@ -6,3 +6,4 @@ xlrd
 openpyxl
 scikit-learn
 gensim
+tqdm

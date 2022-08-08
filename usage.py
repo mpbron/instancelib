@@ -17,6 +17,7 @@ from instancelib.functions.vectorize import vectorize
 from instancelib.ingest.spreadsheet import read_excel_dataset
 from instancelib.instances.text import TextInstance
 from instancelib.pertubations.base import TokenPertubator
+from instancelib.analysis.base import multi_model_viewer
 
 
 #%%
@@ -153,6 +154,10 @@ pipeline = Pipeline([
      ('clf', MultinomialNB()),
      ])
 data_model = SkLearnDataClassifier.build(pipeline, text_env)
+data_model.fit_provider(train, text_env.labels)
 # %%tweakers_env#%%
 env = TextEnvironment.from_data(["A", "B", "C"], [1,2,3], ["Test", "Test2", "Test3"], [["A"], ["A", "B"], ["C"]], None)
+# %%
+model_results = multi_model_viewer({"vector": vec_model, "data": data_model}, test, text_env.labels)
+model_results
 # %%

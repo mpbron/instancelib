@@ -16,6 +16,8 @@
 
 from typing import TypeVar
 
+import numpy as np
+
 
 KT = TypeVar("KT") 
 """The Key Type of the Dataset (mostly int for Primary Keys, but strings are also possible)"""
@@ -49,3 +51,4 @@ LMT = TypeVar("LMT")
 PMT = TypeVar("PMT")
 """The Type of the encoded probability matrix"""
 
+DType = TypeVar("DType", np.float64, np.int32, np.int64, np.float32, np.float16, np.bool8)

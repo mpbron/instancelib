@@ -3,6 +3,38 @@ All notable changes to `instancelib` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.4.4.9]
+### Added
+- Added preliminary methods that enable binary classification model comparison
+
+## [0.4.4.8] 
+### Bugfix
+- Bugfix for Python 3.10 and higher for the rename_labels method. 
+
+## [0.4.4.7] 
+### Bugfix
+- Bugfix for faulty 1D array concatenation in to_bicolumn_proba
+
+## [0.4.4.6]
+### Bugfix
+- On Windows some type annotations for certain numpy dtypes are not supported. These are removed from instancelib source
+
+## [0.4.4.5]
+### Bugfix
+- Array shape issue with consecutive matrix adding in HDF5
+
+## [0.4.4.4]
+### Changed
+- Added tests for HDF5Vector storage, fixed issues with string keys
+
+## [0.4.4.3]
+### Bugfix
+- Typing issues in signature from HDF5VectorStorage
+
+## [0.4.4.2]
+### Changed
+- Fixed some issues where the HDF5VectorStorage cannot store UUID keys
+
 ## [0.4.4.0]
 ### Changed
 - Added Progress bars for the prediction methods
@@ -104,6 +136,8 @@ env["train"], env["test"] = env.train_test_split(env.dataset, 0.70)
 - pandas_to_env_with_id function
 
 [Unreleased]: https://github.com/mpbron/instancelib
+[0.4.4.9]: https://pypi.org/project/instancelib/0.4.4.9
+[0.4.4.8]: https://pypi.org/project/instancelib/0.4.4.8
 [0.3.6.0]: https://pypi.org/project/instancelib/0.3.6.0
 [0.3.5.1]: https://pypi.org/project/instancelib/0.3.5.0
 [0.3.5.0]: https://pypi.org/project/instancelib/0.3.5.0

@@ -18,16 +18,22 @@ from __future__ import annotations
 
 import random
 
-from typing import Generic, Iterable, Mapping, MutableMapping, Optional, Sequence, Tuple, TypeVar, Any, Union
+from typing import Callable, Generic, Iterable, Iterator, Mapping, MutableMapping, Optional, Sequence, Tuple, TypeVar, Any, Union
 from abc import ABC, abstractmethod
 
 from ..utils.func import union
-from ..instances import InstanceProvider, Instance
-from ..labels import LabelProvider
+from ..instances.base import InstanceProvider, Instance, default_instance_viewer
+from ..labels.base import LabelProvider, default_label_viewer
 
 from ..typehints import KT, DT, VT, RT, LT
 
+from ..export.pandas import to_pandas
+
+import pandas as pd
+
 import warnings
+
+
 
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
@@ -323,6 +329,21 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
                   f"   length={len(self.all_instances)}, \n"
                   f"   typeinfo={self.all_instances.type_info}) \n")
         return result
+
+    def to_pandas(self, 
+                  provider: Optional[InstanceProvider[InstanceType, KT, DT, VT, RT]] = None,
+                  labels: Optional[LabelProvider[KT, LT]] = None,
+                  instance_viewer: Callable[[Instance[KT, DT, VT, RT]], Mapping[str, Any]] = default_instance_viewer,
+                  label_viewer: Callable[[KT, LabelProvider[KT, LT]], Mapping[str, Any]] = default_label_viewer,
+                  provider_hooks: Sequence[Callable[[InstanceProvider[InstanceType, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]]]] = list()) -> pd.DataFrame:
+        
+        chosen_provider = self.dataset if provider is None else provider
+        chosen_labels= self.labels if labels is None else labels
+        result = to_pandas(chosen_provider, chosen_labels, instance_viewer, label_viewer, provider_hooks)
+        return result
+
+
+
                                 
 
 class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT], 

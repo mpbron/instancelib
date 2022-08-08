@@ -7,6 +7,7 @@ from typing import (Any, Callable, FrozenSet, Generic, Iterable, Iterator, Mappi
                     Optional, Sequence, Tuple, TypeVar, Union)
 
 import numpy as np
+import numpy.typing as npt
 from tqdm.auto import tqdm
 
 from ..instances import Instance
@@ -20,13 +21,21 @@ from .base import AbstractClassifier
 
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]")
 
-def numpy_ova_threshold(threshold: float) -> Callable[[np.ndarray], np.ndarray]:
-    def mat_function(mat: np.ndarray) -> np.ndarray:
+
+def to_int(f: Callable[..., npt.NDArray[Any]]) -> Callable[..., npt.NDArray[np.int64]]:
+    def wrapper(*args, **kwargs):
+        result = f(*args, **kwargs)
+        int_result = result.astype(np.int64)
+        return int_result
+    return wrapper
+
+def numpy_ova_threshold(threshold: float) -> Callable[[npt.NDArray[Any]], npt.NDArray[np.bool8]]:
+    def mat_function(mat: npt.NDArray[Any]) -> npt.NDArray[np.bool8]:
         binary = mat > threshold
         return binary
     return mat_function
 
-def numpy_mc_threshold(mat: np.ndarray) -> np.ndarray:
+def numpy_mc_threshold(mat: npt.NDArray[Any]) -> npt.NDArray[np.bool8]:
     max_index: Sequence[int] = np.argmax(mat, axis=1).tolist()
     return_mat = np.zeros_like(mat).astype(np.bool8)
     for row_idx, col_idx in enumerate(max_index):
@@ -160,14 +169,15 @@ class DataWrapper(AbstractClassifier[IT, KT, DT, VT, RT, LT, LMT, PMT], Generic[
         encoder = MultilabelDictionaryEncoder(inverted_mapping)
         model = cls(function, threshold_func, encoder )
         return model
+    
 
 
-class NumpyMultiClass(DataWrapper[IT, KT, DT, Any, Any, LT, np.ndarray, np.ndarray, np.ndarray], Generic[IT, KT, DT, LT]):
+class NumpyMultiClass(DataWrapper[IT, KT, DT, Any, Any, LT, npt.NDArray[np.int64], npt.NDArray[np.int64], npt.NDArray[np.float64]], Generic[IT, KT, DT, LT]):
     @classmethod
     def build(cls, 
-              function: Callable[[Sequence[DT]], np.ndarray],
+              function: Callable[[Sequence[DT]], npt.NDArray[np.float64]],
               labels:   Union[Sequence[LT], Mapping[int, LT]]) -> DataWrapper[IT, KT, DT, Any, Any, LT, np.ndarray, np.ndarray, np.ndarray]:
-        model = cls.from_vectorized_function(function, numpy_mc_threshold, labels)
+        model = cls.from_vectorized_function(function, to_int(numpy_mc_threshold), labels)
         return model
         
 
@@ -176,5 +186,5 @@ class NumpyMultiLabel(NumpyMultiClass[IT, KT, DT, LT], Generic[IT, KT, DT, LT]):
     def build(cls, 
               function: Callable[[Sequence[DT]], np.ndarray],
               labels:   Union[Sequence[LT], Mapping[int, LT]]) -> DataWrapper[IT, KT, DT, Any, Any, LT, np.ndarray, np.ndarray, np.ndarray]:
-        model = cls.from_vectorized_function(function, numpy_ova_threshold(0.5), labels)
+        model = cls.from_vectorized_function(function, to_int(numpy_ova_threshold(0.5)), labels)
         return model

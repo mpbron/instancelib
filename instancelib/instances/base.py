@@ -993,7 +993,7 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
 
     @property
     def empty(self) -> bool:
-        return not self._bucket
+        return not self
 
     def add_child(self, 
                   parent: Union[KT, InstanceType], 

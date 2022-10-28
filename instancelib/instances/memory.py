@@ -232,6 +232,10 @@ class MemoryBucketProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
         iterable = iter(self._elements)
         return iterable
     
+    @property
+    def empty(self) -> bool:
+        return not self._elements
+    
 
     
 

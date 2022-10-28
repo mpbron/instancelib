@@ -4,6 +4,10 @@ All notable changes to `instancelib` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4.12]
+### Bugfix
+- Empty MemoryBucketProviders did not report to be empty (when using the .empty property). Resolved
+
 ## [0.4.4.11]
 ### Added
 - Added methods that enable wrapping any predict proba like function
@@ -144,6 +148,8 @@ env["train"], env["test"] = env.train_test_split(env.dataset, 0.70)
 - pandas_to_env_with_id function
 
 [Unreleased]: https://github.com/mpbron/instancelib
+[0.4.4.12]: https://pypi.org/project/instancelib/0.4.4.12
+[0.4.4.11]: https://pypi.org/project/instancelib/0.4.4.11
 [0.4.4.10]: https://pypi.org/project/instancelib/0.4.4.10
 [0.4.4.9]: https://pypi.org/project/instancelib/0.4.4.9
 [0.4.4.8]: https://pypi.org/project/instancelib/0.4.4.8

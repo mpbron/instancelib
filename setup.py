@@ -15,7 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 import pathlib
-import setuptools # type: ignore
+import setuptools  # type: ignore
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
@@ -24,9 +24,9 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text()
 
 # This call to setup() does all the work
-setuptools.setup( # type: ignore
+setuptools.setup(  # type: ignore
     name="instancelib",
-    version="0.4.4.12",
+    version="0.4.5.0",  # NOSONAR
     description="A typed dataset abstraction toolkit for machine learning projects",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -36,22 +36,23 @@ setuptools.setup( # type: ignore
     classifiers=[
         "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
         "Programming Language :: Python",
-        'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     package_data={"instancelib": ["py.typed"]},
-    packages=setuptools.find_packages(), # type: ignore
+    packages=setuptools.find_packages(),  # type: ignore
     python_requires=">=3.8",
     install_requires=[
-        "numpy", 
-        "pandas", 
-        "h5py",  
-        "scikit-learn", 
-        "openpyxl", 
+        "numpy",
+        "pandas",
+        "h5py",
+        "scikit-learn",
+        "openpyxl",
         "xlrd",
         "tqdm",
-        "more-itertools"],
+        "more-itertools",
+    ],
     extras_require={
         "doc2vec": ["gensim"],
-        "hdf5": ["tables"], 
-    }
+        "hdf5": ["tables"],
+    },
 )

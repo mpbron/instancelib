@@ -21,25 +21,43 @@ import logging
 import operator
 from abc import ABC, abstractmethod
 from os import PathLike
-from typing import (Any, FrozenSet, Generic, Iterable, Iterator, List,
-                    Optional, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any,
+    FrozenSet,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
+import numpy.typing as npt
 from tqdm.auto import tqdm
 
 from sklearn.base import ClassifierMixin, TransformerMixin
 from sklearn.pipeline import Pipeline  # type: ignore
-from sklearn.preprocessing import \
-    LabelEncoder as SKLabelEncoder  # type: ignore
+from sklearn.preprocessing import (
+    LabelEncoder as SKLabelEncoder,
+)
 from sklearn.preprocessing import MultiLabelBinarizer  # type: ignore
 
 from ..environment import Environment
 from ..environment.base import Environment
 from ..exceptions.base import LabelEncodingException
 from ..instances import Instance, InstanceProvider
-from ..labels.encoder import (DictionaryEncoder, IdentityEncoder, LabelEncoder,
-                              MultilabelDictionaryEncoder, SklearnLabelEncoder,
-                              SklearnMultiLabelEncoder)
+from ..labels.encoder import (
+    DictionaryEncoder,
+    IdentityEncoder,
+    LabelEncoder,
+    MultilabelDictionaryEncoder,
+    SklearnLabelEncoder,
+    SklearnMultiLabelEncoder,
+)
 from ..typehints.typevars import DT, KT, LT, VT
 from ..utils import SaveableInnerModel
 from ..utils.chunks import divide_iterable_in_lists
@@ -48,51 +66,66 @@ from .base import AbstractClassifier
 
 LOGGER = logging.getLogger(__name__)
 
-IT = TypeVar("IT", bound="Instance[Any, Any, np.ndarray, Any]", covariant=True)
+IT = TypeVar(
+    "IT", bound="Instance[Any, Any, npt.NDArray[Any], Any]", covariant=True
+)
 _T = TypeVar("_T")
 
-class SkLearnClassifier(SaveableInnerModel,
-                        AbstractClassifier[IT, KT, DT, VT, Any, LT, np.ndarray, np.ndarray], 
-                        ABC, Generic[IT, KT, DT, VT, LT]):
+
+class SkLearnClassifier(
+    SaveableInnerModel,
+    AbstractClassifier[
+        IT, KT, DT, VT, Any, LT, npt.NDArray[Any], npt.NDArray[Any]
+    ],
+    ABC,
+    Generic[IT, KT, DT, VT, LT],
+):
     _name = "Sklearn"
-    
+
     def __init__(
-            self,
-            estimator: Union[ClassifierMixin, Pipeline], 
-            encoder: LabelEncoder[LT, np.ndarray, np.ndarray, np.ndarray],
-            storage_location: "Optional[PathLike[str]]"=None, 
-            filename: "Optional[PathLike[str]]"=None
-            ) -> None:
-        SaveableInnerModel.__init__(self, estimator, storage_location, filename)
-        self.encoder = encoder 
+        self,
+        estimator: Union[ClassifierMixin, Pipeline],
+        encoder: LabelEncoder[
+            LT, npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any]
+        ],
+        storage_location: "Optional[PathLike[str]]" = None,
+        filename: "Optional[PathLike[str]]" = None,
+    ) -> None:
+        SaveableInnerModel.__init__(
+            self, estimator, storage_location, filename
+        )
+        self.encoder = encoder
         self._fitted = False
 
     def set_target_labels(self, labels: Iterable[LT]) -> None:
         self.encoder.initialize(labels)
 
     @SaveableInnerModel.load_model_fallback
-    def _fit(self, x_data: np.ndarray, y_data: np.ndarray):
+    def _fit(self, x_data: npt.NDArray[Any], y_data: npt.NDArray[Any]):
         assert x_data.shape[0] == y_data.shape[0]
-        self.innermodel.fit(x_data, y_data) # type: ignore
+        self.innermodel.fit(x_data, y_data)  # type: ignore
         LOGGER.info("[%s] Fitted the model", self.name)
         self._fitted = True
 
     @SaveableInnerModel.load_model_fallback
-    def _predict_proba(self, x_data: np.ndarray) -> np.ndarray:
+    def _predict_proba(self, x_data: npt.NDArray[Any]) -> npt.NDArray[Any]:
         assert self.innermodel is not None
-        return self.innermodel.predict_proba(x_data) 
+        return self.innermodel.predict_proba(x_data)
 
     @SaveableInnerModel.load_model_fallback
-    def _predict(self, x_data: np.ndarray) -> np.ndarray:
+    def _predict(self, x_data: npt.NDArray[Any]) -> npt.NDArray[Any]:
         assert self.innermodel is not None
         return self.innermodel.predict(x_data)
 
     @abstractmethod
-    def encode_x(self, 
-                 instances: Iterable[Instance[KT, DT, VT, Any]]) -> np.ndarray:
+    def encode_x(
+        self, instances: Iterable[Instance[KT, DT, VT, Any]]
+    ) -> npt.NDArray[Any]:
         raise NotImplementedError
 
-    def _filter_x_only_encoded_y(self, instances: Iterable[_T], labelings: Sequence[Iterable[LT]]) -> Tuple[Iterable[_T], np.ndarray]:
+    def _filter_x_only_encoded_y(
+        self, instances: Iterable[_T], labelings: Sequence[Iterable[LT]]
+    ) -> Tuple[Iterable[_T], npt.NDArray[Any]]:
         """Filter out the training data for which no label exists
 
         Parameters
@@ -104,9 +137,9 @@ class SkLearnClassifier(SaveableInnerModel,
 
         Returns
         -------
-        Tuple[Iterable[_T], np.ndarray]
+        Tuple[Iterable[_T], npt.NDArray[Any]]
             A tuple containing the training instances and a label matrix that contains all succesfully encoded labels
-        """        
+        """
         try:
             y_mat = self.encoder.encode_batch(labelings)
         except LabelEncodingException:
@@ -117,23 +150,32 @@ class SkLearnClassifier(SaveableInnerModel,
             lbl_instances = instances
         return lbl_instances, y_mat
 
-    def encode_y(self, labelings: Sequence[Iterable[LT]]) -> np.ndarray:
+    def encode_y(self, labelings: Sequence[Iterable[LT]]) -> npt.NDArray[Any]:
         y_data = self.encoder.encode_batch(labelings)
         return y_data
 
     def get_label_column_index(self, label: LT) -> int:
         return self.encoder.get_label_column_index(label)
-        
+
     @abstractmethod
-    def encode_xy(self, instances: Iterable[Instance[KT, DT, VT, Any]], 
-                        labelings: Iterable[Iterable[LT]]) -> Tuple[np.ndarray, np.ndarray]:
+    def encode_xy(
+        self,
+        instances: Iterable[Instance[KT, DT, VT, Any]],
+        labelings: Iterable[Iterable[LT]],
+    ) -> Tuple[npt.NDArray[Any], npt.NDArray[Any]]:
         raise NotImplementedError
 
-    def fit_instances(self, instances: Iterable[Instance[KT, DT, VT, Any]], labels: Iterable[Iterable[LT]]) -> None:
+    def fit_instances(
+        self,
+        instances: Iterable[Instance[KT, DT, VT, Any]],
+        labels: Iterable[Iterable[LT]],
+    ) -> None:
         x_train_vec, y_train_vec = self.encode_xy(instances, labels)
         self._fit(x_train_vec, y_train_vec)
 
-    def _pred_ins_batch(self, batch: Iterable[Instance[KT, DT, VT, Any]]) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
+    def _pred_ins_batch(
+        self, batch: Iterable[Instance[KT, DT, VT, Any]]
+    ) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         x_keys = [ins.identifier for ins in batch]
         x_vec = self.encode_x(batch)
         y_pred = self._predict(x_vec)
@@ -141,13 +183,17 @@ class SkLearnClassifier(SaveableInnerModel,
         zipped = list(zip(x_keys, labels))
         return zipped
 
-    def _pred_proba_raw_ins_batch(self, batch: Iterable[Instance[KT, DT, VT, Any]]) -> Tuple[Sequence[KT], np.ndarray]:
+    def _pred_proba_raw_ins_batch(
+        self, batch: Iterable[Instance[KT, DT, VT, Any]]
+    ) -> Tuple[Sequence[KT], npt.NDArray[Any]]:
         x_keys = [ins.identifier for ins in batch]
-        x_vec  = self.encode_x(batch)
+        x_vec = self.encode_x(batch)
         y_pred = self._predict_proba(x_vec)
         return x_keys, y_pred
-        
-    def _pred_proba_ins_batch(self, batch: Iterable[Instance[KT, DT, VT, Any]]) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
+
+    def _pred_proba_ins_batch(
+        self, batch: Iterable[Instance[KT, DT, VT, Any]]
+    ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         x_keys = [ins.identifier for ins in batch]
         x_vec = self.encode_x(batch)
         y_pred = self._predict_proba(x_vec)
@@ -155,44 +201,54 @@ class SkLearnClassifier(SaveableInnerModel,
         zipped = list(zip(x_keys, labels))
         return zipped
 
-    def predict_proba_instances_raw(self, 
-                                    instances: Iterable[Instance[KT, DT, VT, Any]],
-                                    batch_size: int = 200
-                                    ) -> Iterator[Tuple[Sequence[KT], np.ndarray]]:
+    def predict_proba_instances_raw(
+        self,
+        instances: Iterable[Instance[KT, DT, VT, Any]],
+        batch_size: int = 200,
+    ) -> Iterator[Tuple[Sequence[KT], npt.NDArray[Any]]]:
         batches = divide_iterable_in_lists(instances, batch_size)
         processed = map(self._pred_proba_raw_ins_batch, tqdm(batches))
         yield from processed
 
-    def predict_proba_instances(self, 
-                                instances: Iterable[Instance[KT, DT, VT, Any]],
-                                batch_size: int = 200
-                                ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
-        
+    def predict_proba_instances(
+        self,
+        instances: Iterable[Instance[KT, DT, VT, Any]],
+        batch_size: int = 200,
+    ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
+
         batches = divide_iterable_in_lists(instances, batch_size)
         processed = map(self._pred_proba_ins_batch, tqdm(batches))
-        combined: Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]] = functools.reduce(
-            operator.concat, processed, []) # type: ignore
+        combined: Sequence[
+            Tuple[KT, FrozenSet[Tuple[LT, float]]]
+        ] = functools.reduce(
+            operator.concat, processed, list()  # type: ignore
+        )  # type: ignore
         return combined
 
-    def predict_instances(self, 
-                          instances: Iterable[Instance[KT, DT, VT, Any]],
-                          batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[LT]]]:        
+    def predict_instances(
+        self,
+        instances: Iterable[Instance[KT, DT, VT, Any]],
+        batch_size: int = 200,
+    ) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         batches = divide_iterable_in_lists(instances, batch_size)
         results = map(self._pred_ins_batch, tqdm(batches))
         concatenated: Sequence[Tuple[KT, FrozenSet[LT]]] = functools.reduce(
-            lambda a,b: operator.concat(a,b), results, []) # type: ignore
+            lambda a, b: operator.concat(a, b), results, []
+        )  # type: ignore
         return concatenated
 
-    def _decode_proba_matrix(self, 
-                             keys: Sequence[KT], 
-                             y_matrix: np.ndarray) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
+    def _decode_proba_matrix(
+        self, keys: Sequence[KT], y_matrix: npt.NDArray[Any]
+    ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         y_labels = self.encoder.decode_proba_matrix(y_matrix)
-        zipped = list(zip(keys, y_labels)) 
+        zipped = list(zip(keys, y_labels))
         return zipped
 
-    def predict_proba_provider(self, 
-                               provider: InstanceProvider[IT, KT, DT, VT, Any], 
-                               batch_size: int = 200) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
+    def predict_proba_provider(
+        self,
+        provider: InstanceProvider[IT, KT, DT, VT, Any],
+        batch_size: int = 200,
+    ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
         preds = self.predict_proba_provider_raw(provider, batch_size)
         decoded_probas = itertools.starmap(self._decode_proba_matrix, preds)
         chained = list(itertools.chain.from_iterable(decoded_probas))
@@ -209,13 +265,14 @@ class SkLearnClassifier(SaveableInnerModel,
         return self._fitted
 
     @classmethod
-    def build_from_model(cls,
-                         estimator: Union[ClassifierMixin, Pipeline],
-                         classes: Optional[Sequence[LT]] = None,
-                         storage_location: "Optional[PathLike[str]]"=None, 
-                         filename: "Optional[PathLike[str]]"=None, 
-                         ints_as_str: bool = False,
-                         ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
+    def build_from_model(
+        cls,
+        estimator: Union[ClassifierMixin, Pipeline],
+        classes: Optional[Sequence[LT]] = None,
+        storage_location: "Optional[PathLike[str]]" = None,
+        filename: "Optional[PathLike[str]]" = None,
+        ints_as_str: bool = False,
+    ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
         """Construct a Sklearn model from a fitted Sklearn model.
         The estimator is a classifier for a binary or multiclass classification problem.
 
@@ -238,31 +295,38 @@ class SkLearnClassifier(SaveableInnerModel,
         """
         if classes is None:
             if hasattr(estimator, "classes_"):
-                labels: List[LT] = estimator.classes_.tolist() # type: ignore
-                dt: np.dtype = estimator.classes_.dtype # type: ignore
+                labels: List[LT] = estimator.classes_.tolist()  # type: ignore
+                dt: np.dtype = estimator.classes_.dtype  # type: ignore
                 if dt in ["object", "str"] or dt.kind == "U":
                     il_encoder = IdentityEncoder[LT].from_list(labels)
                 elif dt in ["int64", "int32"] or dt.kind == "i":
                     if ints_as_str:
-                        il_encoder = DictionaryEncoder[str].from_list(map(str, labels))
+                        il_encoder = DictionaryEncoder[str].from_list(
+                            map(str, labels)
+                        )
                     else:
                         il_encoder = DictionaryEncoder[LT].from_list(labels)
                 else:
-                    raise ValueError("Could not determine label outputs from model,"
-                                     " and no classes were supplied in function call.")
+                    raise ValueError(
+                        "Could not determine label outputs from model,"
+                        " and no classes were supplied in function call."
+                    )
                 return cls(estimator, il_encoder, storage_location, filename)
-            raise ValueError("Could not determine label outputs from model,"
-                                     " and no classes were supplied in function call.")
+            raise ValueError(
+                "Could not determine label outputs from model,"
+                " and no classes were supplied in function call."
+            )
         il_encoder = DictionaryEncoder[LT].from_list(classes)
         return cls(estimator, il_encoder, storage_location, filename)
 
     @classmethod
-    def build_from_model_multilabel(cls,
-                         estimator: Union[ClassifierMixin, Pipeline],
-                         classes: Optional[Sequence[LT]] = None,
-                         storage_location: "Optional[PathLike[str]]"=None, 
-                         filename: "Optional[PathLike[str]]"=None
-                         ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
+    def build_from_model_multilabel(
+        cls,
+        estimator: Union[ClassifierMixin, Pipeline],
+        classes: Optional[Sequence[LT]] = None,
+        storage_location: "Optional[PathLike[str]]" = None,
+        filename: "Optional[PathLike[str]]" = None,
+    ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
         """Construct a Sklearn model from a fitted Sklearn model.
         The estimator is a classifier for a multilabel classification problem.
 
@@ -284,20 +348,20 @@ class SkLearnClassifier(SaveableInnerModel,
             The model
         """
         if classes is None:
-            labels: List[LT] = estimator.classes_.tolist() # type: ignore
+            labels: List[LT] = estimator.classes_.tolist()  # type: ignore
             il_encoder = MultilabelDictionaryEncoder[LT].from_list(labels)
         else:
             il_encoder = MultilabelDictionaryEncoder[LT].from_list(classes)
         return cls(estimator, il_encoder, storage_location, filename)
-        
 
     @classmethod
-    def build(cls,
-                 estimator: Union[ClassifierMixin, Pipeline],
-                 env: Environment[IT, KT, DT, VT, Any, LT],
-                 storage_location: "Optional[PathLike[str]]"=None, 
-                 filename: "Optional[PathLike[str]]"=None
-                 ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
+    def build(
+        cls,
+        estimator: Union[ClassifierMixin, Pipeline],
+        env: Environment[IT, KT, DT, VT, Any, LT],
+        storage_location: "Optional[PathLike[str]]" = None,
+        filename: "Optional[PathLike[str]]" = None,
+    ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
         """Construct a Sklearn model from an :class:`~instancelib.Environment`.
         The estimator is a classifier for a binary or multiclass classification problem.
 
@@ -305,7 +369,7 @@ class SkLearnClassifier(SaveableInnerModel,
         ----------
         estimator : ClassifierMixin
             The Sklearn Classifier (e.g., :class:`sklearn.naive_bayes.MultinomialNB`)
-        env : Environment[IT, KT, Any, np.ndarray, Any, LT]
+        env : Environment[IT, KT, Any, npt.NDArray[Any], Any, LT]
             The environment that will be used to gather the labels from
         storage_location : Optional[PathLike[str]], optional
             If you want to save the model, you can specify the storage folder, by default None
@@ -318,16 +382,17 @@ class SkLearnClassifier(SaveableInnerModel,
             The model
         """
         sklearn_encoder: TransformerMixin = SKLabelEncoder()
-        il_encoder = SklearnLabelEncoder(sklearn_encoder, env.labels.labelset)    
+        il_encoder = SklearnLabelEncoder(sklearn_encoder, env.labels.labelset)
         return cls(estimator, il_encoder, storage_location, filename)
 
     @classmethod
-    def build_multilabel(cls,
-                 estimator: Union[ClassifierMixin, Pipeline],
-                 env: Environment[IT, KT, Any, np.ndarray, Any, LT],
-                 storage_location: "Optional[PathLike[str]]"=None, 
-                 filename: "Optional[PathLike[str]]"=None
-                 ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
+    def build_multilabel(
+        cls,
+        estimator: Union[ClassifierMixin, Pipeline],
+        env: Environment[IT, KT, Any, npt.NDArray[Any], Any, LT],
+        storage_location: "Optional[PathLike[str]]" = None,
+        filename: "Optional[PathLike[str]]" = None,
+    ) -> SkLearnClassifier[IT, KT, DT, VT, LT]:
         """Construct a Sklearn model from an :class:`~instancelib.Environment`.
         The estimator is a classifier for a binary or multiclass classification problem.
 
@@ -335,7 +400,7 @@ class SkLearnClassifier(SaveableInnerModel,
         ----------
         estimator : ClassifierMixin
              The scikit-learn API Classifier capable of Multilabel Classification
-        env : Environment[IT, KT, Any, np.ndarray, Any, LT]
+        env : Environment[IT, KT, Any, npt.NDArray[Any], Any, LT]
             The environment that will be used to gather the labels from
         storage_location : Optional[PathLike[str]], optional
             If you want to save the model, you can specify the storage folder, by default None
@@ -346,15 +411,19 @@ class SkLearnClassifier(SaveableInnerModel,
         -------
         SkLearnClassifier[IT, KT, DT, VT, LT]:
             The model
-        """        
+        """
         sklearn_encoder: TransformerMixin = MultiLabelBinarizer()
-        il_encoder = SklearnMultiLabelEncoder(sklearn_encoder, env.labels.labelset)    
+        il_encoder = SklearnMultiLabelEncoder(
+            sklearn_encoder, env.labels.labelset
+        )
         return cls(estimator, il_encoder, storage_location, filename)
 
     def __repr__(self) -> str:
-        result = ("SklearnClassifier("
-                 f"innermodel={self.innermodel}, "
-                 f"classes={self.encoder.labels})")
+        result = (
+            "SklearnClassifier("
+            f"innermodel={self.innermodel}, "
+            f"classes={self.encoder.labels})"
+        )
         return result
 
     def __str__(self) -> str:

@@ -22,14 +22,14 @@
 
 # import numpy as np # type: ignore
 
-# from ..instances.hdf5 import HDF5Provider 
+# from ..instances.hdf5 import HDF5Provider
 # from ..labels.memory import MemoryLabelProvider
 
 # from .base import AbstractEnvironment
 
 # # TODO Adjust MemoryEnvironment Generic Type (ADD ST)
 
-# class HDF5Environment(AbstractEnvironment[int, str, np.ndarray, str, str]):
+# class HDF5Environment(AbstractEnvironment[int, str, npt.NDArray[Any], str, str]):
 #     def __init__(
 #             self,
 #             dataset: HDF5Provider,
@@ -40,10 +40,10 @@
 #         self._named_providers: Dict[str, HDF5Provider] = dict()
 
 #     @classmethod
-#     def from_data(cls, 
-#             target_labels: Iterable[str], 
-#             indices: Sequence[int], 
-#             data: Sequence[str], 
+#     def from_data(cls,
+#             target_labels: Iterable[str],
+#             indices: Sequence[int],
+#             data: Sequence[str],
 #             ground_truth: Sequence[Set[str]],
 #             data_location: "PathLike[str]",
 #             vector_location: "PathLike[str]") -> HDF5Environment:
@@ -74,15 +74,3 @@
 #     @property
 #     def labels(self):
 #         return self._labelprovider
-
-   
-
-
-    
-    
-    
-
-
-
-        
-

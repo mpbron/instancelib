@@ -37,7 +37,11 @@ import pandas as pd
 from scipy import stats  # type: ignore
 
 from ..machinelearning.base import AbstractClassifier
-from ..instances.base import Instance, InstanceProvider, default_instance_viewer
+from ..instances.base import (
+    Instance,
+    InstanceProvider,
+    default_instance_viewer,
+)
 from ..labels.base import LabelProvider, default_label_viewer
 from ..labels.memory import MemoryLabelProvider
 
@@ -66,7 +70,7 @@ def instance_union(
 ) -> Callable[[InstanceInput[IT, KT, DT, VT, RT]], _T]:
     def wrapper(instances: InstanceInput[IT, KT, DT, VT, RT]) -> _T:
         if isinstance(instances, InstanceProvider):
-            typed_input: InstanceProvider[IT, KT, DT, VT, RT] = instances # type: ignore
+            typed_input: InstanceProvider[IT, KT, DT, VT, RT] = instances  # type: ignore
             return prov_func(typed_input)
         return iter_func(instances)
 
@@ -94,11 +98,10 @@ class BinaryModelMetrics(Generic[KT, LT]):
     false_negatives: FrozenSet[KT]
 
     recall: float = field()  # type: ignore
-    precision: float = field() # type: ignore
-    accuracy: float = field() # type: ignore
-    f1: float = field() # type: ignore
-    wss: float = field() # type: ignore
-    
+    precision: float = field()  # type: ignore
+    accuracy: float = field()  # type: ignore
+    f1: float = field()  # type: ignore
+    wss: float = field()  # type: ignore
 
     @property
     def recall(self) -> float:
@@ -301,7 +304,7 @@ def label_metrics(
     false_neg = ground_truth_pos.difference(true_pos)
     true_neg = included_keys.difference(true_pos, false_pos, false_neg)
     return BinaryModelMetrics(
-        label, None, true_pos, true_neg, false_pos, false_neg
+        label, None, true_pos, true_neg, false_pos, false_neg  # type: ignore
     )
 
 
@@ -361,24 +364,49 @@ def classifier_performance(
     performance = MulticlassModelMetrics[KT, LT](table, *performances)
     return performance
 
-def classifier_performance_mc(model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any], 
-                              instances: InstanceInput[IT, KT, DT, VT, RT],  
-                              ground_truth: LabelProvider[KT, LT],) -> MulticlassModelMetrics[KT, LT]:
+
+def classifier_performance_mc(
+    model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any],
+    instances: InstanceInput[IT, KT, DT, VT, RT],
+    ground_truth: LabelProvider[KT, LT],
+) -> MulticlassModelMetrics[KT, LT]:
     return classifier_performance(model, instances, ground_truth)
 
-def default_prediction_viewer(model: AbstractClassifier[IT, KT, DT, VT, RT, Any, Any, Any], colname="prediction") -> Callable[[InstanceProvider[IT, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]]]:
-    def get_preds(prov: InstanceProvider[IT, KT, DT, VT, RT]) -> Mapping[KT, Mapping[str, Any]]:
+
+def default_prediction_viewer(
+    model: AbstractClassifier[IT, KT, DT, VT, RT, Any, Any, Any],
+    colname="prediction",
+) -> Callable[
+    [InstanceProvider[IT, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]]
+]:
+    def get_preds(
+        prov: InstanceProvider[IT, KT, DT, VT, RT]
+    ) -> Mapping[KT, Mapping[str, Any]]:
         preds = dict(model.predict(prov))
-        formatted = value_map(lambda x : {colname: ", ".join(map(str, x))}, preds)
+        formatted = value_map(
+            lambda x: {colname: ", ".join(map(str, x))}, preds
+        )
         return formatted
+
     return get_preds
 
-def default_proba_viewer(model: AbstractClassifier[IT, KT, DT, VT, RT, Any, Any, Any], prefix="") -> Callable[[InstanceProvider[IT, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]]]:
-    def get_preds(prov: InstanceProvider[IT, KT, DT, VT, RT]) -> Mapping[KT, Mapping[str, Any]]:
+
+def default_proba_viewer(
+    model: AbstractClassifier[IT, KT, DT, VT, RT, Any, Any, Any], prefix=""
+) -> Callable[
+    [InstanceProvider[IT, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]]
+]:
+    def get_preds(
+        prov: InstanceProvider[IT, KT, DT, VT, RT]
+    ) -> Mapping[KT, Mapping[str, Any]]:
         preds = dict(model.predict_proba(prov))
-        formatted = value_map(lambda x: {f"{prefix}{lbl}": proba for lbl, proba in x}, preds)
+        formatted = value_map(
+            lambda x: {f"{prefix}{lbl}": proba for lbl, proba in x}, preds
+        )
         return formatted
+
     return get_preds
+
 
 def multi_model_viewer(
     models: Mapping[str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]],
@@ -419,12 +447,19 @@ def multi_model_viewer(
     -------
     pd.DataFrame
         A Pandas DataFrame that shows a comparison between the models
-    """    
-    pred_hooks = [default_prediction_viewer(model, f"prediction_{name}") for name, model in models.items()]
-    proba_hooks = [default_proba_viewer(model, f"p_{name}_") for name, model in models.items()]
+    """
+    pred_hooks = [
+        default_prediction_viewer(model, f"prediction_{name}")
+        for name, model in models.items()
+    ]
+    proba_hooks = [
+        default_proba_viewer(model, f"p_{name}_")
+        for name, model in models.items()
+    ]
     hooks = [*provider_hooks, *pred_hooks, *proba_hooks]
     df = to_pandas(provider, labels, instance_viewer, label_viewer, hooks)
     return df
+
 
 def prediction_viewer(
     model: AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any],
@@ -443,16 +478,18 @@ def prediction_viewer(
         ]
     ] = list(),
 ) -> pd.DataFrame:
-    hooks = [*provider_hooks, *[default_prediction_viewer(model), default_proba_viewer(model, "p_")]]
+    hooks = [
+        *provider_hooks,
+        *[default_prediction_viewer(model), default_proba_viewer(model, "p_")],
+    ]
     df = to_pandas(provider, labels, instance_viewer, label_viewer, hooks)
-    return df 
+    return df
+
 
 def train_models(
     train_set: InstanceProvider[IT, KT, DT, VT, RT],
     labels: LabelProvider[KT, LT],
-    models: Mapping[
-        str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]
-    ],
+    models: Mapping[str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]],
 ) -> None:
     for model in models.values():
         model.fit_provider(train_set, labels)
@@ -462,12 +499,11 @@ def compare_models(
     test_set: InstanceProvider[IT, KT, DT, VT, RT],
     ground_truth: LabelProvider[KT, LT],
     label: LT,
-    models: Mapping[
-        str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]
-    ],
+    models: Mapping[str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]],
 ) -> Mapping[str, BinaryModelMetrics[KT, LT]]:
     result = value_map(
-        lambda m: classifier_performance(m, test_set, ground_truth)[label], models
+        lambda m: classifier_performance(m, test_set, ground_truth)[label],
+        models,
     )
     return result
 
@@ -475,16 +511,17 @@ def compare_models(
 def results_to_dataframe(
     summary: Mapping[str, BinaryModelMetrics[Any, Any]]
 ) -> pd.DataFrame:
-    df = pd.DataFrame.from_dict(summary, orient="index")
+    df = pd.DataFrame.from_dict(summary, orient="index")  # type: ignore
     return df
 
-def binary_classification_analysis(train_set: InstanceProvider[IT, KT, DT, VT, RT],
-                      test_set: InstanceProvider[IT, KT, DT, VT, RT],
-                      ground_truth: LabelProvider[KT, LT],
-                      label: LT, 
-                      models: Mapping[
-                            str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]
-                        ]) -> pd.DataFrame:
+
+def binary_classification_analysis(
+    train_set: InstanceProvider[IT, KT, DT, VT, RT],
+    test_set: InstanceProvider[IT, KT, DT, VT, RT],
+    ground_truth: LabelProvider[KT, LT],
+    label: LT,
+    models: Mapping[str, AbstractClassifier[IT, KT, DT, VT, RT, LT, Any, Any]],
+) -> pd.DataFrame:
     train_models(train_set, ground_truth, models)
     comparison = compare_models(test_set, ground_truth, label, models)
     dataframe = results_to_dataframe(comparison)

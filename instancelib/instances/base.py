@@ -19,8 +19,23 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from typing import (Any, Callable, FrozenSet, Generic, Iterable, Iterator, List, Mapping, MutableMapping,
-                    Optional, Sequence, Tuple, Type, TypeVar, Union)
+from typing import (
+    Any,
+    Callable,
+    FrozenSet,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from ..utils.chunks import divide_iterable_in_lists
 from ..utils.func import filter_snd_none_zipped
@@ -28,6 +43,7 @@ from ..utils.func import filter_snd_none_zipped
 from ..typehints import KT, DT, VT, RT
 
 _V = TypeVar("_V")
+
 
 @dataclass
 class TypeInfo:
@@ -37,20 +53,21 @@ class TypeInfo:
     representation: Type
 
     def __repr__(self) -> str:
-        result = ("TypeInfo("
-                 f"identifier={self.identifier.__name__}, "
-                 f"data={self.data.__name__}, "
-                 f"vector={self.vector.__name__}, "
-                 f"representation={self.representation.__name__})")
+        result = (
+            "TypeInfo("
+            f"identifier={self.identifier.__name__}, "
+            f"data={self.data.__name__}, "
+            f"vector={self.vector.__name__}, "
+            f"representation={self.representation.__name__})"
+        )
         return result
 
     def __str__(self) -> str:
         return self.__repr__()
 
 
-
 class Instance(ABC, Generic[KT, DT, VT, RT]):
-    """A base Instance Class. 
+    """A base Instance Class.
 
     Every Instance contains 4 properties:
 
@@ -68,7 +85,7 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
     Combining these four items in a single object enables easy transfer between
     different operations like predictions, annotatation and transformation.
-    """    
+    """
 
     @property
     @abstractmethod
@@ -119,10 +136,10 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
         Note
         ----
-        It may be better to use the 
+        It may be better to use the
         :meth:`InstanceProvider.bulk_add_vectors` method
         if you want update the vectors of many instances
-        """        
+        """
         raise NotImplementedError
 
     @property
@@ -145,14 +162,20 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
         ----------
         value : KT
             The new identifier
-        """        
+        """
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        data_short = self.data if len(repr(self.data)) <= 20 else f"{repr(self.data)[0:20]} ...'"
-        str_rep = (f"Instance(identifier={self.identifier}, "
-                   f"data={data_short}, "
-                   f"has_vector={self.vector is not None})")
+        data_short = (
+            self.data
+            if len(repr(self.data)) <= 20
+            else f"{repr(self.data)[0:20]} ...'"
+        )
+        str_rep = (
+            f"Instance(identifier={self.identifier}, "
+            f"data={data_short}, "
+            f"has_vector={self.vector is not None})"
+        )
         return str_rep
 
     def __str__(self) -> str:
@@ -160,15 +183,17 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
 
     def to_dict(self) -> Mapping[str, Any]:
         mapping = {
-            "identifier": self.identifier, 
-            "data": self.data, 
-            "vector": self.vector, 
-            "representation": self.representation}
+            "identifier": self.identifier,
+            "data": self.data,
+            "vector": self.vector,
+            "representation": self.representation,
+        }
         return mapping
 
-   
     @staticmethod
-    def map_data(func: Callable[[DT], _V]) -> Callable[[Instance[KT, DT, VT, RT]], _V]:
+    def map_data(
+        func: Callable[[DT], _V]
+    ) -> Callable[[Instance[KT, DT, VT, RT]], _V]:
         """Transform function that works on raw data into a function that works on
         :class:`Instance` objects.
 
@@ -181,13 +206,17 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
         -------
         Callable[[Instance[KT, DT, VT, RT]], _V]
             The transformed function
-        """        
+        """
+
         def wrapped(instance: Instance[KT, DT, VT, RT]) -> _V:
-            return(func(instance.data))
+            return func(instance.data)
+
         return wrapped
 
     @staticmethod
-    def map_vector(func: Callable[[VT], _V]) -> Callable[[Instance[KT, DT, VT, RT]], Optional[_V]]:
+    def map_vector(
+        func: Callable[[VT], _V]
+    ) -> Callable[[Instance[KT, DT, VT, RT]], Optional[_V]]:
         """Transform function that works on vectors into a function that works on
         :class:`Instance` objects.
 
@@ -200,18 +229,20 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
         -------
         Callable[[Instance[KT, DT, VT, RT]], _V]
             The transformed function
-        """        
+        """
+
         def wrapped(instance: Instance[KT, DT, VT, RT]) -> Optional[_V]:
             if instance.vector is not None:
-                return(func(instance.vector))
+                return func(instance.vector)
             return None
+
         return wrapped
 
     @staticmethod
     def vectorized_data_map(
         func: Callable[[Iterable[DT]], _V]
-        ) -> Callable[[Iterable[Instance[KT, DT, VT, RT]]], _V]:
-        """Transform function that works on sequences of raw data  
+    ) -> Callable[[Iterable[Instance[KT, DT, VT, RT]]], _V]:
+        """Transform function that works on sequences of raw data
         into a function that works on sequences of :class:`Instance` objects.
 
         Parameters
@@ -223,21 +254,32 @@ class Instance(ABC, Generic[KT, DT, VT, RT]):
         -------
         Callable[[Iterable[Instance[KT, DT, VT, RT]]], _V]
             The transformed function
-        """        
+        """
+
         def wrapped(instances: Iterable[Instance[KT, DT, VT, RT]]) -> _V:
             data = (instance.data for instance in instances)
             results = func(data)
             return results
+
         return wrapped
 
     @property
     def type_info(self) -> TypeInfo:
-        result = TypeInfo(type(self.identifier), type(self.data), type(self.vector), type(self.representation))
+        result = TypeInfo(
+            type(self.identifier),
+            type(self.data),
+            type(self.vector),
+            type(self.representation),
+        )
         return result
+
 
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
 
-class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, KT, DT, VT, RT]):
+
+class ROInstanceProvider(
+    Mapping[KT, InstanceType], ABC, Generic[InstanceType, KT, DT, VT, RT]
+):
     """The Base InstanceProvider class (ReadOnly).
 
     This class provides an abstract implementation for a dataset.
@@ -249,12 +291,12 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         - :data:`~instancelib.typehints.VT`: The type of the vector
         - :data:`~instancelib.typehints.RT`: The type of the representation
 
-    Specifying these allows Python to ensure the correctness of your implementation 
+    Specifying these allows Python to ensure the correctness of your implementation
     and eases further integration in your application.
 
     Examples
     --------
-    
+
     Instance access:
 
     >>> provider = InstanceProvider() # Replace with your implementation's constructor
@@ -268,9 +310,9 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
     >>> provider.discard(new_instance)
 
     Example implementation:
-    
-    >>> class TextProvider(InstanceProvider[Instance[int, str, np.ndarray, str],
-    ...                                     int, str, np.ndarray, str]):
+
+    >>> class TextProvider(InstanceProvider[Instance[int, str, npt.NDArray[Any], str],
+    ...                                     int, str, npt.NDArray[Any], str]):
     ...     # Further implementation is needed
     >>> textprovider = TextProvider()
 
@@ -278,10 +320,10 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
     in your own implementation. See the source of this file to see what you need to
     implement.
     """
-    
+
     @abstractmethod
     def __contains__(self, item: object) -> bool:
-        """Special method that checks if something is contained in this 
+        """Special method that checks if something is contained in this
         provider.
 
         Parameters
@@ -293,7 +335,7 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         Returns
         -------
         bool
-            True if the provider contains `item`. 
+            True if the provider contains `item`.
 
         Examples
         --------
@@ -313,7 +355,7 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         Yields
         ------
         :class:`KT`
-            Keys included in the provider 
+            Keys included in the provider
         """
         raise NotImplementedError
 
@@ -364,13 +406,15 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         """
         raise NotImplementedError
 
-    def bulk_add_vectors(self, keys: Sequence[KT], values: Sequence[VT]) -> None:
+    def bulk_add_vectors(
+        self, keys: Sequence[KT], values: Sequence[VT]
+    ) -> None:
         """This methods adds vectors in `values` to the instances specified
-        in `keys`. 
+        in `keys`.
 
         In some use cases, vectors are not known beforehand. This library
         provides several :term:`vectorizer` s that convert raw data points
-        in feature vector form. Once these vectors are available, they can be 
+        in feature vector form. Once these vectors are available, they can be
         added to the provider by using this method
 
         Parameters
@@ -388,7 +432,9 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         for key, vec in zip(keys, values):
             self[key].vector = vec
 
-    def bulk_get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:
+    def bulk_get_vectors(
+        self, keys: Sequence[KT]
+    ) -> Tuple[Sequence[KT], Sequence[VT]]:
         """Given a list of instance `keys`, return the vectors
 
         Parameters
@@ -406,15 +452,17 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         Warning
         -------
         Some underlying implementations do not preserve the ordering of the parameter
-        `keys`. Therefore, always use the keys variable from the returned tuple for 
+        `keys`. Therefore, always use the keys variable from the returned tuple for
         the correct matching.
         """
         vector_pairs = ((key, self[key].vector) for key in keys)
         ret_keys, ret_vectors = filter_snd_none_zipped(vector_pairs)
         return ret_keys, ret_vectors  # type: ignore
-    
-    def data_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
-        """Iterate over all instances data parts in 
+
+    def data_chunker(
+        self, batch_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, DT]]]:
+        """Iterate over all instances data parts in
         this provider
 
         Parameters
@@ -432,30 +480,37 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         chunks = divide_iterable_in_lists(datapoints, batch_size)
         yield from chunks
 
-    def data_chunker_selector(self, 
-                              keys: Iterable[KT], 
-                              batch_size: int = 200
-                              ) -> Iterator[Sequence[Tuple[KT, DT]]]:
+    def data_chunker_selector(
+        self, keys: Iterable[KT], batch_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, DT]]]:
         keyset = frozenset(keys)
-        datapoints = ((ins.identifier, ins.data) for ins in self.values() if ins.identifier in keyset)
+        datapoints = (
+            (ins.identifier, ins.data)
+            for ins in self.values()
+            if ins.identifier in keyset
+        )
         chunks = divide_iterable_in_lists(datapoints, batch_size)
         yield from chunks
-    
+
     @property
     def with_vector(self) -> FrozenSet[KT]:
-        return frozenset((k for k,v in self.items() if v.vector is not None))
+        return frozenset((k for k, v in self.items() if v.vector is not None))
 
     @property
     def without_vector(self) -> FrozenSet[KT]:
-        return frozenset((k for k,v in self.items() if v.vector is None))
+        return frozenset((k for k, v in self.items() if v.vector is None))
 
-    def instance_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
+    def instance_chunker_selector(
+        self, keys: Iterable[KT], batch_size: int = 200
+    ) -> Iterator[Sequence[InstanceType]]:
         chunks = divide_iterable_in_lists(keys, batch_size)
         for chunk in chunks:
             yield [self[key] for key in chunk]
 
-    def instance_chunker(self, batch_size: int = 200) -> Iterator[Sequence[InstanceType]]:
-        """Iterate over all instances (with or without vectors) in 
+    def instance_chunker(
+        self, batch_size: int = 200
+    ) -> Iterator[Sequence[InstanceType]]:
+        """Iterate over all instances (with or without vectors) in
         this provider
 
         Parameters
@@ -472,8 +527,10 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         chunks = divide_iterable_in_lists(self.values(), batch_size)
         yield from chunks
 
-    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
-        """Iterate over all instances (with or without vectors) in belonging the identifier 
+    def vector_chunker_selector(
+        self, keys: Iterable[KT], batch_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        """Iterate over all instances (with or without vectors) in belonging the identifier
         :class:`Iterable` in the `keys` parameter.
 
         Parameters
@@ -496,13 +553,18 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
             An iterator over sequences of key vector tuples
         """
         included_ids = frozenset(self.key_list).intersection(keys)
-        id_vecs = ((elem.identifier, elem.vector)
-                   for elem in self.values() if elem.vector is not None and elem.identifier in included_ids)
+        id_vecs = (
+            (elem.identifier, elem.vector)
+            for elem in self.values()
+            if elem.vector is not None and elem.identifier in included_ids
+        )
         chunks = divide_iterable_in_lists(id_vecs, batch_size)
         return chunks
 
-    def vector_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
-        """Iterate over all pairs of keys and vectors in 
+    def vector_chunker(
+        self, batch_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        """Iterate over all pairs of keys and vectors in
         this provider
 
         Parameters
@@ -541,7 +603,7 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
     def map(self, func: Callable[[InstanceType], _V]) -> Iterator[_V]:
         """A higher order function that maps any function that works on
         individual :class:`Instance` objects on every contained object in
-        this provider. 
+        this provider.
 
         Parameters
         ----------
@@ -552,7 +614,7 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         -------
         Iterator[_V]
             The values produced by the function `func`
-        """        
+        """
         keys = self.key_list
         for key in keys:
             instance = self[key]
@@ -561,8 +623,8 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
 
     def data_map(self, func: Callable[[DT], _V]) -> Iterator[_V]:
         """A higher order function that maps any function that works on
-        individual :class:`~instancelib.typehints.KT` object 
-        on every  :class:`Instance` object in this provider. 
+        individual :class:`~instancelib.typehints.KT` object
+        on every  :class:`Instance` object in this provider.
 
         Parameters
         ----------
@@ -586,17 +648,19 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         ------
         DT
             Raw data
-        """        
+        """
         yield from (instance.data for instance in self.values())
 
-    def vectorized_map(self, 
-                       func: Callable[[Iterable[InstanceType]], _V], 
-                       batch_size: int = 200) -> Iterator[_V]:
+    def vectorized_map(
+        self,
+        func: Callable[[Iterable[InstanceType]], _V],
+        batch_size: int = 200,
+    ) -> Iterator[_V]:
         """Maps a function that works on multiple instances
         onto all the instances in batches of size `batch_size`.
 
         Note: If you run a function that combines multiple instances into
-        a single result, this may possibly lead to undiserable results if 
+        a single result, this may possibly lead to undiserable results if
         batches are not taken into account.
 
         Parameters
@@ -610,20 +674,19 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         -------
         _V
             The result type of the function in parameter `func`
-        """        
+        """
         chunks = divide_iterable_in_lists(self.values(), batch_size)
         results = map(func, chunks)
         yield from results
-    
-    def vectorized_data_map(self, 
-                            func: Callable[[Iterable[DT]], _V],
-                            batch_size: int = 200
-                            ) -> Iterator[_V]:
+
+    def vectorized_data_map(
+        self, func: Callable[[Iterable[DT]], _V], batch_size: int = 200
+    ) -> Iterator[_V]:
         """Maps a function that works on multiple raw data points
         onto all the instances in batches of size `batch_size`.
 
         Note: If you run a function that combines multiple instances into
-        a single result, this may possibly lead to undiserable results if 
+        a single result, this may possibly lead to undiserable results if
         batches are not taken into account.
 
         Parameters
@@ -637,7 +700,7 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
         -------
         _V
             The result type of the function in parameter `func`
-        """        
+        """
         chunks = divide_iterable_in_lists(self.values(), batch_size)
         mapped_f = Instance[KT, DT, VT, RT].vectorized_data_map(func)
         results = map(mapped_f, chunks)
@@ -658,15 +721,19 @@ class ROInstanceProvider(Mapping[KT, InstanceType], ABC, Generic[InstanceType, K
     def __str__(self) -> str:
         return self.__repr__()
 
+
 def default_instance_viewer(
     ins: Instance[Any, Any, Any, RT]
 ) -> Mapping[str, RT]:
     return {"data": ins.representation}
-    
 
-class InstanceProvider(MutableMapping[KT, InstanceType], 
-                       ROInstanceProvider[InstanceType, KT, DT, VT, RT],
-                       ABC, Generic[InstanceType, KT, DT, VT, RT]):
+
+class InstanceProvider(
+    MutableMapping[KT, InstanceType],
+    ROInstanceProvider[InstanceType, KT, DT, VT, RT],
+    ABC,
+    Generic[InstanceType, KT, DT, VT, RT],
+):
     """The Base InstanceProvider class.
 
     This class provides an abstract implementation for a dataset.
@@ -678,12 +745,12 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         - :data:`~instancelib.typehints.VT`: The type of the vector
         - :data:`~instancelib.typehints.RT`: The type of the representation
 
-    Specifying these allows Python to ensure the correctness of your implementation 
+    Specifying these allows Python to ensure the correctness of your implementation
     and eases further integration in your application.
 
     Examples
     --------
-    
+
     Instance access:
 
     >>> provider = InstanceProvider() # Replace with your implementation's constructor
@@ -697,9 +764,9 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
     >>> provider.discard(new_instance)
 
     Example implementation:
-    
-    >>> class TextProvider(InstanceProvider[Instance[int, str, np.ndarray, str],
-    ...                                     int, str, np.ndarray, str]):
+
+    >>> class TextProvider(InstanceProvider[Instance[int, str, npt.NDArray[Any], str],
+    ...                                     int, str, npt.NDArray[Any], str]):
     ...     # Further implementation is needed
     >>> textprovider = TextProvider()
 
@@ -709,9 +776,11 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
     """
 
     @abstractmethod
-    def add_child(self,
-                  parent: Union[KT, Instance[KT, DT, VT, RT]],
-                  child: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+    def add_child(
+        self,
+        parent: Union[KT, Instance[KT, DT, VT, RT]],
+        child: Union[KT, Instance[KT, DT, VT, RT]],
+    ) -> None:
         """Register a parent child relation between two instances
 
         Parameters
@@ -720,12 +789,13 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
             The parent instance (or identifier)
         child : Union[KT, Instance[KT, DT, VT, RT]]
             The child instance (or identifier)
-        """        
+        """
         raise NotImplementedError
 
-         
     @abstractmethod
-    def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[InstanceType]:
+    def get_children(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> Sequence[InstanceType]:
         """Get the children that are registered to this parent
 
         Parameters
@@ -737,11 +807,13 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         -------
         Sequence[InstanceType]
             A list containing the children
-        """        
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+    def discard_children(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> None:
         """Discard the children that are registered to this parent
 
         Parameters
@@ -749,9 +821,11 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         parent : Union[KT, Instance[KT, DT, VT, RT]]
             The parent from which you want to get the children from.
         """
-        raise NotImplementedError        
+        raise NotImplementedError
 
-    def get_children_keys(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[KT]:
+    def get_children_keys(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> Sequence[KT]:
         """Get the children that are registered to this parent
 
         Parameters
@@ -768,7 +842,9 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         return child_keys
 
     @abstractmethod
-    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceType:
+    def get_parent(
+        self, child: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> InstanceType:
         """Get the parent of a child
 
         Parameters
@@ -785,14 +861,12 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         ------
         KeyError
             If there is no parent associated with this :class:`Instance`
-        """        
+        """
         raise NotImplementedError
 
-    
-
     def add(self, instance: Instance[KT, DT, VT, RT]) -> None:
-        """Add an instance to this provider. 
-        
+        """Add an instance to this provider.
+
         If the provider already contains `instance`, nothing happens.
 
         Parameters
@@ -800,11 +874,11 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         instance : Instance[KT, DT, VT, RT]
             The instance that should be added to the provider
         """
-        self.__setitem__(instance.identifier, instance) # type: ignore
+        self.__setitem__(instance.identifier, instance)  # type: ignore
 
     def add_range(self, *instances: Instance[KT, DT, VT, RT]) -> None:
-        """Add multiple instances to this provider. 
-        
+        """Add multiple instances to this provider.
+
         If the provider already contains `instance`, nothing happens.
 
         Parameters
@@ -816,7 +890,7 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
             self.add(instance)
 
     def discard(self, instance: Instance[KT, DT, VT, RT]) -> None:
-        """Remove an instance from this provider. If the 
+        """Remove an instance from this provider. If the
         provider does not contain `instance`, nothing happens.
 
         Parameters
@@ -829,25 +903,27 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         except KeyError:
             pass  # To adhere to Set.discard(...) behavior
 
-    def map_mutate(self, func: Callable[[InstanceType], Instance[KT, DT, VT, RT]]) -> None:
+    def map_mutate(
+        self, func: Callable[[InstanceType], Instance[KT, DT, VT, RT]]
+    ) -> None:
         """Run a function on this provider that modifies all Instances in place
 
         Parameters
         ----------
         func : Callable[[InstanceType], InstanceType]
             A function that modifies instances in place
-        """        
+        """
         keys = self.key_list
         for key in keys:
             instance = self[key]
             upd_instance = func(instance)
-            self[key] = upd_instance # type: ignore
+            self[key] = upd_instance  # type: ignore
 
     @abstractmethod
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
         """Create a new instance of type :data:`InstanceType`.
         The created instance is subsequently added to the provider.
-        
+
         Note: The number of arguments and keyword arguments may differ
         in actual implementation, so there are no standard arguments.
 
@@ -855,19 +931,21 @@ class InstanceProvider(MutableMapping[KT, InstanceType],
         -------
         InstanceType
             The new instance Type
-        """        
+        """
         raise NotImplementedError
 
 
-
-class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC, 
-                                   Generic[InstanceType, KT, DT, VT, RT]):
+class AbstractBucketProvider(
+    InstanceProvider[InstanceType, KT, DT, VT, RT],
+    ABC,
+    Generic[InstanceType, KT, DT, VT, RT],
+):
     """This class allows the creation of subsets (`buckets`) from a provider,
     without copying data, while still preserving the :class:`InstanceProvider`
     API.
 
     For example, in Poolbased Active Learning, the dataset is partitioned
-    in several sets; e.g., the `labeled` and `unlabeled` parts of the dataset. 
+    in several sets; e.g., the `labeled` and `unlabeled` parts of the dataset.
     Or in traditional supervised learning, the train, test and validation sets.
     No data is copied, only a set of identifiers is kept in this provider.
     All data resides in the original provider.
@@ -876,11 +954,11 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
     ----------
     dataset
         The :class:`InstanceProvider` that you want to take a subset from
-    """    
+    """
 
     dataset: InstanceProvider[InstanceType, KT, DT, VT, RT]
-    """The original dataset. All data will remain there"""    
-    
+    """The original dataset. All data will remain there"""
+
     @abstractmethod
     def _add_to_bucket(self, key: KT) -> None:
         """Adds the :class:`Instance` with identifier `key` to the bucket
@@ -889,7 +967,7 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         ----------
         key : KT
             The identifier for the :class:`Instance` that should be added
-        """        
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -900,25 +978,24 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         ----------
         key : KT
             The identifier for the :class:`Instance` that should be removed
-        """        
+        """
         raise NotImplementedError
 
     @abstractmethod
     def _in_bucket(self, key: KT) -> bool:
-        """Returns if the :class:`Instance` with identifier `key` exists 
+        """Returns if the :class:`Instance` with identifier `key` exists
         within this bucket
 
         Parameters
         ----------
         key : KT
             The identifier for the :class:`Instance` that should be added
-        """        
+        """
         raise NotImplementedError
-    
+
     @abstractmethod
     def _clear_bucket(self) -> None:
-        """Removes all elements from this bucket
-        """        
+        """Removes all elements from this bucket"""
         raise NotImplementedError
 
     @abstractmethod
@@ -929,7 +1006,7 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         -------
         int
             The size of the bucket
-        """        
+        """
         raise NotImplementedError
 
     @property
@@ -942,7 +1019,7 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         Iterable[KT]
             An :class:`Iterable` that contains all identifiers
             present in this bucket
-        """        
+        """
         raise NotImplementedError
 
     def __iter__(self) -> Iterator[KT]:
@@ -952,7 +1029,8 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         if self._in_bucket(key):
             return self.dataset[key]
         raise KeyError(
-            f"This datapoint with key {key} does not exist in this provider")
+            f"This datapoint with key {key} does not exist in this provider"
+        )
 
     def __setitem__(self, key: KT, value: InstanceType) -> None:
         self._add_to_bucket(key)
@@ -965,25 +1043,35 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         return self._len_bucket()
 
     def __contains__(self, key: object) -> bool:
-        return self._in_bucket(key) # type: ignore
+        return self._in_bucket(key)  # type: ignore
 
     def get_all(self) -> Iterator[InstanceType]:
         yield from list(self.values())
 
-    def vector_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
-        results = self.dataset.vector_chunker_selector(self.key_list, batch_size)
+    def vector_chunker(
+        self, batch_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, VT]]]:
+        results = self.dataset.vector_chunker_selector(
+            self.key_list, batch_size
+        )
         return results
 
-    def data_chunker(self, batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+    def data_chunker(
+        self, batch_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, DT]]]:
         results = self.dataset.data_chunker_selector(self.key_list, batch_size)
         return results
 
-    def data_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, DT]]]:
+    def data_chunker_selector(
+        self, keys: Iterable[KT], batch_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, DT]]]:
         keyset = frozenset(self.key_list).intersection(keys)
         results = self.dataset.data_chunker_selector(keyset, batch_size)
         return results
 
-    def vector_chunker_selector(self, keys: Iterable[KT], batch_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
+    def vector_chunker_selector(
+        self, keys: Iterable[KT], batch_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, VT]]]:
         keyset = frozenset(self.key_list).intersection(keys)
         results = self.dataset.vector_chunker_selector(keyset, batch_size)
         return results
@@ -995,21 +1083,27 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
     def empty(self) -> bool:
         return not self
 
-    def add_child(self, 
-                  parent: Union[KT, InstanceType], 
-                  child: Union[KT, InstanceType]) -> None:
+    def add_child(
+        self, parent: Union[KT, InstanceType], child: Union[KT, InstanceType]
+    ) -> None:
         self.dataset.add_child(parent, child)
 
-    def get_children_keys(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[KT]:
+    def get_children_keys(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> Sequence[KT]:
         return self.dataset.get_children_keys(parent)
 
-    def get_children(self, parent: Union[KT, InstanceType]) -> Sequence[InstanceType]:
+    def get_children(
+        self, parent: Union[KT, InstanceType]
+    ) -> Sequence[InstanceType]:
         return self.dataset.get_children(parent)
 
     def get_parent(self, child: Union[KT, InstanceType]) -> InstanceType:
         return self.dataset.get_parent(child)
 
-    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+    def discard_children(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> None:
         return self.dataset.discard_children(parent)
 
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
@@ -1017,10 +1111,13 @@ class AbstractBucketProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], ABC
         self.add(new_instance)
         return new_instance
 
-class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT], 
-                          ABC, 
-                          Generic[InstanceType, KT, DT, VT, RT]):
-    """This abstract class allows the creation of large subsets (`buckets`) that 
+
+class SubtractionProvider(
+    AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
+    ABC,
+    Generic[InstanceType, KT, DT, VT, RT],
+):
+    """This abstract class allows the creation of large subsets (`buckets`) that
     do not contain some elements, specified in a `bucket`.
     No data is copied, however, the :class:`InstanceProvider` API is preserved.
 
@@ -1030,9 +1127,9 @@ class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
     and include only the remainder.
 
     This method can be used in the Poolbased Active Learning setting; suppose
-    you have a small `labeled` set and a huge dataset. 
+    you have a small `labeled` set and a huge dataset.
     You can subtract the `labeled` from the dataset and create an InstanceProvider
-    that contains all `unlabeled` examples. 
+    that contains all `unlabeled` examples.
 
     Attributes
     ----------
@@ -1047,7 +1144,7 @@ class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
     If possible, do not use this class: a solution that is based on only :class:`InstanceProvider` objects
     and :class:`AbstractBucketProvider` will probably be faster.
     """
-    
+
     bucket: InstanceProvider[InstanceType, KT, DT, VT, RT]
     """The provider that should be excluded from the original `dataset`."""
 
@@ -1084,6 +1181,3 @@ class SubtractionProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
 
     def clear(self) -> None:
         pass
-
-
-        

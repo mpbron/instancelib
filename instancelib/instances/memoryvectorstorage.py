@@ -6,18 +6,30 @@ from .vectorstorage import VectorStorage
 from ..typehints import KT, VT, MT
 
 import numpy as np
+import numpy.typing as npt
 
-from typing import Any, Generic, Sequence, MutableMapping, Callable, Iterator, Union, Tuple
+from typing import (
+    Any,
+    Generic,
+    Sequence,
+    MutableMapping,
+    Callable,
+    Iterator,
+    Union,
+    Tuple,
+)
 
-class MemoryVectorStorage(VectorStorage[KT,VT,MT], Generic[KT, VT, MT]):
+
+class MemoryVectorStorage(VectorStorage[KT, VT, MT], Generic[KT, VT, MT]):
     from_matrix: Callable[[MT], Sequence[VT]]
     to_matrix: Callable[[Sequence[VT]], MT]
-    
-    
-    def __init__(self, 
-                 storage: MutableMapping[KT,VT], 
-                 from_matrix: Callable[[MT], Sequence[VT]],
-                 to_matrix: Callable[[Sequence[VT]], MT]) -> None:
+
+    def __init__(
+        self,
+        storage: MutableMapping[KT, VT],
+        from_matrix: Callable[[MT], Sequence[VT]],
+        to_matrix: Callable[[Sequence[VT]], MT],
+    ) -> None:
         self.storage = storage
         self.to_matrix = to_matrix
         self.from_matrix = from_matrix
@@ -27,7 +39,7 @@ class MemoryVectorStorage(VectorStorage[KT,VT,MT], Generic[KT, VT, MT]):
 
     def __getitem__(self, k: KT) -> VT:
         return self.storage[k]
-    
+
     def __setitem__(self, k: KT, value: VT) -> None:
         self.storage[k] = value
 
@@ -43,10 +55,12 @@ class MemoryVectorStorage(VectorStorage[KT,VT,MT], Generic[KT, VT, MT]):
     def __delitem__(self, __v: KT) -> None:
         del self.storage[__v]
 
-    def add_bulk(self, input_keys: Sequence[KT], input_values: Sequence[VT]) -> None:
+    def add_bulk(
+        self, input_keys: Sequence[KT], input_values: Sequence[VT]
+    ) -> None:
         for key, value in zip(input_keys, input_values):
             self.storage[key] = value
-    
+
     def get_matrix(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], MT]:
         vectors = [self.storage[key] for key in keys]
         matrix = self.to_matrix(vectors)
@@ -57,8 +71,10 @@ class MemoryVectorStorage(VectorStorage[KT,VT,MT], Generic[KT, VT, MT]):
         for key, vector in zip(input_keys, vectors):
             self.storage[key] = vector
 
-    def get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:
-        """Return the vectors that correspond with the `keys` 
+    def get_vectors(
+        self, keys: Sequence[KT]
+    ) -> Tuple[Sequence[KT], Sequence[VT]]:
+        """Return the vectors that correspond with the `keys`
 
         Parameters
         ----------
@@ -71,20 +87,23 @@ class MemoryVectorStorage(VectorStorage[KT,VT,MT], Generic[KT, VT, MT]):
             A tuple containing two lists:
 
                 - A list with identifier (order may differ from `keys` argument)
-                - A list with vectors 
-        """        
+                - A list with vectors
+        """
         vectors = [self[key] for key in keys]
         return keys, vectors
 
-
-    def matrices_chunker(self, chunk_size: int = 200) -> Iterator[Tuple[Sequence[KT], MT]]:
+    def matrices_chunker(
+        self, chunk_size: int = 200
+    ) -> Iterator[Tuple[Sequence[KT], MT]]:
         chunks = divide_iterable_in_lists(list(self.keys()), chunk_size)
         for chunk in chunks:
             vectors = [self[key] for key in chunk]
             matrix = self.to_matrix(vectors)
             yield chunk, matrix
 
-    def get_vectors_chunked(self, keys: Sequence[KT], chunk_size: int = 200) -> Iterator[Tuple[Sequence[KT], Sequence[VT]]]:
+    def get_vectors_chunked(
+        self, keys: Sequence[KT], chunk_size: int = 200
+    ) -> Iterator[Tuple[Sequence[KT], Sequence[VT]]]:
         """Return vectors in chunks of `chunk_size` containing the vectors requested in `keys`
 
         Parameters
@@ -100,14 +119,16 @@ class MemoryVectorStorage(VectorStorage[KT,VT,MT], Generic[KT, VT, MT]):
             A tuple containing two lists:
 
                 - A list with identifiers (order may differ from `keys` argument)
-                - A list with vectors 
-        """        
+                - A list with vectors
+        """
         chunks = divide_iterable_in_lists(keys, chunk_size)
         for chunk in chunks:
             vectors = [self[key] for key in chunk]
             yield chunk, vectors
 
-    def get_vectors_zipped(self, keys: Sequence[KT], chunk_size: int = 200) -> Iterator[Sequence[Tuple[KT, VT]]]:
+    def get_vectors_zipped(
+        self, keys: Sequence[KT], chunk_size: int = 200
+    ) -> Iterator[Sequence[Tuple[KT, VT]]]:
         chunks = divide_iterable_in_lists(keys, chunk_size)
         for chunk in chunks:
             tuples = [(key, self[key]) for key in chunk]
@@ -115,32 +136,40 @@ class MemoryVectorStorage(VectorStorage[KT,VT,MT], Generic[KT, VT, MT]):
 
     def __enter__(self) -> VectorStorage[KT, VT, MT]:
         return self
-    
+
     def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
         pass
 
     @classmethod
-    def create(cls, 
-               from_matrix: Callable[[MT], Sequence[VT]], 
-               to_matrix: Callable[[Sequence[VT]], MT]) -> MemoryVectorStorage[KT, VT, MT]:
+    def create(
+        cls,
+        from_matrix: Callable[[MT], Sequence[VT]],
+        to_matrix: Callable[[Sequence[VT]], MT],
+    ) -> MemoryVectorStorage[KT, VT, MT]:
         storage = dict()
         return cls(storage, from_matrix, to_matrix)
-    
+
     def reload(self) -> None:
-        """Reload the index from disk
-        """
+        """Reload the index from disk"""
         pass
 
+
 class NumpyFromMatrix:
-    def __call__(self, matrix: np.ndarray) -> Sequence[np.ndarray]:
+    def __call__(self, matrix: npt.NDArray[Any]) -> Sequence[npt.NDArray[Any]]:
         return list(matrix)
 
+
 class NumpyToMatrix:
-    def __call__(self, vectors: Sequence[np.ndarray]) -> np.ndarray:
+    def __call__(
+        self, vectors: Sequence[npt.NDArray[Any]]
+    ) -> npt.NDArray[Any]:
         return np.vstack(vectors)
 
-class NumpyMemoryStorage(MemoryVectorStorage[KT, np.ndarray, np.ndarray], Generic[KT]):
-    def __init__(self, storage: MutableMapping[KT, np.ndarray]) -> None:
+
+class NumpyMemoryStorage(
+    MemoryVectorStorage[KT, npt.NDArray[Any], npt.NDArray[Any]], Generic[KT]
+):
+    def __init__(self, storage: MutableMapping[KT, npt.NDArray[Any]]) -> None:
         from_matrix = NumpyFromMatrix()
         to_matrix = NumpyToMatrix()
         super().__init__(storage, from_matrix, to_matrix)

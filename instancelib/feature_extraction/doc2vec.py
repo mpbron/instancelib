@@ -22,10 +22,11 @@ from typing import Sequence, Optional, Callable, List, Dict, Any
 from tempfile import NamedTemporaryFile
 
 import numpy as np
-from sklearn.exceptions import NotFittedError # type: ignore
+import numpy.typing as npt
+from sklearn.exceptions import NotFittedError  # type: ignore
 
-from gensim.models.doc2vec import Doc2Vec, TaggedLineDocument #type: ignore
-from gensim.utils import save_as_line_sentence # type: ignore
+from gensim.models.doc2vec import Doc2Vec, TaggedLineDocument  # type: ignore
+from gensim.utils import save_as_line_sentence  # type: ignore
 
 
 from .base import BaseVectorizer
@@ -42,7 +43,7 @@ def get_line_docs(documents: Sequence[str]) -> TaggedLineDocument:
 
 
 def split_tokenizer(text: str) -> List[str]:
-    return text.split(' ')
+    return text.split(" ")
 
 
 DocTokenizer = Callable[..., List[str]]
@@ -57,41 +58,46 @@ class Doc2VecVectorizer(BaseVectorizer[str], SaveableInnerModel):
         self,
         d2v_params: Dict[str, Any],
         tokenizer: DocTokenizer = split_tokenizer,
-        storage_location: "Optional[PathLike[str]]" =None,
-        filename:"Optional[PathLike[str]]" = None
+        storage_location: "Optional[PathLike[str]]" = None,
+        filename: "Optional[PathLike[str]]" = None,
     ) -> None:
-        BaseVectorizer.__init__(self) # type: ignore
-        self.tokenizer = tokenizer # type: ignore
+        BaseVectorizer.__init__(self)  # type: ignore
+        self.tokenizer = tokenizer  # type: ignore
         self.d2v_params = d2v_params
         self.innermodel = None
-        SaveableInnerModel.__init__(self, self.innermodel, storage_location, filename)
+        SaveableInnerModel.__init__(
+            self, self.innermodel, storage_location, filename
+        )
 
     def fit(self, x_data: Sequence[str], **kwargs: Any) -> Doc2VecVectorizer:
         self.innermodel = Doc2Vec(
-            documents=get_line_docs(x_data), **self.d2v_params)
-        self.innermodel.delete_temporary_training_data( # type: ignore
-            keep_doctags_vectors=True, keep_inference=True) 
+            documents=get_line_docs(x_data), **self.d2v_params
+        )
+        self.innermodel.delete_temporary_training_data(  # type: ignore
+            keep_doctags_vectors=True, keep_inference=True
+        )
         self._fitted = True
         return self
 
     @SaveableInnerModel.load_model_fallback
-    def transform(self, x_data: Sequence[str], **kwargs: Any) -> np.ndarray: # type: ignore
+    def transform(self, x_data: Sequence[str], **kwargs: Any) -> npt.NDArray[Any]:  # type: ignore
         if self.fitted and self.innermodel is not None:
-            return np.array( # type: ignore
+            return np.array(  # type: ignore
                 [
-                    self.innermodel.infer_vector(self.tokenizer(doc)) # type: ignore
+                    self.innermodel.infer_vector(self.tokenizer(doc))  # type: ignore
                     for doc in x_data
-                ]) 
+                ]
+            )
         raise NotFittedError
 
-    def fit_transform(self, x_data: Sequence[str], **kwargs: Any) -> np.ndarray: # type: ignore
+    def fit_transform(self, x_data: Sequence[str], **kwargs: Any) -> npt.NDArray[Any]:  # type: ignore
         self.fit(x_data)
-        return self.transform(x_data) # type: ignore
+        return self.transform(x_data)  # type: ignore
 
     def save(self) -> None:
         if self.innermodel is not None:
-            self.innermodel.save(self.filepath) # type: ignore
+            self.innermodel.save(self.filepath)  # type: ignore
             self.saved = True
 
     def load(self) -> None:
-        self.innermodel = Doc2Vec.load(self.filepath) # type: ignore
+        self.innermodel = Doc2Vec.load(self.filepath)  # type: ignore

@@ -18,19 +18,24 @@ from __future__ import annotations
 
 from typing import Sequence, Any
 
-import numpy as np # type: ignore
+import numpy.typing as npt
 
 from ..instances import Instance
 
 from .base import BaseVectorizer
 
-InstanceList = Sequence[Instance[Any, str, np.ndarray, Any]] # type: ignore
+InstanceList = Sequence[Instance[Any, str, npt.NDArray[Any], Any]]  # type: ignore
 
-class TextInstanceVectorizer(BaseVectorizer[Instance[Any, str, np.ndarray, Any]]): 
+
+class TextInstanceVectorizer(
+    BaseVectorizer[Instance[Any, str, npt.NDArray[Any], Any]]
+):
     _name = "TextInstanceVectorizer"
-    def __init__(self,
-                 vectorizer: BaseVectorizer[str],
-                 ) -> None:
+
+    def __init__(
+        self,
+        vectorizer: BaseVectorizer[str],
+    ) -> None:
         super().__init__()
         self.innermodel = vectorizer
 
@@ -38,15 +43,21 @@ class TextInstanceVectorizer(BaseVectorizer[Instance[Any, str, np.ndarray, Any]]
     def fitted(self) -> bool:
         return self.innermodel.fitted
 
-    def fit(self, x_data: InstanceList, **kwargs: Any) -> TextInstanceVectorizer:
+    def fit(
+        self, x_data: InstanceList, **kwargs: Any
+    ) -> TextInstanceVectorizer:
         texts = [x.data for x in x_data]
         self.innermodel.fit(texts)
         return self
 
-    def transform(self, x_data: InstanceList, **kwargs: Any) -> np.ndarray:
+    def transform(
+        self, x_data: InstanceList, **kwargs: Any
+    ) -> npt.NDArray[Any]:
         texts = [x.data for x in x_data]
-        return self.innermodel.transform(texts) # type: ignore
+        return self.innermodel.transform(texts)  # type: ignore
 
-    def fit_transform(self, x_data: InstanceList, **kwargs: Any) -> np.ndarray:
+    def fit_transform(
+        self, x_data: InstanceList, **kwargs: Any
+    ) -> npt.NDArray[Any]:
         texts = [x.data for x in x_data]
-        return self.innermodel.fit_transform(texts) # type: ignore
+        return self.innermodel.fit_transform(texts)  # type: ignore

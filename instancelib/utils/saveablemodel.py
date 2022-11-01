@@ -21,20 +21,23 @@ from pathlib import Path
 from os import PathLike
 import pickle
 import uuid
-from typing import Any, Callable, List, Optional, TypeVar
+from typing import Any, Callable, Generic, List, Optional, TypeVar
 
 MT = TypeVar("MT")
 
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
-class SaveableInnerModel():
+
+class SaveableInnerModel:
     _name = "SaveableInnerModel"
 
-    def __init__(self, 
-                 innermodel: Optional[Any], 
-                 storage_location: "Optional[PathLike[str]]" = None, 
-                 filename: "Optional[PathLike[str]]" = None, 
-                 taboo_fields: Optional[List[str]] = None):
+    def __init__(
+        self,
+        innermodel: Optional[Any],
+        storage_location: "Optional[PathLike[str]]" = None,
+        filename: "Optional[PathLike[str]]" = None,
+        taboo_fields: Optional[List[str]] = None,
+    ):
         self.storage_location = storage_location
         self.saved = False
         self.innermodel = innermodel
@@ -61,7 +64,7 @@ class SaveableInnerModel():
 
     @property
     def filepath(self) -> "Optional[PathLike[str]]":
-        if self.storage_location is not None: 
+        if self.storage_location is not None:
             full_path = Path(self.storage_location) / self.filename
             return full_path
         return None
@@ -77,11 +80,14 @@ class SaveableInnerModel():
     @staticmethod
     def load_model_fallback(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(self: SaveableInnerModel, *args: Any, **kwargs: Any) -> Any:
+        def wrapper(
+            self: SaveableInnerModel, *args: Any, **kwargs: Any
+        ) -> Any:
             if not self.is_loaded and self.is_stored:
                 self.load()
             return func(self, *args, **kwargs)
-        return wrapper # type: ignore
+
+        return wrapper  # type: ignore
 
     @property
     def is_loaded(self) -> bool:
@@ -91,8 +97,11 @@ class SaveableInnerModel():
         if not self.has_storage_location:
             return self.__dict__
         self.save()
-        state = {key: value for (key, value) in self.__dict__.items(
-        ) if key not in self.taboo_fields}
+        state = {
+            key: value
+            for (key, value) in self.__dict__.items()
+            if key not in self.taboo_fields
+        }
         state = {**state.copy(), **self.taboo_fields}
         return state
 

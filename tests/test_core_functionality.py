@@ -136,16 +136,10 @@ def test_usage():
     from instancelib.feature_extraction.textinstance import (
         TextInstanceVectorizer,
     )
-    from instancelib.feature_extraction.textsklearn import SklearnVectorizer
     from instancelib.functions.vectorize import vectorize
     from instancelib.ingest.spreadsheet import read_excel_dataset
     from instancelib.instances.text import TextInstance
     from instancelib.pertubations.base import TokenPertubator
-
-    def binary_mapper(value: Any) -> str:
-        if value == 1:
-            return "Relevant"
-        return "Irrelevant"
 
     text_env = read_excel_dataset(
         DATASET_FILE, data_cols=["fulltext"], label_cols=["label"]
@@ -318,8 +312,8 @@ def test_autovectorizer():
     results2_b = il.classifier_performance(model_b, half2_b, env_b.labels)
 
     assert results1_a.accuracy == results1_b.accuracy
-    assert results1_b.precision == results1_a.precision
-    assert results2_a.accuracy == results2_a.accuracy
+    assert results1_a.precision == results1_b.precision
+    assert results2_a.accuracy == results2_b.accuracy
 
 
 def test_vector_storage():

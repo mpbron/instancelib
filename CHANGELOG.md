@@ -4,6 +4,11 @@ All notable changes to `instancelib` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6.0]
+### Changed
+- Fixed some remaining old Numpy Type annotations to new numpy.typing style annotations
+- Changed tqdm progress behavior; after finishing the bar disappears
+
 ## [0.4.5.0]
 ### Changed
 - Fixed old Numpy Type annotations to new numpy.typing style annotations
@@ -156,6 +161,7 @@ env["train"], env["test"] = env.train_test_split(env.dataset, 0.70)
 - pandas_to_env_with_id function
 
 [Unreleased]: https://github.com/mpbron/instancelib
+[0.4.6.0]: https://pypi.org/project/instancelib/0.4.6.0
 [0.4.5.0]: https://pypi.org/project/instancelib/0.4.5.0
 [0.4.4.12]: https://pypi.org/project/instancelib/0.4.4.12
 [0.4.4.11]: https://pypi.org/project/instancelib/0.4.4.11

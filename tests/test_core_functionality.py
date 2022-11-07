@@ -146,25 +146,19 @@ def test_usage():
     )
 
     print(text_env)
-    #%%
     ins_provider = text_env.dataset
     labelprovider = text_env.labels
 
-    #%%
     n_docs = len(ins_provider)
     n_train = round(0.70 * n_docs)
     train, test = text_env.train_test_split(ins_provider, train_size=0.70)
 
-    #%%
     text_env["train"], text_env["test"] = train, test
-    #%%
     # Test if we indeed got the right length
     print((len(train) == n_train))
-    #%%
     # Test if the train and test set are mutually exclusive
     all([doc not in test for doc in train])
 
-    #%%
     # Get the first document within training
     key, instance = next(iter(train.items()))
     print(instance)

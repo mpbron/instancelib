@@ -11,7 +11,6 @@ from typing import (
     Iterable,
     Iterator,
     Mapping,
-    Optional,
     Sequence,
     Tuple,
     TypeVar,
@@ -190,7 +189,9 @@ class DataWrapper(
     ) -> Iterator[Tuple[Sequence[KT], PMT]]:
         tuples = provider.data_chunker(batch_size)
         total_it = math.ceil(len(provider) / batch_size)
-        preds = map(self._get_probas, tqdm(tuples, total=total_it))
+        preds = map(
+            self._get_probas, tqdm(tuples, total=total_it, leave=False)
+        )
         yield from preds
 
     def predict_proba_instances_raw(
@@ -199,7 +200,7 @@ class DataWrapper(
         batch_size: int = 200,
     ) -> Iterator[Tuple[Sequence[KT], PMT]]:
         tuples = data_chunker(instances, batch_size)
-        preds = map(self._get_probas, tqdm(tuples))
+        preds = map(self._get_probas, tqdm(tuples, leave=False))
         yield from preds
 
     def predict_proba_provider(

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import itertools
 import logging
+from math import ceil
 from typing import (
     Any,
     FrozenSet,
@@ -28,12 +29,11 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
-    Union,
 )
 
 import numpy as np
+import numpy.typing as npt
 from tqdm.auto import tqdm
-from math import ceil
 
 from ..exceptions import NoVectorsException
 from ..instances import Instance, InstanceProvider
@@ -42,7 +42,6 @@ from ..typehints.typevars import KT, LT
 from ..utils.func import list_unzip, zip_chain
 from .featurematrix import FeatureMatrix
 from .sklearn import SkLearnClassifier
-import numpy.typing as npt
 
 LOGGER = logging.getLogger(__name__)
 
@@ -137,7 +136,9 @@ class SkLearnVectorClassifier(
             provider, batch_size
         )
         total_it = ceil(len(provider) / batch_size)
-        preds = map(self._get_probas, tqdm(matrices, total=total_it))
+        preds = map(
+            self._get_probas, tqdm(matrices, total=total_it, leave=False)
+        )
         yield from preds
 
     def predict_provider(
@@ -149,7 +150,9 @@ class SkLearnVectorClassifier(
             provider, batch_size
         )
         total_it = ceil(len(provider) / batch_size)
-        preds = map(self._get_preds, tqdm(matrices, total=total_it))
+        preds = map(
+            self._get_preds, tqdm(matrices, total=total_it, leave=False)
+        )
         results = list(zip_chain(preds))
         return results
 

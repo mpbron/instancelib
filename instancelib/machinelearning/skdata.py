@@ -36,9 +36,8 @@ from typing import (
 )
 
 import numpy as np  # type: ignore
-
-import sklearn as sk  # type: ignore
-from sklearn.base import ClassifierMixin, TransformerMixin
+import numpy.typing as npt
+from sklearn.base import ClassifierMixin
 from sklearn.pipeline import Pipeline
 from tqdm.auto import tqdm
 
@@ -134,7 +133,9 @@ class SkLearnDataClassifier(
     ) -> Iterator[Tuple[Sequence[KT], npt.NDArray[Any]]]:
         tuples = provider.data_chunker(batch_size)
         total_it = math.ceil(len(provider) / batch_size)
-        preds = map(self._get_probas, tqdm(tuples, total=total_it))
+        preds = map(
+            self._get_probas, tqdm(tuples, total=total_it, leave=False)
+        )
         yield from preds
 
     def predict_provider(
@@ -144,7 +145,7 @@ class SkLearnDataClassifier(
     ) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         tuples = provider.data_chunker(batch_size)
         total_it = math.ceil(len(provider) / batch_size)
-        preds = map(self._get_preds, tqdm(tuples, total=total_it))
+        preds = map(self._get_preds, tqdm(tuples, total=total_it, leave=False))
         results = list(zip_chain(preds))
         return results
 

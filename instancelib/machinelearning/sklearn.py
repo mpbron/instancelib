@@ -207,7 +207,9 @@ class SkLearnClassifier(
         batch_size: int = 200,
     ) -> Iterator[Tuple[Sequence[KT], npt.NDArray[Any]]]:
         batches = divide_iterable_in_lists(instances, batch_size)
-        processed = map(self._pred_proba_raw_ins_batch, tqdm(batches))
+        processed = map(
+            self._pred_proba_raw_ins_batch, tqdm(batches, leave=False)
+        )
         yield from processed
 
     def predict_proba_instances(
@@ -217,7 +219,7 @@ class SkLearnClassifier(
     ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
 
         batches = divide_iterable_in_lists(instances, batch_size)
-        processed = map(self._pred_proba_ins_batch, tqdm(batches))
+        processed = map(self._pred_proba_ins_batch, tqdm(batches, leave=False))
         combined: Sequence[
             Tuple[KT, FrozenSet[Tuple[LT, float]]]
         ] = functools.reduce(
@@ -231,7 +233,7 @@ class SkLearnClassifier(
         batch_size: int = 200,
     ) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         batches = divide_iterable_in_lists(instances, batch_size)
-        results = map(self._pred_ins_batch, tqdm(batches))
+        results = map(self._pred_ins_batch, tqdm(batches, leave=False))
         concatenated: Sequence[Tuple[KT, FrozenSet[LT]]] = functools.reduce(
             lambda a, b: operator.concat(a, b), results, []
         )  # type: ignore

@@ -4,6 +4,24 @@ All notable changes to `instancelib` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8.0]
+### Fixed
+- Fixed some typing issues in the qrel ingest
+
+## [0.4.7.0]
+### Fixed
+- Added missing abstractmethod for get_matrix_chunked to vector storage.
+- Fixed issues in the qrel / trec ingest methods that do not work when Mac and possibly Windows Specific files exist within the folders.
+### Added    
+- Added functionality to disable the tqdm progress bar during ML inference.
+
+    
+
+## [0.4.6.0]
+### Changed
+- Fixed some remaining old Numpy Type annotations to new numpy.typing style annotations
+- Changed tqdm progress behavior; after finishing the bar disappears
+
 ## [0.4.6.0]
 ### Changed
 - Fixed some remaining old Numpy Type annotations to new numpy.typing style annotations
@@ -161,6 +179,8 @@ env["train"], env["test"] = env.train_test_split(env.dataset, 0.70)
 - pandas_to_env_with_id function
 
 [Unreleased]: https://github.com/mpbron/instancelib
+[0.4.8.0]: https://pypi.org/project/instancelib/0.4.8.0
+[0.4.7.0]: https://pypi.org/project/instancelib/0.4.7.0
 [0.4.6.0]: https://pypi.org/project/instancelib/0.4.6.0
 [0.4.5.0]: https://pypi.org/project/instancelib/0.4.5.0
 [0.4.4.12]: https://pypi.org/project/instancelib/0.4.4.12

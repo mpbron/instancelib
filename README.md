@@ -3,7 +3,7 @@ A generic dataset interface for Machine Learning models**
 </h3>
 
 [![PyPI](https://img.shields.io/pypi/v/instancelib)](https://pypi.org/project/instancelib/)
-[![Python_version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://pypi.org/project/instancelib/)
+[![Python_version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue)](https://pypi.org/project/instancelib/)
 [![License](https://img.shields.io/pypi/l/instancelib)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
 
 ---

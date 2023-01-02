@@ -66,17 +66,13 @@ from .base import AbstractClassifier
 
 LOGGER = logging.getLogger(__name__)
 
-IT = TypeVar(
-    "IT", bound="Instance[Any, Any, npt.NDArray[Any], Any]", covariant=True
-)
+IT = TypeVar("IT", bound="Instance[Any, Any, npt.NDArray[Any], Any]", covariant=True)
 _T = TypeVar("_T")
 
 
 class SkLearnClassifier(
     SaveableInnerModel,
-    AbstractClassifier[
-        IT, KT, DT, VT, Any, LT, npt.NDArray[Any], npt.NDArray[Any]
-    ],
+    AbstractClassifier[IT, KT, DT, VT, Any, LT, npt.NDArray[Any], npt.NDArray[Any]],
     ABC,
     Generic[IT, KT, DT, VT, LT],
 ):
@@ -85,17 +81,17 @@ class SkLearnClassifier(
     def __init__(
         self,
         estimator: Union[ClassifierMixin, Pipeline],
-        encoder: LabelEncoder[
-            LT, npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any]
-        ],
+        encoder: LabelEncoder[LT, npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any]],
+        *_,
         storage_location: "Optional[PathLike[str]]" = None,
         filename: "Optional[PathLike[str]]" = None,
+        disable_tqdm: bool = False,
+        **__,
     ) -> None:
-        SaveableInnerModel.__init__(
-            self, estimator, storage_location, filename
-        )
+        SaveableInnerModel.__init__(self, estimator, storage_location, filename)
         self.encoder = encoder
         self._fitted = False
+        self._disable_tqdm = disable_tqdm
 
     def set_target_labels(self, labels: Iterable[LT]) -> None:
         self.encoder.initialize(labels)
@@ -208,7 +204,8 @@ class SkLearnClassifier(
     ) -> Iterator[Tuple[Sequence[KT], npt.NDArray[Any]]]:
         batches = divide_iterable_in_lists(instances, batch_size)
         processed = map(
-            self._pred_proba_raw_ins_batch, tqdm(batches, leave=False)
+            self._pred_proba_raw_ins_batch,
+            tqdm(batches, leave=False, disable=self._disable_tqdm),
         )
         yield from processed
 
@@ -219,10 +216,11 @@ class SkLearnClassifier(
     ) -> Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]]:
 
         batches = divide_iterable_in_lists(instances, batch_size)
-        processed = map(self._pred_proba_ins_batch, tqdm(batches, leave=False))
-        combined: Sequence[
-            Tuple[KT, FrozenSet[Tuple[LT, float]]]
-        ] = functools.reduce(
+        processed = map(
+            self._pred_proba_ins_batch,
+            tqdm(batches, leave=False, disable=self._disable_tqdm),
+        )
+        combined: Sequence[Tuple[KT, FrozenSet[Tuple[LT, float]]]] = functools.reduce(
             operator.concat, processed, list()  # type: ignore
         )  # type: ignore
         return combined
@@ -233,7 +231,7 @@ class SkLearnClassifier(
         batch_size: int = 200,
     ) -> Sequence[Tuple[KT, FrozenSet[LT]]]:
         batches = divide_iterable_in_lists(instances, batch_size)
-        results = map(self._pred_ins_batch, tqdm(batches, leave=False))
+        results = map(self._pred_ins_batch, tqdm(batches, leave=False, disable=self._disable_tqdm))
         concatenated: Sequence[Tuple[KT, FrozenSet[LT]]] = functools.reduce(
             lambda a, b: operator.concat(a, b), results, []
         )  # type: ignore
@@ -303,9 +301,7 @@ class SkLearnClassifier(
                     il_encoder = IdentityEncoder[LT].from_list(labels)
                 elif dt in ["int64", "int32"] or dt.kind == "i":
                     if ints_as_str:
-                        il_encoder = DictionaryEncoder[str].from_list(
-                            map(str, labels)
-                        )
+                        il_encoder = DictionaryEncoder[str].from_list(map(str, labels))
                     else:
                         il_encoder = DictionaryEncoder[LT].from_list(labels)
                 else:
@@ -415,9 +411,7 @@ class SkLearnClassifier(
             The model
         """
         sklearn_encoder: TransformerMixin = MultiLabelBinarizer()
-        il_encoder = SklearnMultiLabelEncoder(
-            sklearn_encoder, env.labels.labelset
-        )
+        il_encoder = SklearnMultiLabelEncoder(sklearn_encoder, env.labels.labelset)
         return cls(estimator, il_encoder, storage_location, filename)
 
     def __repr__(self) -> str:

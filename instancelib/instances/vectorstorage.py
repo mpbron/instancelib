@@ -59,6 +59,10 @@ class VectorStorage(MutableMapping[KT, VT], Generic[KT, VT, MT]):
     @abstractmethod
     def get_matrix(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], MT]:
         raise NotImplementedError
+    
+    @abstractmethod
+    def get_matrix_chunked(self, keys: Sequence[KT], chunk_size: int) -> Iterator[Tuple[Sequence[KT], MT]]:
+        raise NotImplementedError
 
     @abstractmethod
     def get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:

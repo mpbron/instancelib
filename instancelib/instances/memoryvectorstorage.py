@@ -91,6 +91,13 @@ class MemoryVectorStorage(VectorStorage[KT, VT, MT], Generic[KT, VT, MT]):
         """
         vectors = [self[key] for key in keys]
         return keys, vectors
+    
+    def get_matrix_chunked(self, keys: Sequence[KT], chunk_size: int) -> Iterator[Tuple[Sequence[KT], MT]]:
+        chunks = divide_iterable_in_lists(keys, chunk_size)
+        for chunk in chunks:
+            vectors = [self[key] for key in chunk]
+            matrix = self.to_matrix(vectors)
+            yield chunk, matrix
 
     def matrices_chunker(
         self, chunk_size: int = 200

@@ -1,30 +1,14 @@
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    FrozenSet,
-    Iterable,
-    List,
-    Sequence,
-    Set,
-    Tuple,
-    TypeVar,
-    Iterator,
-)
+from typing import Any, Mapping, FrozenSet, Iterator, Set, Tuple, TypeVar, Optional
+
 import numpy.typing as npt
-
-from pandas.core.frame import DataFrame
-from instancelib.environment.text import TextEnvironment
-
-from instancelib.utils.func import list_unzip3
-
-from ..environment import AbstractEnvironment
-from ..instances import Instance
-import json
-from ..typehints.typevars import VT, LT
-
 import pandas as pd
+
+from ..environment.text import TextEnvironment
+from ..instances import Instance
+from ..utils.func import list_unzip3
 
 IT = TypeVar("IT", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
@@ -36,21 +20,32 @@ class Qrel:
     relevancy: int
 
 
-def read_doctexts(doctext_file: Path) -> Dict[str, Dict[str, str]]:
-    def process_line(line: str) -> Tuple[str, Dict[str, str]]:
-        obj = json.loads(line)
-        return obj["id"], obj
+def not_hidden(p: Path) -> bool:
+    return not (p.stem.startswith(".") or p.stem.startswith("_"))
 
-    with doctext_file.open() as f:
-        tuples = [process_line(line) for line in f.readlines()]
-    dictionary = {key: obj for (key, obj) in tuples}
+
+def read_doctexts(doctext_file: Path) -> Optional[Mapping[str, Mapping[str, str]]]:
+    def process_line(line: str) -> Optional[Tuple[str, Mapping[str, str]]]:
+        try:
+            obj: Mapping[str, str] = json.loads(line)
+            key = obj["id"]
+        except (KeyError, UnicodeDecodeError):
+            return None
+        return key, obj
+
+    try:
+        with doctext_file.open() as f:
+            plines = [process_line(line) for line in f.readlines()]
+    except UnicodeDecodeError:
+        return None
+    dictionary = dict([pline for pline in plines if pline is not None])
     return dictionary
 
 
 def build_doc_map(
-    topic_docs: Dict[str, Dict[str, Dict[str, str]]]
-) -> Dict[str, Set[str]]:
-    docmap: Dict[str, Set[str]] = dict()
+    topic_docs: Mapping[str, Mapping[str, Mapping[str, str]]]
+) -> Mapping[str, Set[str]]:
+    docmap: Mapping[str, Set[str]] = dict()
     for topic, docs_dict in topic_docs.items():
         for doc_key in docs_dict:
             docmap.setdefault(doc_key, set()).add(topic)
@@ -103,9 +98,9 @@ def read_qrel_dataset(base_dir: Path):
 class TrecDataset:
     def __init__(
         self,
-        docids: Dict[str, FrozenSet[str]],
-        texts: Dict[str, Dict[str, Dict[str, str]]],
-        qrels: Dict[str, pd.DataFrame],
+        docids: Mapping[str, FrozenSet[str]],
+        texts: Mapping[str, Mapping[str, Mapping[str, str]]],
+        qrels: Mapping[str, pd.DataFrame],
         topics: pd.DataFrame,
         pos_label: str = "Relevant",
         neg_label: str = "Irrelevant",
@@ -151,9 +146,7 @@ class TrecDataset:
         content = doc["content"]
         return f"{title} {content}"
 
-    def get_env(
-        self, topic_key: str
-    ) -> TextEnvironment[str, npt.NDArray[Any], str]:
+    def get_env(self, topic_key: str) -> TextEnvironment[str, npt.NDArray[Any], str]:
         def yielder():
             def get_all(doc_id: str):
                 data = self.get_document(topic_key, doc_id)
@@ -176,7 +169,7 @@ class TrecDataset:
 
     def get_envs(
         self,
-    ) -> Dict[str, TextEnvironment[str, npt.NDArray[Any], str]]:
+    ) -> Mapping[str, TextEnvironment[str, npt.NDArray[Any], str]]:
         return {tk: self.get_env(tk) for tk in self.topic_keys}
 
     @classmethod
@@ -185,8 +178,12 @@ class TrecDataset:
         doctexts_dir = base_dir / "doctexts"
         topics_dir = base_dir / "topics"
         docids_dir = base_dir / "docids"
-        doc_ids = {f.name: read_docids(f) for f in docids_dir.iterdir()}
-        texts = {f.name: read_doctexts(f) for f in doctexts_dir.iterdir()}
-        qrels = {f.name: read_qrel(f) for f in qrel_dir.iterdir()}
+        doc_ids = {
+            f.name: read_docids(f) for f in docids_dir.iterdir() if not_hidden(f)
+        }
+        texts = {
+            f.name: read_doctexts(f) for f in doctexts_dir.iterdir() if not_hidden(f)
+        }
+        qrels = {f.name: read_qrel(f) for f in qrel_dir.iterdir() if not_hidden(f)}
         topics = read_topics(topics_dir)
         return cls(doc_ids, texts, qrels, topics)

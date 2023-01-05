@@ -23,17 +23,41 @@ from ..utils.func import filter_snd_none
 from ..utils.to_key import to_key
 
 import itertools
-from typing import (Any, Dict, Generic, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, TypeVar, Union)
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from .base import AbstractBucketProvider, Instance, InstanceProvider
 
 
 from ..typehints import KT, DT, VT, RT
+from typing_extensions import Self
+
+_T = TypeVar("_T")
 
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
-class DataPoint(Instance[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
 
-    def __init__(self, identifier: KT, data: DT, vector: Optional[VT], representation: RT) -> None:
+
+class DataPoint(Instance[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
+    def __init__(
+        self,
+        identifier: KT,
+        data: DT,
+        vector: Optional[VT],
+        representation: RT,
+    ) -> None:
         self._identifier = identifier
         self._data = data
         self._vector = vector
@@ -65,20 +89,28 @@ class DataPoint(Instance[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
 
     @classmethod
     def from_instance(cls, instance: Instance[KT, DT, VT, RT]):
-        return cls(instance.identifier, instance.data, instance.vector, instance.representation)
+        return cls(
+            instance.identifier,
+            instance.data,
+            instance.vector,
+            instance.representation,
+        )
 
 
+class AbstractMemoryProvider(
+    InstanceProvider[InstanceType, KT, DT, VT, RT],
+    ABC,
+    Generic[InstanceType, KT, DT, VT, RT],
+):
 
-
-class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT], 
-                             ABC, Generic[InstanceType, KT, DT, VT, RT]):
-    
     dictionary: Dict[KT, InstanceType]
     children: Dict[KT, Set[KT]]
     parents: Dict[KT, KT]
 
     def __init__(self, instances: Iterable[InstanceType]):
-        self.dictionary = {instance.identifier: instance for instance in instances}
+        self.dictionary = {
+            instance.identifier: instance for instance in instances
+        }
         self.children = dict()
         self.parents = dict()
 
@@ -109,18 +141,22 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
 
     def clear(self) -> None:
         self.dictionary = {}
-       
-    def bulk_get_vectors(self, keys: Sequence[KT]) -> Tuple[Sequence[KT], Sequence[VT]]:
-        vectors = [self[key].vector  for key in keys]
-        ret_keys, ret_vectors = filter_snd_none(keys, vectors) # type: ignore
+
+    def bulk_get_vectors(
+        self, keys: Sequence[KT]
+    ) -> Tuple[Sequence[KT], Sequence[VT]]:
+        vectors = [self[key].vector for key in keys]
+        ret_keys, ret_vectors = filter_snd_none(keys, vectors)  # type: ignore
         return ret_keys, ret_vectors
 
     def bulk_get_all(self) -> List[InstanceType]:
         return list(self.get_all())
-   
-    def add_child(self, 
-                  parent: Union[KT, Instance[KT, DT, VT, RT]], 
-                  child:  Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+
+    def add_child(
+        self,
+        parent: Union[KT, Instance[KT, DT, VT, RT]],
+        child: Union[KT, Instance[KT, DT, VT, RT]],
+    ) -> None:
         parent_key: KT = to_key(parent)
         child_key: KT = to_key(child)
         assert parent_key != child_key
@@ -128,38 +164,49 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
             self.children.setdefault(parent_key, set()).add(child_key)
             self.parents[child_key] = parent_key
         else:
-            raise KeyError("Either the parent or child does not exist in this Provider")
+            raise KeyError(
+                "Either the parent or child does not exist in this Provider"
+            )
 
-    def get_children(self, 
-                     parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[InstanceType]:
+    def get_children(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> Sequence[InstanceType]:
         parent_key: KT = to_key(parent)
         if parent_key in self.children:
-            children = [self.dictionary[child_key] for child_key in self.children[parent_key]]
-            return children # type: ignore
+            children = [
+                self.dictionary[child_key]
+                for child_key in self.children[parent_key]
+            ]
+            return children  # type: ignore
         return []
 
-    def get_children_keys(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> Sequence[KT]:
+    def get_children_keys(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> Sequence[KT]:
         parent_key: KT = to_key(parent)
         if parent_key in self.children:
             return list(self.children[parent_key])
         return []
 
-    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceType:
+    def get_parent(
+        self, child: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> InstanceType:
         child_key: KT = to_key(child)
         if child_key in self.parents:
             parent_key = self.parents[child_key]
             parent = self.dictionary[parent_key]
-            return parent # type: ignore
+            return parent  # type: ignore
         raise KeyError(f"The instance with key {child_key} has no parent")
 
-    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+    def discard_children(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> None:
         parent_key: KT = to_key(parent)
         if parent_key in self.children:
             children = self.children[parent_key]
             self.children[parent_key] = set()
             for child in children:
                 del self.dictionary[child]
-                
 
     @staticmethod
     @abstractmethod
@@ -167,32 +214,72 @@ class AbstractMemoryProvider(InstanceProvider[InstanceType, KT, DT, VT, RT],
         raise NotImplementedError
 
     @classmethod
-    def from_data_and_indices(cls,
-                              indices: Sequence[KT],
-                              raw_data: Sequence[DT],
-                              vectors: Optional[Sequence[Optional[VT]]] = None
-                              ) -> AbstractMemoryProvider[InstanceType, KT, DT, VT, RT]:
+    def from_data_and_indices(
+        cls,
+        indices: Sequence[KT],
+        raw_data: Sequence[DT],
+        vectors: Optional[Sequence[Optional[VT]]] = None,
+    ) -> AbstractMemoryProvider[InstanceType, KT, DT, VT, RT]:
         if vectors is None or len(vectors) != len(indices):
             vectors = [None] * len(indices)
-        datapoints = itertools.starmap(cls.construct, zip(indices, raw_data, vectors, raw_data))
+        datapoints = itertools.starmap(
+            cls.construct, zip(indices, raw_data, vectors, raw_data)
+        )
         return cls(datapoints)
 
     @classmethod
-    def from_data(cls, 
-                  raw_data: Sequence[DT]
-                 ) -> AbstractMemoryProvider[InstanceType, KT, DT, VT, RT]:
+    def from_data(cls, raw_data: Sequence[DT]) -> Self:
         indices = range(len(raw_data))
         vectors = [None] * len(raw_data)
-        datapoints = itertools.starmap(cls.construct, zip(indices, raw_data, vectors, raw_data))
+        datapoints = itertools.starmap(
+            cls.construct, zip(indices, raw_data, vectors, raw_data)
+        )
         return cls(datapoints)
 
+    @classmethod
+    def shuffle(
+        cls,
+        provider: InstanceProvider[InstanceType, _T, DT, VT, RT],
+        mapping: Mapping[_T, KT],
+    ) -> Self:
+        """Reorder the provider according to the given mapping
 
- 
-class DataPointProvider(AbstractMemoryProvider[DataPoint[Union[KT, UUID], DT, VT, RT], Union[KT, UUID], DT, VT, RT], 
-                        Generic[KT, DT, VT, RT]):
+        Parameters
+        ----------
+        provider : InstanceProvider[InstanceType, _T, DT, VT, RT]
+            The provider that needs to be reordered
+        mapping : Mapping[_T, KT]
+            The mapping that maps old identifiers to new identifiers
 
-    
+        Returns
+        -------
+        Self
+            The shuffled
+        """
+        instances = itertools.starmap(
+            cls.construct,
+            sorted(
+                (
+                    (
+                        mapping[ins.identifier],
+                        ins.data,
+                        ins.vector,
+                        ins.representation,
+                    )
+                    for ins in provider.values()
+                ),
+                key=lambda x: x[0],  # type: ignore
+            ),
+        )
+        return cls(instances)
 
+
+class DataPointProvider(
+    AbstractMemoryProvider[
+        DataPoint[Union[KT, UUID], DT, VT, RT], Union[KT, UUID], DT, VT, RT
+    ],
+    Generic[KT, DT, VT, RT],
+):
     @staticmethod
     def construct(*args: Any, **kwargs: Any):
         new_instance = DataPoint[Union[KT, UUID], DT, VT, RT](*args, **kwargs)
@@ -200,15 +287,22 @@ class DataPointProvider(AbstractMemoryProvider[DataPoint[Union[KT, UUID], DT, VT
 
     def create(self, *args: Any, **kwargs: Any):
         new_key = uuid4()
-        new_instance = DataPoint[Union[KT, UUID], DT, VT, RT](new_key, *args, **kwargs)
+        new_instance = DataPoint[Union[KT, UUID], DT, VT, RT](
+            new_key, *args, **kwargs
+        )
         self.add(new_instance)
         return new_instance
 
 
-class MemoryBucketProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT], Generic[InstanceType, KT, DT, VT, RT]):
-    def __init__(self, 
-                 dataset: InstanceProvider[InstanceType, KT, DT, VT, RT], 
-                 instances: Iterable[KT]):
+class MemoryBucketProvider(
+    AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
+    Generic[InstanceType, KT, DT, VT, RT],
+):
+    def __init__(
+        self,
+        dataset: InstanceProvider[InstanceType, KT, DT, VT, RT],
+        instances: Iterable[KT],
+    ):
         self._elements: Set[KT] = set(instances)
         self.dataset = dataset
 
@@ -223,7 +317,7 @@ class MemoryBucketProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
 
     def _in_bucket(self, key: KT) -> bool:
         return key in self._elements
-    
+
     def _len_bucket(self) -> int:
         return len(self._elements)
 
@@ -231,13 +325,7 @@ class MemoryBucketProvider(AbstractBucketProvider[InstanceType, KT, DT, VT, RT],
     def _bucket(self) -> Iterable[KT]:
         iterable = iter(self._elements)
         return iterable
-    
+
     @property
     def empty(self) -> bool:
         return not self._elements
-    
-
-    
-
-
-   

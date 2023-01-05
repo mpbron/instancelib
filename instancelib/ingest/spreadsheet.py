@@ -235,9 +235,7 @@ def build_environment_with_id(
     labelfunc = functools.partial(
         inv_transform_mapping, label_cols, label_mapper=label_mapper
     )
-    indices, texts, true_labels = extract_data_with_id(
-        df, id_col, data_cols, labelfunc
-    )
+    indices, texts, true_labels = extract_data_with_id(df, id_col, data_cols, labelfunc)
     if labels is None:
         labels = frozenset(itertools.chain.from_iterable(true_labels))
     environment = TextEnvironment[int, npt.NDArray[Any], str].from_data(
@@ -352,9 +350,7 @@ def pandas_to_env(
             df, identity_mapper, labels, l_data_cols, l_label_cols
         )
     else:
-        env = build_environment(
-            df, identity_mapper, labels, l_data_cols, l_label_cols
-        )
+        env = build_environment(df, identity_mapper, labels, l_data_cols, l_label_cols)
     return env
 
 
@@ -420,12 +416,8 @@ def to_dicts(
 
 
 def to_environment(
-    prov_builder: Callable[
-        [Mapping[KT, IT]], InstanceProvider[IT, KT, DT, VT, RT]
-    ],
-    labelprov_builder: Callable[
-        [Mapping[KT, FrozenSet[LT]]], LabelProvider[KT, LT]
-    ],
+    prov_builder: Callable[[Mapping[KT, IT]], InstanceProvider[IT, KT, DT, VT, RT]],
+    labelprov_builder: Callable[[Mapping[KT, FrozenSet[LT]]], LabelProvider[KT, LT]],
     dictionaries: Tuple[Mapping[KT, IT], Mapping[KT, FrozenSet[LT]]],
 ) -> AbstractEnvironment[IT, KT, DT, VT, RT, LT]:
     instances, labels = dictionaries

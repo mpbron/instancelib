@@ -17,8 +17,24 @@
 from __future__ import annotations
 import collections
 
-from typing import (Any, Callable, Dict, FrozenSet, Generic, Iterable, Iterator, Mapping, Optional,
-                    Sequence, Set, Tuple, TypeVar, Union)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    Generic,
+    Iterable,
+    Iterator,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
+from typing_extensions import Self
 
 from ..instances import Instance
 from ..typehints import KT, LT
@@ -29,17 +45,20 @@ import collections.abc
 
 _T = TypeVar("_T")
 
+
 class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
-    """A Memory based implementation to test and benchmark AL algorithms
-    """
+    """A Memory based implementation to test and benchmark AL algorithms"""
+
     _labelset: FrozenSet[LT]
     _labeldict: Dict[KT, Set[LT]]
     _labeldict_inv: Dict[LT, Set[KT]]
 
-    def __init__(self, 
-            labelset: Iterable[LT], 
-            labeldict: Dict[KT, Set[LT]], 
-            labeldict_inv: Optional[Dict[LT, Set[KT]]] = None) -> None:
+    def __init__(
+        self,
+        labelset: Iterable[LT],
+        labeldict: Dict[KT, Set[LT]],
+        labeldict_inv: Optional[Dict[LT, Set[KT]]] = None,
+    ) -> None:
         self._labelset = frozenset(labelset)
         self._labeldict = labeldict
         if labeldict_inv is None:
@@ -61,11 +80,11 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
 
     @classmethod
     def from_data(
-            cls, 
-            labelset: Iterable[LT], 
-            indices: Sequence[KT], 
-            labels: Sequence[Iterable[LT]]
-        ) -> MemoryLabelProvider[KT, LT]:
+        cls,
+        labelset: Iterable[LT],
+        indices: Sequence[KT],
+        labels: Sequence[Iterable[LT]],
+    ) -> MemoryLabelProvider[KT, LT]:
         labelset = frozenset(labelset)
         labeldict = {
             idx: set(labellist) for (idx, labellist) in zip(indices, labels)
@@ -78,29 +97,40 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
         return cls(labelset, labeldict, labeldict_inv)
 
     @classmethod
-    def from_provider(cls, provider: LabelProvider[KT, LT], subset: Iterable[KT] = list()) -> MemoryLabelProvider[KT, LT]:
+    def from_provider(
+        cls, provider: LabelProvider[KT, LT], subset: Iterable[KT] = list()
+    ) -> MemoryLabelProvider[KT, LT]:
         instances = frozenset(subset) if subset else frozenset(provider.keys())
         labelset = provider.labelset
-        labeldict_inv = {label: set(provider.get_instances_by_label(label).intersection(instances)) for label in labelset}
-        labeldict: Dict[KT, Set[LT]]= {}
+        labeldict_inv = {
+            label: set(
+                provider.get_instances_by_label(label).intersection(instances)
+            )
+            for label in labelset
+        }
+        labeldict: Dict[KT, Set[LT]] = {}
         for label, key_list in labeldict_inv.items():
             for key in key_list:
                 labeldict.setdefault(key, set()).add(label)
         return cls(labelset, labeldict, labeldict_inv)
 
     @classmethod
-    def from_tuples(cls, predictions: Sequence[Tuple[KT, FrozenSet[LT]]]) -> MemoryLabelProvider[KT, LT]:
+    def from_tuples(
+        cls, predictions: Sequence[Tuple[KT, FrozenSet[LT]]]
+    ) -> MemoryLabelProvider[KT, LT]:
         _, labels = list_unzip(predictions)
         labelset = union(*labels)
         labeldict = {key: set(labeling) for (key, labeling) in predictions}
         provider = cls(labelset, labeldict, None)
-        return  provider
+        return provider
 
     @property
     def labelset(self) -> FrozenSet[LT]:
         return self._labelset
 
-    def remove_labels(self, instance: Union[KT, Instance[KT, Any, Any, Any]], *labels: LT):
+    def remove_labels(
+        self, instance: Union[KT, Instance[KT, Any, Any, Any]], *labels: LT
+    ):
         key = to_key(instance)
         if key not in self._labeldict:
             raise KeyError("Key {} is not found".format(key))
@@ -108,13 +138,17 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
             self._labeldict[key].discard(label)
             self._labeldict_inv[label].discard(key)
 
-    def set_labels(self, instance: Union[KT, Instance[KT, Any, Any, Any]], *labels: LT):
+    def set_labels(
+        self, instance: Union[KT, Instance[KT, Any, Any, Any]], *labels: LT
+    ):
         key = to_key(instance)
         for label in labels:
             self._labeldict.setdefault(key, set()).add(label)
             self._labeldict_inv.setdefault(label, set()).add(key)
 
-    def get_labels(self, instance: Union[KT, Instance[KT, Any, Any, Any]]) -> FrozenSet[LT]:
+    def get_labels(
+        self, instance: Union[KT, Instance[KT, Any, Any, Any]]
+    ) -> FrozenSet[LT]:
         key = to_key(instance)
         if key in self:
             return frozenset(self._labeldict[key])
@@ -125,16 +159,30 @@ class MemoryLabelProvider(LabelProvider[KT, LT], Generic[KT, LT]):
 
     def document_count(self, label: LT) -> int:
         return len(self.get_instances_by_label(label))
-            
+
     @classmethod
-    def rename_labels(cls, 
-                      provider: LabelProvider[KT, _T], 
-                      mapping: Union[Mapping[_T, LT], Callable[[_T], LT]]
-                      ) -> MemoryLabelProvider[KT, LT]:
-        mapper = mapping.__getitem__ if isinstance(mapping, collections.abc.Mapping) else mapping
-        labeldict = {key: {mapper(old_label) for old_label in old_labels} for key, old_labels in provider.items()}
+    def rename_labels(
+        cls,
+        provider: LabelProvider[KT, _T],
+        mapping: Union[Mapping[_T, LT], Callable[[_T], LT]],
+    ) -> MemoryLabelProvider[KT, LT]:
+        mapper = (
+            mapping.__getitem__
+            if isinstance(mapping, collections.abc.Mapping)
+            else mapping
+        )
+        labeldict = {
+            key: {mapper(old_label) for old_label in old_labels}
+            for key, old_labels in provider.items()
+        }
         labelset = frozenset([mapper(lbl) for lbl in provider.labelset])
-        provider = cls(labelset, labeldict, None) # type: ignore
-        return provider # type: ignore
+        provider = cls(labelset, labeldict, None)  # type: ignore
+        return provider  # type: ignore
 
-
+    @classmethod
+    def translate_keys(
+        cls, provider: LabelProvider[_T, LT], mapping: Mapping[_T, KT]
+    ) -> Self:
+        new_dict = dict((mapping[k], set(v)) for k, v in provider.items())
+        lbls = provider.labelset
+        return cls(lbls, new_dict)

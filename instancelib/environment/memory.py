@@ -17,18 +17,33 @@
 from __future__ import annotations
 from abc import ABC
 
-from typing import Generic, Iterable, Dict, Iterator, Mapping, TypeVar, Any
+from typing import (
+    Generic,
+    Iterable,
+    Dict,
+    Iterator,
+    Mapping,
+    TypeVar,
+    Any,
+    Union,
+)
 from typing_extensions import Self
 
 from ..instances.base import Instance, InstanceProvider
-from ..instances.memory import MemoryBucketProvider
+from ..instances.memory import (
+    MemoryBucketProvider,
+    AbstractMemoryProvider,
+)
 from ..labels.base import LabelProvider
+from ..labels.memory import MemoryLabelProvider
 
 from .base import AbstractEnvironment
 
 from ..typehints import KT, DT, VT, RT, LT
 
+import numpy as np
 
+DEFAULT_RNG = np.random.default_rng()
 InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
 
 
@@ -236,5 +251,34 @@ class MemoryEnvironment(
         self._named_providers = dict()
 
     @classmethod
-    def shuffle(cls, provider: Self, mapping: Mapping[KT, KT]) -> Self:
-        return cls(provider.dataset, provider.labels)
+    def shuffle(
+        cls, env: Self, rng: np.random.Generator = DEFAULT_RNG
+    ) -> Self:
+        """Shuffle the identifiers according to a mapping
+
+        Parameters
+        ----------
+        env : Self
+            The environment that needs to be shuffled
+        mapping : Mapping[KT, KT]
+            The mapping that is to be used
+
+        Returns
+        -------
+        Self
+            A shuffled environment
+        """
+        keys = env.all_instances.key_list
+        permutation = env.all_instances.key_list
+        rng.shuffle(permutation)  # type: ignore
+        mapping = {k: v for k, v in zip(keys, permutation)}
+        if isinstance(env.all_instances, AbstractMemoryProvider):
+            newprovider = env.all_instances.shuffle(env.all_instances, mapping)
+            if isinstance(env.labels, MemoryLabelProvider):
+                newlabels = env.labels.translate_keys(env.labels, mapping)
+            else:
+                newlabels = MemoryLabelProvider.translate_keys(
+                    env.labels, mapping
+                )
+            return cls(newprovider, newlabels)
+        return cls(env.all_instances, env.labels)

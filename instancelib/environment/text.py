@@ -17,6 +17,9 @@
 from __future__ import annotations
 
 from typing import Generic, Optional, Sequence, Iterable, Union
+from typing_extensions import Self
+
+from instancelib.instances.base import InstanceProvider
 
 from ..instances.text import TextInstanceProvider, MemoryTextInstance
 from ..labels.memory import MemoryLabelProvider
@@ -26,29 +29,26 @@ from uuid import UUID
 
 from ..typehints import KT, VT, LT
 
-class TextEnvironment(MemoryEnvironment[MemoryTextInstance[KT, VT], Union[KT, UUID], str, VT, str, LT], Generic[KT, VT, LT]):
+
+class TextEnvironment(
+    MemoryEnvironment[
+        MemoryTextInstance[KT, VT], Union[KT, UUID], str, VT, str, LT
+    ],
+    Generic[KT, VT, LT],
+):
     @classmethod
-    def from_data(cls, 
-                  target_labels: Iterable[LT], 
-                  indices: Sequence[KT], 
-                  data: Sequence[str], 
-                  ground_truth: Sequence[Iterable[LT]],
-                  vectors: Optional[Sequence[VT]]) -> TextEnvironment[KT, VT, LT]:
-        dataset = TextInstanceProvider[KT, VT].from_data_and_indices(indices, data, vectors)
-        truth = MemoryLabelProvider[Union[KT, UUID], LT].from_data(target_labels, indices, ground_truth)
+    def from_data(
+        cls,
+        target_labels: Iterable[LT],
+        indices: Sequence[KT],
+        data: Sequence[str],
+        ground_truth: Sequence[Iterable[LT]],
+        vectors: Optional[Sequence[VT]],
+    ) -> Self:
+        dataset = TextInstanceProvider[KT, VT].from_data_and_indices(
+            indices, data, vectors
+        )
+        truth = MemoryLabelProvider[Union[KT, UUID], LT].from_data(
+            target_labels, indices, ground_truth
+        )
         return cls(dataset, truth)
-    
-
-
-
-        
-
-
-    
-    
-    
-
-
-
-        
-

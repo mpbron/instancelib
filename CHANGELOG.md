@@ -186,7 +186,7 @@ env["train"], env["test"] = env.train_test_split(env.dataset, 0.70)
 - pandas_to_env_with_id function
 
 [Unreleased]: https://github.com/mpbron/instancelib
-[0.4.8.0]: https://pypi.org/project/instancelib/0.4.9.0
+[0.4.9.0]: https://pypi.org/project/instancelib/0.4.9.0
 [0.4.8.0]: https://pypi.org/project/instancelib/0.4.8.0
 [0.4.7.0]: https://pypi.org/project/instancelib/0.4.7.0
 [0.4.6.0]: https://pypi.org/project/instancelib/0.4.6.0

@@ -17,7 +17,8 @@
 from __future__ import annotations
 from abc import ABC
 
-from typing import Generic, Iterable, Dict, Iterator, TypeVar, Any
+from typing import Generic, Iterable, Dict, Iterator, Mapping, TypeVar, Any
+from typing_extensions import Self
 
 from ..instances.base import Instance, InstanceProvider
 from ..instances.memory import MemoryBucketProvider
@@ -28,12 +29,14 @@ from .base import AbstractEnvironment
 from ..typehints import KT, DT, VT, RT, LT
 
 
+InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
 
-InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
 class AbstractMemoryEnvironment(
-        AbstractEnvironment[InstanceType, KT, DT, VT, RT, LT],
-        ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
+    AbstractEnvironment[InstanceType, KT, DT, VT, RT, LT],
+    ABC,
+    Generic[InstanceType, KT, DT, VT, RT, LT],
+):
     """Environments provide an interface that enable you to access all data stored in the datasets.
     If there are labels stored in the environment, you can access these as well from here.
 
@@ -42,13 +45,13 @@ class AbstractMemoryEnvironment(
     - :meth:`dataset`: Contains all Instances of the original dataset
     - :meth:`labels`: Contains an object that allows you to access labels easily
 
-    Besides these properties, this object also provides methods to create new 
-    :class:`~instancelib.InstanceProvider` objects that contain a subset of 
+    Besides these properties, this object also provides methods to create new
+    :class:`~instancelib.InstanceProvider` objects that contain a subset of
     the set of all instances stored in this environment.
 
     Attributes
     ----------
-    _public_dataset 
+    _public_dataset
         An :class:`InstanceProvider` that contains all original Instances
     _dataset
         An :class:`InstanceProvider` that contains all instances
@@ -74,7 +77,7 @@ class AbstractMemoryEnvironment(
     Create a train-test split on the dataset (70 % train, 30 % test):
 
     >>> train, test = env.train_test_split(dataset, 0.70)
-    """    
+    """
 
     _public_dataset: InstanceProvider[InstanceType, KT, DT, VT, RT]
     """An :class:`~instancelib.InstanceProvider` that contains all original Instances"""
@@ -82,16 +85,22 @@ class AbstractMemoryEnvironment(
     """An :class:`InstanceProvider` that contains all instances"""
     _labelprovider: LabelProvider[KT, LT]
     """This object contains all labels"""
-    _named_providers: Dict[str, InstanceProvider[InstanceType, KT, DT, VT, RT]] = dict()
+    _named_providers: Dict[
+        str, InstanceProvider[InstanceType, KT, DT, VT, RT]
+    ] = dict()
     """All user generated providers that were given a name"""
-    
+
     def __contains__(self, __o: object) -> bool:
         return __o in self._named_providers
 
-    def __getitem__(self, __k: str) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+    def __getitem__(
+        self, __k: str
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         return self._named_providers[__k]
 
-    def __setitem__(self, __k: str, __v: InstanceProvider[InstanceType, KT, DT, VT, RT]) -> None:
+    def __setitem__(
+        self, __k: str, __v: InstanceProvider[InstanceType, KT, DT, VT, RT]
+    ) -> None:
         self.set_named_provider(__k, __v)
 
     def __len__(self) -> int:
@@ -110,27 +119,39 @@ class AbstractMemoryEnvironment(
     @property
     def all_instances(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         return self._dataset
-    
+
     @property
     def labels(self) -> LabelProvider[KT, LT]:
         return self._labelprovider
 
-    def create_bucket(self, keys: Iterable[KT]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
-        return MemoryBucketProvider[InstanceType, KT, DT, VT, RT](self._dataset, keys)
+    def create_bucket(
+        self, keys: Iterable[KT]
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        return MemoryBucketProvider[InstanceType, KT, DT, VT, RT](
+            self._dataset, keys
+        )
 
-    def create_empty_provider(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+    def create_empty_provider(
+        self,
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         return self.create_bucket([])
 
-    def set_named_provider(self, name: str, value: InstanceProvider[InstanceType, KT, DT, VT, RT]):
+    def set_named_provider(
+        self, name: str, value: InstanceProvider[InstanceType, KT, DT, VT, RT]
+    ):
         self._named_providers[name] = value
 
-    def create_named_provider(self, name: str) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+    def create_named_provider(
+        self, name: str
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         self._named_providers[name] = self.create_empty_provider()
-        return self._named_providers[name]   
-    
+        return self._named_providers[name]
+
+
 class MemoryEnvironment(
     AbstractMemoryEnvironment[InstanceType, KT, DT, VT, RT, LT],
-        Generic[InstanceType, KT, DT, VT, RT, LT]):
+    Generic[InstanceType, KT, DT, VT, RT, LT],
+):
     """This class implements the :class:`~abc.ABC` :class:`~instancelib.Environment`.
     In this method, all data is loaded and stored in RAM and is not preserved on disk.
     There are two important properties in every :class:`Environment`:
@@ -138,8 +159,8 @@ class MemoryEnvironment(
     - :meth:`dataset`: Contains all Instances of the original dataset
     - :meth:`labels`: Contains an object that allows you to access labels easily
 
-    Besides these properties, this object also provides methods to create new 
-    :class:`~instancelib.InstanceProvider` objects that contain a subset of 
+    Besides these properties, this object also provides methods to create new
+    :class:`~instancelib.InstanceProvider` objects that contain a subset of
     the set of all instances stored in this environment.
 
     Parameters
@@ -152,7 +173,7 @@ class MemoryEnvironment(
 
     Attributes
     ----------
-    _public_dataset 
+    _public_dataset
         An :class:`InstanceProvider` that contains all original Instances
     _dataset
         An :class:`InstanceProvider` that contains all instances
@@ -191,13 +212,13 @@ class MemoryEnvironment(
     >>> with open("file.pkl", "rb") as fh:
     ...     env = pickle.load(fh)
     >>> dataset = env.dataset
-    """    
-    
+    """
+
     def __init__(
-            self,
-            dataset: InstanceProvider[InstanceType, KT, DT, VT, RT],
-            labelprovider: LabelProvider[KT, LT]
-        ):
+        self,
+        dataset: InstanceProvider[InstanceType, KT, DT, VT, RT],
+        labelprovider: LabelProvider[KT, LT],
+    ):
         """[summary]
 
         Parameters
@@ -206,25 +227,14 @@ class MemoryEnvironment(
             [description]
         labelprovider : MemoryLabelProvider[KT, LT]
             [description]
-        """        
+        """
         self._dataset = dataset
-        self._public_dataset = MemoryBucketProvider[InstanceType, KT, DT, VT, RT](dataset, dataset.key_list)
+        self._public_dataset = MemoryBucketProvider[
+            InstanceType, KT, DT, VT, RT
+        ](dataset, dataset.key_list)
         self._labelprovider = labelprovider
         self._named_providers = dict()
-    
-    
 
-    
-
-
-
-    
-
-    
-    
-    
-
-
-
-        
-
+    @classmethod
+    def shuffle(cls, provider: Self, mapping: Mapping[KT, KT]) -> Self:
+        return cls(provider.dataset, provider.labels)

@@ -18,11 +18,28 @@ from __future__ import annotations
 
 import random
 
-from typing import Callable, Generic, Iterable, Iterator, Mapping, MutableMapping, Optional, Sequence, Tuple, TypeVar, Any, Union
+from typing import (
+    Callable,
+    Generic,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Any,
+    Union,
+)
 from abc import ABC, abstractmethod
 
 from ..utils.func import union
-from ..instances.base import InstanceProvider, Instance, default_instance_viewer
+from ..instances.base import (
+    InstanceProvider,
+    Instance,
+    default_instance_viewer,
+)
 from ..labels.base import LabelProvider, default_label_viewer
 
 from ..typehints import KT, DT, VT, RT, LT
@@ -34,11 +51,14 @@ import pandas as pd
 import warnings
 
 
+InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]")
 
-InstanceType = TypeVar("InstanceType", bound="Instance[Any, Any, Any, Any]", covariant=True)
 
-class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT, RT]], 
-                  ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
+class Environment(
+    MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT, RT]],
+    ABC,
+    Generic[InstanceType, KT, DT, VT, RT, LT],
+):
     """Environments provide an interface that enable you to access all data stored in the datasets.
     If there are labels stored in the environment, you can access these as well from here.
 
@@ -47,8 +67,8 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
     - :meth:`dataset`: Contains all Instances of the original dataset
     - :meth:`labels`: Contains an object that allows you to access labels easily
 
-    Besides these properties, this object also provides methods to create new 
-    :class:`~instancelib.InstanceProvider` objects that contain a subset of 
+    Besides these properties, this object also provides methods to create new
+    :class:`~instancelib.InstanceProvider` objects that contain a subset of
     the set of all instances stored in this environment.
 
     Examples
@@ -68,15 +88,18 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
 
     >>> train, test = env.train_test_split(dataset, 0.70)
     """
+
     @abstractmethod
-    def create_empty_provider(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+    def create_empty_provider(
+        self,
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """Use this method to create an empty `InstanceProvider`
 
         Returns
         -------
         InstanceProvider[InstanceType, KT, DT, VT, RT]
             The newly created provider
-        """        
+        """
         raise NotImplementedError
 
     @property
@@ -90,29 +113,27 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         -------
         InstanceProvider[InstanceType, KT, DT, VT, RT]
             The dataset :class:`InstanceProvider`
-        """        
+        """
         raise NotImplementedError
 
-    
-    
     @property
     @abstractmethod
     def all_instances(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """This provider should include all instances in all providers.
-        If there are any synthethic datapoints constructed, 
+        If there are any synthethic datapoints constructed,
         they should be also in here.
 
         Returns
         -------
         InstanceProvider[InstanceType, KT, DT, VT, RT]
             The all_instances :class:`InstanceProvider`
-        """        
+        """
         raise NotImplementedError
 
     @property
     def all_datapoints(self) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """This provider should include all instances in all providers.
-        If there are any synthethic datapoints constructed, 
+        If there are any synthethic datapoints constructed,
         they should be also in here.
 
         Returns
@@ -125,24 +146,27 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         Deprecated, use the all_instances property instead!
 
         """
-        warnings.warn("Use the `all_instances` property instead!", category=DeprecationWarning)      
+        warnings.warn(
+            "Use the `all_instances` property instead!",
+            category=DeprecationWarning,
+        )
         return self.all_instances
 
     @property
     @abstractmethod
     def labels(self) -> LabelProvider[KT, LT]:
         """This property contains provider that has a mapping from instances to labels and
-        vice-versa. 
+        vice-versa.
 
         Returns
         -------
         LabelProvider[KT, LT]
             The label provider
-        """        
+        """
         raise NotImplementedError
 
     def add_vectors(self, keys: Sequence[KT], vectors: Sequence[VT]) -> None:
-        """This method adds feature vectors or embeddings to instances 
+        """This method adds feature vectors or embeddings to instances
         associated with the keys in the first parameters. The sequences
         `keys` and `vectors` should have the same length.
 
@@ -151,10 +175,10 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         keys : Sequence[KT]
             A sequence of keys
         vectors : Sequence[VT]
-            A sequence of vectors that should be associated with the instances 
+            A sequence of vectors that should be associated with the instances
             of the sequence `keys`
-        
-        """        
+
+        """
         self.all_instances.bulk_add_vectors(keys, vectors)
 
     def create(self, *args: Any, **kwargs: Any) -> InstanceType:
@@ -164,13 +188,15 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         -------
         InstanceType
             A new instance
-        """        
+        """
         new_instance = self.all_instances.create(*args, **kwargs)
         return new_instance
 
     @abstractmethod
-    def create_bucket(self, keys: Iterable[KT]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
-        """Create an InstanceProvider that contains certain keys found in this 
+    def create_bucket(
+        self, keys: Iterable[KT]
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+        """Create an InstanceProvider that contains certain keys found in this
         environment.
 
         Parameters
@@ -183,15 +209,18 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         InstanceProvider[InstanceType, KT, DT, VT, RT]
             An InstanceProvider that contains the instances specified in `keys`
 
-        """        
+        """
         raise NotImplementedError
 
-    def train_test_split(self, 
-                         source: InstanceProvider[InstanceType, KT, DT, VT, RT],
-                         train_size: Union[float, int]
-                         ) -> Tuple[InstanceProvider[InstanceType, KT, DT, VT, RT], 
-                                    InstanceProvider[InstanceType, KT, DT, VT, RT]]:
-        """Divide an InstanceProvider into two different providers containing a random 
+    def train_test_split(
+        self,
+        source: InstanceProvider[InstanceType, KT, DT, VT, RT],
+        train_size: Union[float, int],
+    ) -> Tuple[
+        InstanceProvider[InstanceType, KT, DT, VT, RT],
+        InstanceProvider[InstanceType, KT, DT, VT, RT],
+    ]:
+        """Divide an InstanceProvider into two different providers containing a random
         division of the input according to the parameter `train_size`.
 
         Parameters
@@ -216,25 +245,26 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
             A Tuple containing two InstanceProviders:
                 - The training set (containing `train_size` documents)
                 - The test set
-        """        
+        """
         if isinstance(train_size, float):
-            n_train_docs = round(train_size*len(source))
+            n_train_docs = round(train_size * len(source))
         else:
             n_train_docs = train_size
         source_keys = list(frozenset(source.key_list))
-        
+
         # Randomly sample train keys
         train_keys = random.sample(source_keys, n_train_docs)
-        # The remainder should be used for testing        
+        # The remainder should be used for testing
         test_keys = frozenset(source_keys).difference(train_keys)
-        
+
         train_provider = self.create_bucket(train_keys)
         test_provider = self.create_bucket(test_keys)
         return train_provider, test_provider
 
-    def combine(self, 
-                *providers: InstanceProvider[InstanceType, KT, DT, VT, RT],
-                ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+    def combine(
+        self,
+        *providers: InstanceProvider[InstanceType, KT, DT, VT, RT],
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """Combine Providers into a single Provider
 
         Parameters
@@ -246,13 +276,15 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         -------
         InstanceProvider[InstanceType, KT, DT, VT, RT]
             The provider that contains all elements of the supplied Providers
-        """        
-                
+        """
+
         keys = union(*(frozenset(pr.key_list) for pr in providers))
         combined_provider = self.create_bucket(keys)
         return combined_provider
 
-    def get_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+    def get_children(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         """Get the children that are registered to this parent
 
         Parameters
@@ -264,12 +296,14 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         -------
         InstanceProvider[InstanceType, KT, DT, VT, RT]
             A Provider that contains all children
-        """        
+        """
         child_keys = self.all_instances.get_children_keys(parent)
         new_bucket = self.create_bucket(child_keys)
         return new_bucket
 
-    def get_parent(self, child: Union[KT, Instance[KT, DT, VT, RT]]) -> InstanceType:
+    def get_parent(
+        self, child: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> InstanceType:
         """Get the parent of a child
 
         Parameters
@@ -281,73 +315,105 @@ class Environment(MutableMapping[str, InstanceProvider[InstanceType, KT, DT, VT,
         -------
         InstanceType
             The parent of this child instance
-        """        
+        """
         return self.all_instances.get_parent(child)
 
-    def discard_children(self, parent: Union[KT, Instance[KT, DT, VT, RT]]) -> None:
+    def discard_children(
+        self, parent: Union[KT, Instance[KT, DT, VT, RT]]
+    ) -> None:
         """Discard all children from this parent
 
         Parameters
         ----------
         parent : Union[KT, Instance[KT, DT, VT, RT]]
             The parent Instance
-        """        
+        """
         self.all_instances.discard_children(parent)
 
-    def get_subset_by_labels(self, 
-                            provider: InstanceProvider[InstanceType, KT, DT, VT, RT], 
-                            *labels: LT,
-                            labelprovider: Optional[LabelProvider[KT, LT]] = None, 
-                            ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+    def get_subset_by_labels(
+        self,
+        provider: InstanceProvider[InstanceType, KT, DT, VT, RT],
+        *labels: LT,
+        labelprovider: Optional[LabelProvider[KT, LT]] = None,
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         if labelprovider is None:
             l_provider = self.labels
         else:
             l_provider = labelprovider
-        keys = union(*(l_provider.get_instances_by_label(label) for label in labels)).intersection(provider)
+        keys = union(
+            *(l_provider.get_instances_by_label(label) for label in labels)
+        ).intersection(provider)
         provider = self.create_bucket(keys)
         return provider
 
     @property
-    def named_providers(self) -> Mapping[str, InstanceProvider[InstanceType, KT, DT, VT, RT]]:
-        return dict(self)        
+    def named_providers(
+        self,
+    ) -> Mapping[str, InstanceProvider[InstanceType, KT, DT, VT, RT]]:
+        return dict(self)
 
     @abstractmethod
-    def set_named_provider(self, name: str, value: InstanceProvider[InstanceType, KT, DT, VT, RT]):
+    def set_named_provider(
+        self, name: str, value: InstanceProvider[InstanceType, KT, DT, VT, RT]
+    ):
         raise NotImplementedError
 
     @abstractmethod
-    def create_named_provider(self, name: str, keys: Iterable[KT] = list()) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
+    def create_named_provider(
+        self, name: str, keys: Iterable[KT] = list()
+    ) -> InstanceProvider[InstanceType, KT, DT, VT, RT]:
         raise NotImplementedError
 
     def __repr__(self) -> str:
         return self.__str__()
 
     def __str__(self) -> str:
-        result = (f"Environment(dataset={self.dataset}, \n"
-                  f"   labels={self.labels}, \n"
-                  f"   named_providers={self.named_providers}, \n"
-                  f"   length={len(self.all_instances)}, \n"
-                  f"   typeinfo={self.all_instances.type_info}) \n")
+        result = (
+            f"Environment(dataset={self.dataset}, \n"
+            f"   labels={self.labels}, \n"
+            f"   named_providers={self.named_providers}, \n"
+            f"   length={len(self.all_instances)}, \n"
+            f"   typeinfo={self.all_instances.type_info}) \n"
+        )
         return result
 
-    def to_pandas(self, 
-                  provider: Optional[InstanceProvider[InstanceType, KT, DT, VT, RT]] = None,
-                  labels: Optional[LabelProvider[KT, LT]] = None,
-                  instance_viewer: Callable[[Instance[KT, DT, VT, RT]], Mapping[str, Any]] = default_instance_viewer,
-                  label_viewer: Callable[[KT, LabelProvider[KT, LT]], Mapping[str, Any]] = default_label_viewer,
-                  provider_hooks: Sequence[Callable[[InstanceProvider[InstanceType, KT, DT, VT, RT]], Mapping[KT, Mapping[str, Any]]]] = list()) -> pd.DataFrame:
-        
+    def to_pandas(
+        self,
+        provider: Optional[
+            InstanceProvider[InstanceType, KT, DT, VT, RT]
+        ] = None,
+        labels: Optional[LabelProvider[KT, LT]] = None,
+        instance_viewer: Callable[
+            [Instance[KT, DT, VT, RT]], Mapping[str, Any]
+        ] = default_instance_viewer,
+        label_viewer: Callable[
+            [KT, LabelProvider[KT, LT]], Mapping[str, Any]
+        ] = default_label_viewer,
+        provider_hooks: Sequence[
+            Callable[
+                [InstanceProvider[InstanceType, KT, DT, VT, RT]],
+                Mapping[KT, Mapping[str, Any]],
+            ]
+        ] = list(),
+    ) -> pd.DataFrame:
+
         chosen_provider = self.dataset if provider is None else provider
-        chosen_labels= self.labels if labels is None else labels
-        result = to_pandas(chosen_provider, chosen_labels, instance_viewer, label_viewer, provider_hooks)
+        chosen_labels = self.labels if labels is None else labels
+        result = to_pandas(
+            chosen_provider,
+            chosen_labels,
+            instance_viewer,
+            label_viewer,
+            provider_hooks,
+        )
         return result
 
 
-
-                                
-
-class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT], 
-                  ABC, Generic[InstanceType, KT, DT, VT, RT, LT]):
+class AbstractEnvironment(
+    Environment[InstanceType, KT, DT, VT, RT, LT],
+    ABC,
+    Generic[InstanceType, KT, DT, VT, RT, LT],
+):
     """Environments provide an interface that enable you to access all data stored in the datasets.
     If there are labels stored in the environment, you can access these as well from here.
 
@@ -356,8 +422,8 @@ class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT],
     - :meth:`dataset`: Contains all Instances of the original dataset
     - :meth:`labels`: Contains an object that allows you to access labels easily
 
-    Besides these properties, this object also provides methods to create new 
-    :class:`~instancelib.InstanceProvider` objects that contain a subset of 
+    Besides these properties, this object also provides methods to create new
+    :class:`~instancelib.InstanceProvider` objects that contain a subset of
     the set of all instances stored in this environment.
 
     Examples
@@ -376,5 +442,6 @@ class AbstractEnvironment(Environment[InstanceType, KT, DT, VT, RT, LT],
     Create a train-test split on the dataset (70 % train, 30 % test):
 
     >>> train, test = env.train_test_split(dataset, 0.70)
-    """    
+    """
+
     pass

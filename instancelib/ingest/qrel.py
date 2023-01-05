@@ -46,14 +46,14 @@ def read_doctexts(
 
     try:
         with doctext_file.open() as f:
-            plines = [process_line(line) for line in f.readlines()]
+            dictionary = {
+                tup[0]: tup[1]
+                for line in f.readlines()
+                if (tup := process_line(line)) is not None
+            }
     except UnicodeDecodeError:
         return None
-    dictionary = {
-        tup[0]: tup[1]
-        for line in f.readlines()
-        if (tup := process_line(line)) is not None
-    }
+
     return dictionary
 
 

@@ -40,7 +40,7 @@ def read_doctexts(
         try:
             obj: Mapping[str, str] = json.loads(line)
             key = obj["id"]
-        except (KeyError, UnicodeDecodeError):
+        except (KeyError, UnicodeDecodeError, json.JSONDecodeError):
             return None
         return key, obj
 

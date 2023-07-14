@@ -46,17 +46,17 @@ def to_int(
 
 def numpy_ova_threshold(
     threshold: float,
-) -> Callable[[npt.NDArray[Any]], npt.NDArray[np.bool8]]:
-    def mat_function(mat: npt.NDArray[Any]) -> npt.NDArray[np.bool8]:
+) -> Callable[[npt.NDArray[Any]], npt.NDArray[np.bool_]]:
+    def mat_function(mat: npt.NDArray[Any]) -> npt.NDArray[np.bool_]:
         binary = mat > threshold
         return binary
 
     return mat_function
 
 
-def numpy_mc_threshold(mat: npt.NDArray[Any]) -> npt.NDArray[np.bool8]:
+def numpy_mc_threshold(mat: npt.NDArray[Any]) -> npt.NDArray[np.bool_]:
     max_index: Sequence[int] = np.argmax(mat, axis=1).tolist()
-    return_mat = np.zeros_like(mat).astype(np.bool8)
+    return_mat = np.zeros_like(mat).astype(np.bool_)
     for row_idx, col_idx in enumerate(max_index):
         return_mat[row_idx, col_idx] = True
     return return_mat

@@ -55,13 +55,13 @@ class DataPoint(Instance[KT, DT, VT, RT], Generic[KT, DT, VT, RT]):
         self,
         identifier: KT,
         data: DT,
-        vector: Optional[VT],
-        representation: RT,
+        vector: Optional[VT] = None,
+        representation: Optional[RT] = None,
     ) -> None:
         self._identifier = identifier
         self._data = data
         self._vector = vector
-        self._representation = representation
+        self._representation = data if representation is None else representation
 
     @property
     def data(self) -> DT:

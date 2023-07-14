@@ -20,8 +20,9 @@ from __future__ import annotations
 from typing import Any, Generic, Iterator, Optional, Sequence
 
 import numpy as np
+import numpy.typing as npt
 
-from ..instances import InstanceProvider
+from ..instances.base import InstanceProvider
 from ..typehints import KT
 from ..utils.chunks import divide_sequence
 from ..utils.func import filter_snd_none, list_unzip

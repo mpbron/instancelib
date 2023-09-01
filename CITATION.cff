@@ -1,0 +1,9 @@
+cff-version: 1.1.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Bron
+    given-names: Michiel Pieter
+    orcid: https://orcid.org/0000-0002-4823-6085
+title: mpbron/instancelib: v0.5.0
+version: v0.5.0
+date-released: 2023-09-01

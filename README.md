@@ -1,14 +1,15 @@
 **<h3 align="center">
-A generic dataset interface for Machine Learning models**
+A generic interface for datasets and Machine Learning models**
 </h3>
 
 [![PyPI](https://img.shields.io/pypi/v/instancelib)](https://pypi.org/project/instancelib/)
 [![Python_version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue)](https://pypi.org/project/instancelib/)
 [![License](https://img.shields.io/pypi/l/instancelib)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
+[![DOI](https://zenodo.org/badge/421403034.svg)](https://zenodo.org/badge/latestdoi/421403034)
 
 ---
 
-`instancelib` provides a **generic architecture** for datasets. 
+`instancelib` provides a **generic architecture** for datasets and **machine learning algorithms** such as **classification algorithms**. 
 
 &copy; Michiel Bron, 2021
 
@@ -91,12 +92,3 @@ This library is used in the following projects:
 ## Maintenance
 ### Contributors
 - [Michiel Bron](https://www.uu.nl/staff/MPBron) (`@mpbron`)
-
-### Todo
-Tasks yet to be done:
-
-* Implement support for ONNX models
-* Implement support for Python DataLoaders
-* Make the external dataset interface more user friendly
-* Redesign LabelProvider to support more attribute levels
-* CI/CD tests

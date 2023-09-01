@@ -26,8 +26,8 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setuptools.setup(  # type: ignore
     name="instancelib",
-    version="0.4.9.1",  # NOSONAR
-    description="A typed dataset abstraction toolkit for machine learning projects",
+    version="0.5.0",  # NOSONAR
+    description="A generic interface for datasets and Machine Learning models",
     long_description=README,
     long_description_content_type="text/markdown",
     author="Michiel Bron",

@@ -1,0 +1,25 @@
+{
+    "title": "Python Package instancelib",
+    "description": "A generic interface for datasets and Machine Learning models",
+    "license": "LGPL-3.0",
+    "upload_type": "software",
+    "access_right": "open",
+    "version": "0.5.0",
+    "creators": [
+        {
+            "name": "Bron, Michiel",
+            "affiliation": "Utrecht University",
+            "orcid": "0000-0002-4823-6085"
+        }
+    ],
+    "keywords": [
+        "library",
+        "datasets",
+        "generic",
+        "artificial intelligence",
+        "text classification",
+        "technology-assisted review",
+        "onnx",
+        "scikit-learn"
+    ]
+}

@@ -328,7 +328,7 @@ def to_confmat(
     contingency_table: Mapping[Tuple[LT, LT], FrozenSet[Any]]
 ) -> pd.DataFrame:
     true_labels, pred_labels = list_unzip(contingency_table.keys())
-    tls, pls = list(frozenset(true_labels)), list(frozenset(pred_labels))
+    tls, pls = sorted(list(frozenset(true_labels))), sorted(list(frozenset(pred_labels)))
     matrix = np.zeros((len(tls), len(pls)), dtype=np.int64)
     for i, tl in enumerate(tls):
         for j, pl in enumerate(pls):

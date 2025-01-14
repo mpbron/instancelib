@@ -26,7 +26,7 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setuptools.setup(  # type: ignore
     name="instancelib",
-    version="0.5.1",  # NOSONAR
+    version="0.5.2",  # NOSONAR
     description="A generic interface for datasets and Machine Learning models",
     long_description=README,
     long_description_content_type="text/markdown",

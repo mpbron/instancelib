@@ -124,6 +124,10 @@ class BaseVectorizer(ABC, Generic[DT]):
         """
         pass
 
+    @property
+    def name(self) -> str:
+        return self._name
+
 
 class SeparateContextVectorizer(ABC, Generic[DT, CT]):
     """This :class:`~abc.ABC` specifies a generic vectorizer for data types

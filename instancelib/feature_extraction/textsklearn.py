@@ -58,3 +58,7 @@ class SklearnVectorizer(BaseVectorizer[str], SaveableInnerModel):
     def fit_transform(self, x_data: Sequence[str], **kwargs: Any) -> npt.NDArray[Any]:  # type: ignore
         self.fit(x_data)
         return self.transform(x_data)  # type: ignore
+
+    @property
+    def name(self) -> str:
+        return f"{self._name} - {self.innermodel.__class__}"

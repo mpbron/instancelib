@@ -4,6 +4,10 @@ All notable changes to `instancelib` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2]
+### Added
+- Public `name` property for feature extraction methods
+
 ## [0.5.0]
 ### Added
 - Rudimentary support for fitting procedures that need a validation split (defaults to normal fit if not used)
@@ -199,6 +203,7 @@ env["train"], env["test"] = env.train_test_split(env.dataset, 0.70)
 - pandas_to_env_with_id function
 
 [Unreleased]: https://github.com/mpbron/instancelib
+[0.5.2]: https://pypi.org/project/instancelib/0.5.2
 [0.5.0]: https://pypi.org/project/instancelib/0.5.0
 [0.4.9.1]: https://pypi.org/project/instancelib/0.4.9.1
 [0.4.9.0]: https://pypi.org/project/instancelib/0.4.9.0

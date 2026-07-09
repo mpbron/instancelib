@@ -61,7 +61,8 @@ See [installation.md](docs/installation.md) for an extended installation guide.
 | Method | Instructions |
 |--------|--------------|
 | `pip` | Install from [PyPI](https://pypi.org/project/instancelib/) via `pip install instancelib`. |
-| Local | Clone this repository and install via `pip install -e .` or locally run `python setup.py install`.
+| `uv` | Add to your project via `uv add instancelib`. |
+| Local | Clone this repository and install via `pip install -e .` or `uv sync`. |
 
 ## Documentation
 Full documentation of the latest version is provided at [https://instancelib.readthedocs.org](https://instancelib.readthedocs.org).

@@ -1,6 +1,6 @@
 [project]
 name = "instancelib"
-version = "0.5.2"
+version = "0.6.0"
 description = "A generic interface for datasets and Machine Learning models"
 readme = "README.md"
 license = { text = "GNU LGPL v3" }

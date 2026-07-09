@@ -9,6 +9,7 @@ from .ingest.spreadsheet import (pandas_to_env, pandas_to_env_with_id,
 from .instances.base import Instance, InstanceProvider
 from .instances.memory import DataPoint, DataPointProvider
 from .instances.text import TextInstance, TextInstanceProvider
+from .instances.structuredtext import StructuredTextInstance, StructuredTextInstanceProvider
 from .labels import LabelProvider
 from .labels.memory import MemoryLabelProvider
 from .machinelearning import SkLearnDataClassifier, SkLearnVectorClassifier, AbstractClassifier, SeparateDataEncoderClassifier
@@ -21,6 +22,7 @@ __all__= [
     "Instance", "InstanceProvider", 
     "DataPointProvider", "DataPoint",
     "TextInstance", "TextInstanceProvider",
+    "StructuredTextInstance", "StructuredTextInstanceProvider",
     "AbstractEnvironment", "MemoryEnvironment",
     "Environment",
     "TextEnvironment",

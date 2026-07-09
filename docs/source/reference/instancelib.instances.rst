@@ -13,6 +13,7 @@ Submodules
    instancelib.instances.hdf5pandas
    instancelib.instances.hdf5vector
    instancelib.instances.memory
+   instancelib.instances.structuredtext
    instancelib.instances.text
    instancelib.instances.vectorstorage
 
